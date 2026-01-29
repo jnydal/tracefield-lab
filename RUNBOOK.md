@@ -1,4 +1,4 @@
-# Astro-Reason Runbook
+# Research Lab Runbook
 
 This document contains operational procedures, troubleshooting, and common tasks.
 
@@ -24,21 +24,31 @@ docker compose logs -f worker-ingest
 # API health
 curl http://localhost:8000/healthz
 
-# Fetch-Bio health
-curl http://localhost:8002/healthz
-
-# Ollama (if running)
+# Optional LLM (if running)
 curl http://localhost:8001/api/tags
 ```
 
-## Data Pipeline Workflow
+## Data Pipeline Workflow (Target)
 
-### Step 1: Ingest Data
+### Step 1: Register Dataset
 
 ```bash
-# Upload XML file
-curl -X POST http://localhost:8000/ingest/astrodatabank \
-  -F "xml=@your-file.xml"
+curl -X POST http://localhost:8000/datasets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "example-dataset",
+    "source": "https://example.org",
+    "license": "CC-BY-4.0",
+    "schema": {"columns":[{"name":"id","type":"string"}]}
+  }'
+```
+
+### Step 2: Ingest Raw Data
+
+```bash
+curl -X POST http://localhost:8000/ingest \
+  -F "datasetId=uuid-here" \
+  -F "file=@data/example.csv"
 
 # Get job ID from response
 JOB_ID="..."
@@ -48,112 +58,61 @@ watch -n 2 "curl -s http://localhost:8000/jobs/$JOB_ID | jq .status"
 ```
 
 **What Happens**:
-1. API stores XML in MinIO
-2. Enqueues job in Kafka (`default` topic)
-3. Worker-ingest processes XML
-4. Inserts into `person_raw`, `birth`, `bio_text`
-5. Enqueues embedding jobs
+1. API stores raw files in object storage
+2. Enqueues ingest job on Kafka
+3. Worker-ingest parses data into staging tables
+4. Downstream feature jobs are enqueued
 
-### Step 2: Resolve & Enrich
+### Step 3: Configure Entity Mapping (Optional)
 
-The Resolver service runs automatically:
-- Finds people without QIDs
-- Resolves to Wikidata
-- Calls fetch-bio API
-- Fetches Wikipedia biographies
-
-**Monitor**:
 ```bash
-docker compose logs -f resolver
+curl -X POST http://localhost:8000/entities/map \
+  -H "Content-Type: application/json" \
+  -d '{
+    "datasetId": "uuid-here",
+    "entityType": "person",
+    "joinKeys": ["id", "name"],
+    "fuzzyMatch": {"field": "name", "threshold": 0.92}
+  }'
 ```
 
-**Rate limiting (recommended)**:
-- Default throttles are 1 request/sec to Wikidata and 1 request/sec to Wikipedia
-- Add jitter to avoid synchronized bursts
-- Set a clear User-Agent with contact info
+### Step 4: Extract Features
 
-Example `.env`:
-```bash
-WIKI_USER_AGENT=astro-reason/0.1 (contact: you@example.com)
-WIKIDATA_MIN_INTERVAL_SEC=1.0
-WIKIDATA_JITTER_SEC=0.2
-WIKIPEDIA_MIN_INTERVAL_SEC=1.0
-WIKIPEDIA_JITTER_SEC=0.2
-```
-
-Safe schedule suggestion:
-- Run `fetch-bio` in small batches (e.g., `limit=200`)
-- Trigger every 10–15 minutes for sustained ingestion
-
-### Step 3: Generate Embeddings
-
-Embeddings worker processes jobs automatically:
-- Reads from `embeddings` topic
-- Generates semantic vectors
-- Stores in `embeddings_*` tables
+Feature workers process jobs automatically:
+- Embeddings, traits, astro, or custom modules
+- Write standardized features with provenance
 
 **Monitor**:
 ```bash
 docker compose logs -f embeddings
-```
-
-### Step 4: Score Traits
-
-**Current State**: Traits jobs are enqueued by the fetch-bio service after biographies are written.
-
-**Manual Trigger** (optional):
-```bash
-# Enqueue a traits job directly via Kafka
-docker compose exec kafka /opt/bitnami/kafka/bin/kafka-console-producer.sh \
-  --bootstrap-server localhost:9092 --topic traits <<'EOF'
-{"id":"<job-uuid>","function":"traits.score_person","args":["person-uuid"],"kwargs":{},"status":"QUEUED","enqueuedAt":0,"startedAt":null,"endedAt":null,"result":null,"excInfo":null}
-EOF
-```
-
-### Step 5: Compute Astro Features
-
-Astro service runs automatically:
-- Finds people without `astro_features`
-- Computes astrological features
-- Stores in `astro_features` table
-
-**Monitor**:
-```bash
+docker compose logs -f traits
 docker compose logs -f astro
 ```
 
-## Database Queries
+### Step 5: Run Analysis Jobs
+
+```bash
+curl -X POST http://localhost:8000/analysis/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "leftFeatureSet": "traits",
+    "rightFeatureSet": "astro",
+    "test": "spearman",
+    "correction": "benjamini-hochberg"
+  }'
+```
+
+## Database Queries (Target)
 
 ### Check Pipeline Progress
 
 ```sql
--- People with complete data
-SELECT 
-  COUNT(*) as total_people,
-  COUNT(b.id) as with_birth,
-  COUNT(bt.person_id) as with_bio,
-  COUNT(e.person_id) as with_embeddings,
-  COUNT(nv.person_id) as with_traits,
-  COUNT(af.person_id) as with_astro
-FROM person_raw pr
-LEFT JOIN birth b ON b.person_id = pr.id
-LEFT JOIN bio_text bt ON bt.person_id = pr.id AND bt.text IS NOT NULL
-LEFT JOIN embeddings_768 e ON e.person_id = pr.id
-LEFT JOIN nlp_vectors nv ON nv.person_id = pr.id
-LEFT JOIN astro_features af ON af.person_id = pr.id;
-```
-
-### Find People Ready for Processing
-
-```sql
--- People with bios but no traits
-SELECT pr.id, pr.name, bt.text
-FROM person_raw pr
-JOIN bio_text bt ON bt.person_id = pr.id
-LEFT JOIN nlp_vectors nv ON nv.person_id = pr.id
-WHERE bt.text IS NOT NULL
-  AND nv.person_id IS NULL
-LIMIT 10;
+SELECT
+  COUNT(*) AS datasets,
+  (SELECT COUNT(*) FROM dataset_files) AS files,
+  (SELECT COUNT(*) FROM features) AS features,
+  (SELECT COUNT(*) FROM analysis_jobs) AS analysis_jobs
+FROM datasets;
 ```
 
 ### Check Job Queue Status
@@ -161,11 +120,11 @@ LIMIT 10;
 ```bash
 # Kafka topic offsets and consumer lag
 docker compose exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh \
-  --bootstrap-server localhost:9092 --describe --topic default
+  --bootstrap-server localhost:9092 --describe --topic ingest
 docker compose exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh \
-  --bootstrap-server localhost:9092 --describe --topic embeddings
+  --bootstrap-server localhost:9092 --describe --topic features
 docker compose exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh \
-  --bootstrap-server localhost:9092 --describe --topic traits
+  --bootstrap-server localhost:9092 --describe --topic analysis
 ```
 
 ## Troubleshooting
@@ -255,18 +214,19 @@ docker compose logs -f --tail=100 service-name
 docker compose exec service-name /bin/sh
 ```
 
-## API Client Examples
+## API Client Examples (Target)
 
 ### Python Client
 
 ```python
 import requests
 
-# Upload XML
-with open("data.xml", "rb") as f:
+# Upload dataset file
+with open("data.csv", "rb") as f:
     response = requests.post(
-        "http://localhost:8000/ingest/astrodatabank",
-        files={"xml": f}
+        "http://localhost:8000/ingest",
+        files={"file": f},
+        data={"datasetId": "uuid-here"}
     )
     job = response.json()
     print(f"Job ID: {job['jobId']}")
@@ -287,12 +247,13 @@ import io.ktor.http.*
 
 val client = HttpClient(CIO)
 
-// Upload XML
-val response = client.post("http://localhost:8000/ingest/astrodatabank") {
+// Upload dataset file
+val response = client.post("http://localhost:8000/ingest") {
     setBody(MultiPartFormDataContent(
         formData {
-            append("xml", File("data.xml").readBytes(), Headers.build {
-                append(HttpHeaders.ContentType, "application/xml")
+            append("datasetId", "uuid-here")
+            append("file", File("data.csv").readBytes(), Headers.build {
+                append(HttpHeaders.ContentType, "text/csv")
             })
         }
     ))
@@ -305,13 +266,11 @@ val response = client.post("http://localhost:8000/ingest/astrodatabank") {
 
 All services expose health endpoints:
 - API: `GET http://localhost:8000/healthz`
-- Fetch-Bio: `GET http://localhost:8002/healthz`
 
 ### Database Health
 
 ```sql
--- Check table sizes
-SELECT 
+SELECT
   schemaname,
   tablename,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
@@ -324,7 +283,7 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 
 ```bash
 # Watch topic status (sample)
-watch -n 5 'docker compose exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic default'
+watch -n 5 'docker compose exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic ingest'
 ```
 
 ## Common Tasks
@@ -333,19 +292,9 @@ watch -n 5 'docker compose exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh --b
 
 ```sql
 -- Clear all data (CAUTION: destructive)
-TRUNCATE person_raw CASCADE;
+TRUNCATE datasets CASCADE;
 ```
 
 ### Reprocess Failed Jobs
 
 Jobs are stored in PostgreSQL (`job_status`). Check failed job IDs and re-enqueue to Kafka if needed.
-
-### Manual Trigger Services
-
-```bash
-# Trigger astro computation
-docker compose exec astro java -jar app.jar
-
-# Trigger resolver
-docker compose exec resolver java -jar app.jar
-```

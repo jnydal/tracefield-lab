@@ -1,24 +1,64 @@
-# Astro-Reason Agent Guide
+# Research Lab Agent Guide
 
-This document describes how to interact with the Astro-Reason system at a high level.
+This document describes how to interact with the Research Lab system at a high level.
 Operational commands, troubleshooting, and step-by-step procedures live in `RUNBOOK.md`.
 
-## Service Interaction Patterns
+## Interaction Patterns (Proposed)
 
 ### 1. API Service (Port 8000)
 
-**Upload XML File**:
+**Register a Dataset**:
 ```bash
-curl -X POST http://localhost:8000/ingest/astrodatabank \
-  -F "xml=@testdata/c_sample.xml"
+curl -X POST http://localhost:8000/datasets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Example Dataset",
+    "source": "https://example.org",
+    "license": "CC-BY-4.0",
+    "schema": {"columns": [{"name": "id", "type": "string"}]}
+  }'
 ```
 
-**Response**:
-```json
-{
-  "jobId": "uuid-here",
-  "objectUri": "s3://astro-raw/hash-timestamp.xml"
-}
+**Upload Raw Data**:
+```bash
+curl -X POST http://localhost:8000/ingest \
+  -F "datasetId=uuid-here" \
+  -F "file=@data/example.csv"
+```
+
+**Create Entity Mapping Rules**:
+```bash
+curl -X POST http://localhost:8000/entities/map \
+  -H "Content-Type: application/json" \
+  -d '{
+    "datasetId": "uuid-here",
+    "entityType": "person",
+    "joinKeys": ["id", "name"],
+    "fuzzyMatch": {"field": "name", "threshold": 0.92}
+  }'
+```
+
+**Trigger Feature Extraction**:
+```bash
+curl -X POST http://localhost:8000/features/extract \
+  -H "Content-Type: application/json" \
+  -d '{
+    "datasetId": "uuid-here",
+    "module": "embeddings",
+    "inputs": {"textColumn": "bio_text"}
+  }'
+```
+
+**Run Analysis Job**:
+```bash
+curl -X POST http://localhost:8000/analysis/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "leftFeatureSet": "traits",
+    "rightFeatureSet": "astro",
+    "test": "spearman",
+    "correction": "benjamini-hochberg"
+  }'
 ```
 
 **Check Job Status**:
@@ -26,48 +66,14 @@ curl -X POST http://localhost:8000/ingest/astrodatabank \
 curl http://localhost:8000/jobs/{jobId}
 ```
 
-**Response**:
-```json
-{
-  "id": "uuid-here",
-  "status": "finished",
-  "enqueuedAt": "1234567890",
-  "startedAt": "1234567891",
-  "endedAt": "1234567892",
-  "result": "Success",
-  "excInfo": null
-}
-```
-
-### 2. Fetch-Bio Service (Port 8002)
-
-**Trigger Biography Fetching**:
-```bash
-curl -X POST http://localhost:8002/fetch-bio \
-  -H "Content-Type: application/json" \
-  -d '{"lang": "en", "limit": 500}'
-```
-
-**Response**:
-```json
-{
-  "status": "ok",
-  "written": 42,
-  "message": "Fetched 42 biographies"
-}
-```
-
-**Note**: This is typically called automatically by the Resolver service.
-
-### 3. Worker Services
+### 2. Worker Services
 
 Workers run continuously and process jobs from Kafka topics:
 
-- **worker-ingest**: Processes `default` topic
-- **embeddings**: Processes `embeddings` topic (Python)
-- **traits**: Processes `traits` topic
-- **resolver**: Polls database directly
-- **astro**: Polls database directly
+- **worker-ingest**: Parses datasets from object storage
+- **feature workers**: Compute features (embeddings, traits, astro, custom modules)
+- **analysis worker**: Runs statistical tests and stores results
+- **resolver**: Optional entity resolver (e.g., QID lookups)
 
 ## Service Configuration
 
@@ -77,63 +83,56 @@ Create `.env` file:
 
 ```bash
 # Database
-DATABASE_URL=postgresql://postgres:postgres@db:5432/astro_reason
-PG_DSN=postgresql://postgres:postgres@db:5432/astro_reason
+DATABASE_URL=postgresql://postgres:postgres@db:5432/research_lab
+PG_DSN=postgresql://postgres:postgres@db:5432/research_lab
 
 # Kafka
 KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 
-# MinIO
-MINIO_ENDPOINT=http://minio:9000
-MINIO_ACCESS_KEY=minio
-MINIO_SECRET_KEY=minio123
-MINIO_BUCKET_RAW=astro-raw
+# Object storage
+OBJECT_STORE_ENDPOINT=http://minio:9000
+OBJECT_STORE_ACCESS_KEY=minio
+OBJECT_STORE_SECRET_KEY=minio123
+OBJECT_STORE_BUCKET_RAW=research-raw
 
-# LLM
-OLLAMA_URL=http://local-llm:11434
+# LLM (optional, used by some feature modules)
+LLM_URL=http://local-llm:11434
 LLM_MODEL=qwen2.5:7b-instruct-q4_K_M
 
-# Embeddings
+# Embeddings (optional)
 EMBEDDINGS_MODEL=BAAI/bge-large-en-v1.5
-
-# Astro
-SWEPH_EPHE_PATH=/opt/ephe
-
-# Fetch-Bio (for resolver)
-FETCH_BIO_URL=http://fetch-bio:8002
 ```
 
-## Production Considerations
+## Module Contract (Feature Providers)
 
-### Security
-- Add authentication to API endpoints
-- Use secrets management for credentials
-- Enable TLS for external-facing services
-- Restrict network access
+All feature modules implement the same contract:
 
-### Performance
-- Scale workers horizontally
-- Use connection pooling (already configured)
-- Monitor database query performance
-- Cache frequently accessed data
+- **Inputs**: dataset id, entity type, column mapping
+- **Outputs**: `features` records with `entity_id`, `feature_name`, `value`, `type`
+- **Provenance**: module name, version, config hash, source dataset
 
-### Reliability
-- Implement retry logic for external APIs
-- Add circuit breakers for service calls
-- Set up monitoring and alerting
-- Regular database backups
+Example output:
+```json
+{
+  "entityId": "uuid-here",
+  "featureName": "trait.openness",
+  "value": 0.84,
+  "type": "float",
+  "provenance": {"module": "traits", "version": "1.2.0"}
+}
+```
 
 ## Integration Points
 
-### Adding New Services
+### Adding a New Feature Module
 
 1. Create service directory in `service/`
-2. Add `build.gradle.kts` with dependencies
-3. Create Dockerfile
-4. Add to `docker-compose.yml`
-5. Update `settings.gradle.kts`
+2. Implement module contract in worker code
+3. Add Dockerfile and dependencies
+4. Register module in API configuration
+5. Add to `docker-compose.yml`
 
-### Extending API
+### Extending the API
 
 Add new routes in `service/api/src/main/kotlin/com/astroreason/api/Application.kt`:
 
