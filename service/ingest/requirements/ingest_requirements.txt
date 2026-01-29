@@ -1,0 +1,8 @@
+# requirements/ingest.txt
+psycopg[binary]
+# add minio if you’re writing to object storage from here:
+# minio
+lxml
+requests
+confluent-kafka>=2.13
+

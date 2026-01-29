@@ -1,0 +1,8 @@
+# requirements/astro.txt
+psycopg[binary]
+numpy
+pyswisseph
+skyfield
+jplephem
+python-dateutil
+tzdata

@@ -1,0 +1,6 @@
+# requirements/embeddings.txt
+psycopg2-binary
+pgvector
+numpy
+sentence-transformers
+confluent-kafka>=2.13

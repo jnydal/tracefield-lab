@@ -1,0 +1,7 @@
+# requirements/api.txt
+fastapi
+uvicorn
+pydantic
+confluent-kafka>=2.13
+psycopg[binary]
+sqlalchemy
