@@ -1,6 +1,6 @@
-# Research Lab Agent Guide
+# Tracefield Lab Agent Guide
 
-This document describes how to interact with the Research Lab system at a high level.
+This document describes how to interact with the Tracefield Lab system at a high level.
 Operational commands, troubleshooting, and step-by-step procedures live in `RUNBOOK.md`.
 
 ## Interaction Patterns (Proposed)

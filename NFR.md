@@ -1,6 +1,6 @@
-# Non-Functional Requirements: Research Lab
+# Non-Functional Requirements: Tracefield Lab
 
-This document describes non-functional requirements for the generic research lab system.
+This document describes non-functional requirements for the generic Tracefield lab system.
 
 ## Goals
 

@@ -1,8 +1,8 @@
-# Research Lab Architecture
+# Tracefield Lab Architecture
 
 ## Overview
 
-The Research Lab is a generic, modular data pipeline for multi-dataset analysis. It abstracts data ingestion, entity mapping, feature extraction, and statistical analysis into configurable modules, allowing researchers to compare heterogeneous datasets without rewriting the pipeline for each domain.
+The Tracefield Lab is a generic, modular data pipeline for multi-dataset analysis. It abstracts data ingestion, entity mapping, feature extraction, and statistical analysis into configurable modules, allowing researchers to compare heterogeneous datasets without rewriting the pipeline for each domain.
 
 ## System Architecture
 

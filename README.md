@@ -1,6 +1,6 @@
 # Tracefield Lab
 
-Research Lab is a modular pipeline for multi-dataset analysis. It abstracts ingestion,
+Tracefield Lab is a modular pipeline for multi-dataset analysis. It abstracts ingestion,
 entity mapping, feature extraction, and statistical analysis into configurable modules,
 so researchers can compare heterogeneous datasets without rewriting the pipeline.
 
@@ -9,7 +9,7 @@ so researchers can compare heterogeneous datasets without rewriting the pipeline
 ## Abstract
 
 Many research workflows require combining datasets, harmonizing entities, extracting
-features, and running statistical tests. Research Lab provides a reproducible system
+features, and running statistical tests. Tracefield Lab provides a reproducible system
 for that workflow, with a feature store, analysis jobs, and provenance tracking.
 
 The system:
@@ -158,7 +158,7 @@ For research use only. External datasets must follow their respective licenses.
 
 ## Citation
 
-If using Research Lab for academic research, cite:
+If using Tracefield Lab for academic research, cite:
 - Model name and version (if LLMs used)
 - Prompt hash (if LLMs used)
 - Processing date
