@@ -1,0 +1,61 @@
+@import 'flowbite/dist/flowbite.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* Login page layout */
+  .login-page {
+    @apply flex min-h-screen items-center justify-center bg-gray-50 px-6 py-8;
+  }
+
+  .login-card {
+    @apply rounded-lg border border-slate-100/80 bg-white/95 shadow-xl backdrop-blur sm:border-slate-200;
+  }
+
+  .login-card-inner {
+    @apply flex flex-col gap-8 p-6 sm:p-8;
+  }
+
+  .login-title {
+    @apply text-2xl font-bold tracking-tight text-gray-900 text-center;
+  }
+
+  .login-form {
+    @apply flex flex-col gap-5;
+  }
+
+  .login-sso {
+    @apply flex flex-col gap-4;
+  }
+
+  .login-sso-button {
+    @apply w-full border border-gray-200 bg-white text-gray-900 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200;
+  }
+
+  .login-divider {
+    @apply flex items-center gap-3 text-xs uppercase tracking-wide text-gray-500;
+  }
+
+  .login-divider::before,
+  .login-divider::after {
+    content: '';
+    @apply h-px flex-1 bg-gray-200;
+  }
+
+  .login-error {
+    @apply text-sm;
+  }
+
+  .login-links {
+    @apply flex flex-col gap-2 text-center text-sm text-gray-700;
+  }
+
+  .login-link {
+    @apply text-blue-600 hover:text-blue-800 hover:underline;
+  }
+
+  .login-page .ui-button {
+    @apply w-full bg-blue-600 text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600;
+  }
+}

@@ -44,3 +44,6 @@ __pycache__/
 venv/
 env/
 ENV/
+
+#frontend
+frontend/node_modules/
