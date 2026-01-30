@@ -4,7 +4,7 @@ plugins {
 }
 
 allprojects {
-    group = "com.astroreason"
+    group = "com.tracefield"
     version = "0.1.0"
 
     repositories {

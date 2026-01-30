@@ -55,7 +55,7 @@ curl -X POST http://localhost:8000/analysis/jobs \
   -H "Content-Type: application/json" \
   -d '{
     "leftFeatureSet": "traits",
-    "rightFeatureSet": "astro",
+    "rightFeatureSet": "feature_b",
     "test": "spearman",
     "correction": "benjamini-hochberg"
   }'
@@ -71,7 +71,7 @@ curl http://localhost:8000/jobs/{jobId}
 Workers run continuously and process jobs from Kafka topics:
 
 - **worker-ingest**: Parses datasets from object storage
-- **feature workers**: Compute features (embeddings, traits, astro, custom modules)
+- **feature workers**: Compute features (embeddings, custom modules)
 - **analysis worker**: Runs statistical tests and stores results
 - **resolver**: Optional entity resolver (e.g., QID lookups)
 
@@ -134,7 +134,7 @@ Example output:
 
 ### Extending the API
 
-Add new routes in `service/api/src/main/kotlin/com/astroreason/api/Application.kt`:
+Add new routes in `service/api/src/main/kotlin/com/tracefield/api/Application.kt`:
 
 ```kotlin
 get("/new-endpoint") {
@@ -144,6 +144,6 @@ get("/new-endpoint") {
 
 ### Adding Database Tables
 
-1. Define table in `service/core/src/main/kotlin/com/astroreason/core/schema/Tables.kt`
+1. Define table in `service/core/src/main/kotlin/com/tracefield/core/schema/Tables.kt`
 2. Create migration SQL in `infra/sql/`
 3. Update Exposed table definitions

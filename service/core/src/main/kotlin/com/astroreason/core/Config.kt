@@ -1,6 +1,6 @@
-package com.astroreason.core
+package com.tracefield.core
 
-import com.astroreason.core.config.Config as CoreConfig
+import com.tracefield.core.config.Config as CoreConfig
 
 object Config {
     val settings = CoreConfig.settings

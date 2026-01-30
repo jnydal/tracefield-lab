@@ -1,10 +1,10 @@
-package com.astroreason.core.queue
+package com.tracefield.core.queue
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import com.astroreason.core.DatabaseManager
-import com.astroreason.core.schema.JobStatusTable
+import com.tracefield.core.DatabaseManager
+import com.tracefield.core.schema.JobStatusTable
 import kotlinx.serialization.decodeFromString
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -53,7 +53,7 @@ class JobQueue(
     private val bootstrapServers: String,
     private val queueName: String = "default",
     private val groupId: String? = null,
-    private val clientId: String = "astro-reason"
+    private val clientId: String = "tracefield"
 ) {
     private val json = Json { encodeDefaults = true }
     private val kafkaTemplate: KafkaTemplate<String, String>
@@ -195,7 +195,7 @@ fun createJobQueue(
     bootstrapServers: String,
     queueName: String = "default",
     groupId: String? = null,
-    clientId: String = "astro-reason"
+    clientId: String = "tracefield"
 ): JobQueue {
     return JobQueue(bootstrapServers, queueName, groupId, clientId)
 }

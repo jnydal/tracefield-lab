@@ -2,13 +2,13 @@ Tracefield lab
 
 
 
-ou can make this system generic by abstracting (a) dataset ingestion, (b) feature extraction, and (c) correlation/analysis into configurable “modules,” then adding a UI to let users choose datasets, map entities, and pick statistical tests. Here’s a practical path based on how your repo is structured now (service/api, service/worker-ingest, service/traits, service/astro, etc.):
+You can make this system generic by abstracting (a) dataset ingestion, (b) feature extraction, and (c) correlation/analysis into configurable modules, then adding a UI to let users choose datasets, map entities, and pick statistical tests. Here’s a practical path based on how your repo is structured now (service/api, workers, etc.):
 Make the pipeline generic (conceptual changes)
 Dataset registry: a table/API that stores dataset metadata (name, schema, source, license, refresh schedule).
 Entity model: define a canonical entity (e.g., “person”, “organization”, “event”) and a mapping layer that links rows across datasets using keys or probabilistic matching.
 Feature store: store extracted features in a generic features table (entity_id, feature_name, value, type, provenance, timestamp).
 Analysis jobs: a generic “analysis job” that takes two feature sets and a test spec (correlation type, covariates, binning, significance correction).
-Module/plugin interface: workers expose a standard contract (input columns → output features) so you can swap astro/NLP modules for others.
+Module/plugin interface: workers expose a standard contract (input columns → output features) so you can swap domain modules without rewriting the pipeline.
 This keeps your existing job-queue + worker + PostgreSQL architecture intact, just with more generic schema and worker contracts.
 Frontend you can add (configuration + exploration)
 A minimal UI can enable:
@@ -19,10 +19,9 @@ Analysis builder (Pearson/Spearman/MI, regression, chi-square; confounders; mult
 Results dashboard (correlation matrix, effect sizes, p-values, scatterplots)
 This UI can sit on top of the existing API service, with new endpoints for dataset definitions, feature extraction configs, and analysis job submission.
 Practical steps in this codebase
-Add a generic data model alongside current tables (right now you have person_raw, bio_text, nlp_vectors, astro_features). A generic layer could live in service/core + SQL migrations.
+Add a generic data model for datasets, entities, features, and analysis jobs. A generic layer can live in service/core + SQL migrations.
 Abstract feature extraction:
-Traits and astro can become feature providers that write into features.
-Embeddings are just another feature provider (vector type).
+Feature modules write into the feature store with a shared contract.
 Analysis service:
 You currently don’t have a dedicated correlation service (see “Future Enhancements” in ARCHITECTURE.md).
 Add a lightweight stats worker that reads feature pairs and computes selected tests.
@@ -32,9 +31,10 @@ Multiple-testing correction (Bonferroni, Benjamini–Hochberg)
 Effect size reporting (not just p-values)
 Confounders / controls (regression with covariates)
 Data quality flags (missingness, low variance, outliers)
+
 How this maps to your existing pipeline
-Ingest remains Kafka + worker-ingest.
-Traits/astro/embeddings become feature extraction jobs.
+Ingest remains Kafka + worker services.
+Feature extraction becomes modular jobs.
 Storage becomes a feature store instead of bespoke tables.
 A new analysis worker/service computes correlation jobs and stores results.
 

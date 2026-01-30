@@ -5,7 +5,7 @@ plugins {
 }
 
 application {
-    mainClass.set("com.astroreason.api.ApplicationKt")
+    mainClass.set("com.tracefield.api.ApplicationKt")
 }
 
 dependencies {

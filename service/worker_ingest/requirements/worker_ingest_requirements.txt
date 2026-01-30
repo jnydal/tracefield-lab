@@ -1,7 +1,0 @@
-# requirements/worker_ingest_requirements.txt
-confluent-kafka>=2.13
-boto3>=1.35
-psycopg[binary]>=3.2
-lxml>=5.3
-numpy
-sentence-transformers

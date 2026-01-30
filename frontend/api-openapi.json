@@ -1,27 +1,460 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Example API",
-    "version": "0.0.0",
-    "description": "Minimal OpenAPI specification for the frontend scaffold."
+    "title": "Tracefield Lab API",
+    "version": "0.1.0",
+    "description": "Generic research pipeline API with dataset, feature, analysis, and auth endpoints."
   },
   "servers": [
     {
-      "url": "https://api.example.com"
+      "url": "http://localhost:8000"
     }
   ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "tracefield_session"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string" },
+          "displayName": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "email"]
+      },
+      "LoginStateResponse": {
+        "type": "object",
+        "properties": {
+          "authenticated": { "type": "boolean" },
+          "user": { "$ref": "#/components/schemas/User" }
+        },
+        "required": ["authenticated"]
+      },
+      "DatasetRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "source": { "type": "string", "nullable": true },
+          "license": { "type": "string", "nullable": true },
+          "schema": { "type": "object", "nullable": true, "additionalProperties": true },
+          "refreshSchedule": { "type": "string", "nullable": true }
+        },
+        "required": ["name"]
+      },
+      "Dataset": {
+        "allOf": [
+          { "$ref": "#/components/schemas/DatasetRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "createdAt": { "type": "string" },
+              "updatedAt": { "type": "string" }
+            },
+            "required": ["id", "createdAt", "updatedAt"]
+          }
+        ]
+      },
+      "EntityMappingRequest": {
+        "type": "object",
+        "properties": {
+          "datasetId": { "type": "string", "format": "uuid" },
+          "entityId": { "type": "string", "format": "uuid" },
+          "sourceRecordId": { "type": "string", "nullable": true },
+          "sourceKeys": { "type": "object", "nullable": true, "additionalProperties": true },
+          "method": { "type": "string", "nullable": true },
+          "score": { "type": "number", "nullable": true }
+        },
+        "required": ["datasetId", "entityId"]
+      },
+      "EntityMapping": {
+        "allOf": [
+          { "$ref": "#/components/schemas/EntityMappingRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "createdAt": { "type": "string" }
+            },
+            "required": ["id", "createdAt"]
+          }
+        ]
+      },
+      "FeatureDefinitionRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "valueType": { "type": "string" },
+          "unit": { "type": "string", "nullable": true },
+          "owner": { "type": "string", "nullable": true },
+          "config": { "type": "object", "nullable": true, "additionalProperties": true }
+        },
+        "required": ["name", "valueType"]
+      },
+      "FeatureDefinition": {
+        "allOf": [
+          { "$ref": "#/components/schemas/FeatureDefinitionRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "createdAt": { "type": "string" }
+            },
+            "required": ["id", "createdAt"]
+          }
+        ]
+      },
+      "AnalysisJobRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "config": { "type": "object", "additionalProperties": true },
+          "status": { "type": "string", "nullable": true }
+        },
+        "required": ["name", "config"]
+      },
+      "AnalysisJob": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AnalysisJobRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "createdAt": { "type": "string" },
+              "startedAt": { "type": "string", "nullable": true },
+              "endedAt": { "type": "string", "nullable": true }
+            },
+            "required": ["id", "createdAt"]
+          }
+        ]
+      },
+      "AnalysisResult": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "jobId": { "type": "string", "format": "uuid" },
+          "featureXId": { "type": "string", "format": "uuid" },
+          "featureYId": { "type": "string", "format": "uuid" },
+          "stats": { "type": "object", "additionalProperties": true },
+          "pValue": { "type": "number", "nullable": true },
+          "effectSize": { "type": "number", "nullable": true },
+          "correction": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string" }
+        },
+        "required": ["id", "jobId", "featureXId", "featureYId", "stats", "createdAt"]
+      }
+    }
+  },
   "paths": {
-    "/user/login": {
-      "post": {
-        "operationId": "auth_login",
+    "/healthz": {
+      "get": {
+        "operationId": "health_check",
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/version": {
+      "get": {
+        "operationId": "version_info",
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/datasets": {
+      "get": {
+        "operationId": "datasets_list",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "object"
-                }
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Dataset" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "datasets_create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/DatasetRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Dataset" } }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/{id}": {
+      "get": {
+        "operationId": "datasets_get",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Dataset" } }
+            }
+          },
+          "404": { "description": "Not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "put": {
+        "operationId": "datasets_update",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/DatasetRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Dataset" } }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "datasets_delete",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "No content" }
+        }
+      }
+    },
+    "/entity-mappings": {
+      "get": {
+        "operationId": "entity_mappings_list",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/EntityMapping" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "entity_mappings_create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/EntityMappingRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/EntityMapping" } }
+            }
+          }
+        }
+      }
+    },
+    "/entity-mappings/{id}": {
+      "get": {
+        "operationId": "entity_mappings_get",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/EntityMapping" } }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "entity_mappings_update",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/EntityMappingRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/EntityMapping" } }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "entity_mappings_delete",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "No content" }
+        }
+      }
+    },
+    "/features/definitions": {
+      "get": {
+        "operationId": "feature_definitions_list",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/FeatureDefinition" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "feature_definitions_create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/FeatureDefinitionRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/FeatureDefinition" } }
+            }
+          }
+        }
+      }
+    },
+    "/features/definitions/{id}": {
+      "get": {
+        "operationId": "feature_definitions_get",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/FeatureDefinition" } }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "feature_definitions_update",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/FeatureDefinitionRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/FeatureDefinition" } }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "feature_definitions_delete",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "No content" }
+        }
+      }
+    },
+    "/analysis-jobs": {
+      "post": {
+        "operationId": "analysis_jobs_create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/AnalysisJobRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AnalysisJob" } }
+            }
+          }
+        }
+      }
+    },
+    "/analysis-jobs/{id}": {
+      "get": {
+        "operationId": "analysis_jobs_get",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AnalysisJob" } }
+            }
+          }
+        }
+      }
+    },
+    "/analysis-results": {
+      "get": {
+        "operationId": "analysis_results_list",
+        "parameters": [
+          { "name": "jobId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/AnalysisResult" } }
               }
             }
           }
@@ -35,13 +468,32 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoginStateResponse" } }
             }
           }
+        }
+      }
+    },
+    "/auth/google/start": {
+      "get": {
+        "operationId": "auth_google_start",
+        "parameters": [
+          { "name": "returnTo", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "302": { "description": "Redirect to Google OAuth" }
+        }
+      }
+    },
+    "/auth/google/callback": {
+      "get": {
+        "operationId": "auth_google_callback",
+        "parameters": [
+          { "name": "code", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "302": { "description": "Redirect back to app" }
         }
       }
     },
@@ -52,11 +504,20 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
+              "application/json": { "schema": { "type": "object", "additionalProperties": true } }
+            }
+          }
+        }
+      }
+    },
+    "/user/login": {
+      "post": {
+        "operationId": "auth_login",
+        "responses": {
+          "501": {
+            "description": "Not implemented",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
             }
           }
         }

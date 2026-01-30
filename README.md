@@ -46,7 +46,7 @@ Analysis worker → results
 |----------|-------------|
 | API (Kotlin/Ktor) | Dataset registry, job orchestration, results |
 | Worker-ingest | Parses datasets and normalizes raw data |
-| Feature workers | Embeddings, traits, astro, custom modules |
+| Feature workers | Embeddings, custom modules |
 | Analysis worker | Statistical tests and corrections (planned) |
 | PostgreSQL + pgvector | Structured data and vector storage |
 | Kafka | Job queue |

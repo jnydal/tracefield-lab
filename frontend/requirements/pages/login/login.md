@@ -116,6 +116,7 @@ Use Tailwind + Flowbite React components according to `style.md`.
     -   Card fills horizontal space with padding.
     -   Background image may be hidden or repositioned depending on
         `AuthLayout`.
+-   **No global header** is shown on the login page (logged-out state).
 
 ### 5.2 Elements
 
@@ -195,6 +196,14 @@ Implement login via RTK Query in the main API slice, following
 -   Mutation: `login`
 -   Endpoint: `POST /user/login`
 -   OperationId: `auth_login`
+
+------------------------------------------------------------------------
+
+## 9. Logged-in Header (Context)
+
+-   A **responsive header** (nav menu + user icon) is rendered only after
+    login on authenticated pages.
+-   Logged-out routes (including `/login`) do **not** render the header.
 
 ### 8.2 Response Handling
 

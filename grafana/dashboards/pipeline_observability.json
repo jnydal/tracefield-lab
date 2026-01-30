@@ -1,7 +1,7 @@
 {
   "uid": "pipeline-observability",
   "title": "Pipeline Observability",
-  "tags": ["astro-reason", "pipeline"],
+  "tags": ["tracefield", "pipeline"],
   "timezone": "browser",
   "schemaVersion": 38,
   "version": 1,
@@ -14,7 +14,7 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "People Processed",
+      "title": "Datasets",
       "datasource": {
         "type": "postgres",
         "uid": "postgres"
@@ -24,7 +24,7 @@
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT people_total AS value FROM pipeline_counts;"
+          "rawSql": "SELECT datasets_total AS value FROM pipeline_counts;"
         }
       ],
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 }
@@ -32,7 +32,7 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Traits Scored",
+      "title": "Entities",
       "datasource": {
         "type": "postgres",
         "uid": "postgres"
@@ -42,7 +42,7 @@
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT traits_scored AS value FROM pipeline_counts;"
+          "rawSql": "SELECT entities_total AS value FROM pipeline_counts;"
         }
       ],
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 }
@@ -50,7 +50,7 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Embeddings Computed",
+      "title": "Features",
       "datasource": {
         "type": "postgres",
         "uid": "postgres"
@@ -60,7 +60,7 @@
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT embeddings_computed AS value FROM pipeline_counts;"
+          "rawSql": "SELECT features_total AS value FROM pipeline_counts;"
         }
       ],
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 }
@@ -68,7 +68,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Astro Features",
+      "title": "Analysis Jobs",
       "datasource": {
         "type": "postgres",
         "uid": "postgres"
@@ -78,7 +78,7 @@
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT astro_features_computed AS value FROM pipeline_counts;"
+          "rawSql": "SELECT analysis_jobs_total AS value FROM pipeline_counts;"
         }
       ],
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 }
@@ -86,7 +86,7 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "Correlations Computed",
+      "title": "Analysis Results",
       "datasource": {
         "type": "postgres",
         "uid": "postgres"
@@ -96,7 +96,7 @@
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT correlations_computed AS value FROM pipeline_counts;"
+          "rawSql": "SELECT analysis_results_total AS value FROM pipeline_counts;"
         }
       ],
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 }
@@ -122,7 +122,7 @@
     {
       "id": 7,
       "type": "table",
-      "title": "Stuck Jobs (SLA 24h)",
+      "title": "Stale Datasets (SLA 24h)",
       "datasource": {
         "type": "postgres",
         "uid": "postgres"
@@ -132,7 +132,7 @@
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT person_id, last_event_at, hours_since_last_event, missing_traits, missing_embeddings, missing_astro FROM pipeline_stuck ORDER BY hours_since_last_event DESC LIMIT 200;"
+          "rawSql": "SELECT dataset_id, last_event_at, hours_since_last_event FROM pipeline_stuck ORDER BY hours_since_last_event DESC LIMIT 200;"
         }
       ],
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 }

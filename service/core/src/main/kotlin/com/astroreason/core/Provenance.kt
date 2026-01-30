@@ -1,6 +1,6 @@
-package com.astroreason.core
+package com.tracefield.core
 
-import com.astroreason.core.schema.jsonb
+import com.tracefield.core.schema.jsonb
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.javatime.timestamp
@@ -12,6 +12,9 @@ import java.util.*
 object ProvenanceEvents : Table("provenance_event") {
     val id = long("id").autoIncrement()
     val personId = uuid("person_id").nullable()
+    val entityId = uuid("entity_id").nullable()
+    val datasetId = uuid("dataset_id").nullable()
+    val jobId = uuid("job_id").nullable()
     val stage = text("stage")
     val detail = jsonb("detail")
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp())
@@ -22,6 +25,9 @@ object ProvenanceEvents : Table("provenance_event") {
 data class ProvenanceEvent(
     val id: Long? = null,
     val personId: UUID? = null,
+    val entityId: UUID? = null,
+    val datasetId: UUID? = null,
+    val jobId: UUID? = null,
     val stage: String,
     val detail: Map<String, Any>,
     val createdAt: Instant? = null
@@ -29,6 +35,9 @@ data class ProvenanceEvent(
 
 fun logProvenanceEvent(
     personId: UUID? = null,
+    entityId: UUID? = null,
+    datasetId: UUID? = null,
+    jobId: UUID? = null,
     stage: String,
     status: String? = null,
     count: Int? = null,
@@ -65,6 +74,9 @@ fun logProvenanceEvent(
         
         ProvenanceEvents.insert {
             it[ProvenanceEvents.personId] = personId
+            it[ProvenanceEvents.entityId] = entityId
+            it[ProvenanceEvents.datasetId] = datasetId
+            it[ProvenanceEvents.jobId] = jobId
             it[ProvenanceEvents.stage] = stage
             it[ProvenanceEvents.detail] = detailJson
         }

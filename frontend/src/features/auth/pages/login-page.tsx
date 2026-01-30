@@ -14,6 +14,8 @@ export function LoginPage() {
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
   const errorAlertRef = useRef<HTMLDivElement>(null);
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
   const {
     register,
@@ -91,6 +93,13 @@ export function LoginPage() {
     }
   };
 
+  const handleGoogleLogin = () => {
+    const returnTo = searchParams.get('returnTo') || '/';
+    const authUrl = new URL('/auth/google/start', apiBaseUrl);
+    authUrl.searchParams.set('returnTo', returnTo);
+    window.location.assign(authUrl.toString());
+  };
+
   return (
     <section className="login-page">
       <div className="w-full max-w-md">
@@ -99,7 +108,11 @@ export function LoginPage() {
             <h1 className="login-title">Logg inn</h1>
 
             <div className="login-sso">
-              <Button type="button" className="login-sso-button">
+              <Button
+                type="button"
+                className="login-sso-button"
+                onClick={handleGoogleLogin}
+              >
                 Fortsett med Google
               </Button>
               <div className="login-divider" role="separator" aria-label="Eller">

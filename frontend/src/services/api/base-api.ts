@@ -159,7 +159,18 @@ const baseQueryWithRetry: BaseQueryFn<
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithRetry,
-  tagTypes: ['Auth', 'Profile', 'Messages', 'Search', 'Subscriptions'],
+  tagTypes: [
+    'Auth',
+    'Datasets',
+    'EntityMappings',
+    'FeatureDefinitions',
+    'AnalysisJobs',
+    'AnalysisResults',
+    'Profile',
+    'Messages',
+    'Search',
+    'Subscriptions',
+  ],
   endpoints: () => ({}),
 });
 

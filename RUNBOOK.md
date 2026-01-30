@@ -79,14 +79,14 @@ curl -X POST http://localhost:8000/entities/map \
 ### Step 4: Extract Features
 
 Feature workers process jobs automatically:
-- Embeddings, traits, astro, or custom modules
+- Embeddings or custom modules
 - Write standardized features with provenance
 
 **Monitor**:
 ```bash
 docker compose logs -f embeddings
 docker compose logs -f traits
-docker compose logs -f astro
+docker compose logs -f api
 ```
 
 ### Step 5: Run Analysis Jobs
@@ -96,7 +96,7 @@ curl -X POST http://localhost:8000/analysis/jobs \
   -H "Content-Type: application/json" \
   -d '{
     "leftFeatureSet": "traits",
-    "rightFeatureSet": "astro",
+    "rightFeatureSet": "feature_b",
     "test": "spearman",
     "correction": "benjamini-hochberg"
   }'

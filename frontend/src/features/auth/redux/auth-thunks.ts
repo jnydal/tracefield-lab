@@ -16,20 +16,29 @@ export const bootstrapAuth = createAsyncThunk<
     const result = await dispatch(authApi.endpoints.getMe.initiate());
     
     if (result.data) {
-      // Map response to user object
-      // Since OpenAPI doesn't define exact shape, we use flexible mapping
-      const userData = result.data as Record<string, unknown>;
-      const user = {
-        id: typeof userData.id === 'string' ? userData.id : undefined,
-        email: typeof userData.email === 'string' ? userData.email : undefined,
-        username: typeof userData.username === 'string' ? userData.username : undefined,
-        displayName: typeof userData.displayName === 'string' 
-          ? userData.displayName 
-          : undefined,
-        ...userData,
-      };
-      
-      dispatch(setUser(user));
+      // Map login state response to user object
+      const loginState = result.data as Record<string, unknown>;
+      const authenticated =
+        typeof loginState.authenticated === 'boolean'
+          ? loginState.authenticated
+          : undefined;
+      const userData = (loginState.user ?? loginState) as Record<string, unknown>;
+
+      if (authenticated === false) {
+        dispatch(clearAuth());
+      } else if (userData && Object.keys(userData).length > 0) {
+        const user = {
+          id: typeof userData.id === 'string' ? userData.id : undefined,
+          email: typeof userData.email === 'string' ? userData.email : undefined,
+          username: typeof userData.username === 'string' ? userData.username : undefined,
+          displayName:
+            typeof userData.displayName === 'string' ? userData.displayName : undefined,
+          ...userData,
+        };
+        dispatch(setUser(user));
+      } else {
+        dispatch(clearAuth());
+      }
     } else {
       // No user data, clear auth state
       dispatch(clearAuth());

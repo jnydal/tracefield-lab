@@ -1,10 +1,10 @@
-package com.astroreason.core
+package com.tracefield.core
 
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class Settings(
-    val appName: String = "astro-reason",
+    val appName: String = "tracefield",
     val appEnv: String = System.getenv("APP_ENV") ?: "dev",
     val logLevel: String = System.getenv("LOG_LEVEL") ?: "INFO",
     
@@ -20,7 +20,7 @@ data class Settings(
     val s3Endpoint: String? = System.getenv("MINIO_ENDPOINT") ?: System.getenv("S3_ENDPOINT"),
     val s3AccessKey: String? = System.getenv("MINIO_ACCESS_KEY") ?: System.getenv("S3_ACCESS_KEY"),
     val s3SecretKey: String? = System.getenv("MINIO_SECRET_KEY") ?: System.getenv("S3_SECRET_KEY"),
-    val s3Bucket: String = System.getenv("MINIO_BUCKET_RAW") ?: System.getenv("S3_BUCKET") ?: "astro-reason",
+    val s3Bucket: String = System.getenv("MINIO_BUCKET_RAW") ?: System.getenv("S3_BUCKET") ?: "tracefield",
     val s3UseSsl: Boolean = System.getenv("S3_USE_SSL")?.toBoolean() ?: false,
     
     // LLM / Embeddings
@@ -31,11 +31,16 @@ data class Settings(
     // Wikipedia
     val wikiLangDefault: String = System.getenv("WIKI_LANG_DEFAULT") ?: "en",
     
-    // Astro
-    // Which backend to use for astro features: "swisseph" (default, high precision) or "fallback"
-    val astroBackend: String = System.getenv("ASTRO_BACKEND") ?: "swisseph",
-    // Optional path to Swiss Ephemeris data files (e.g. /opt/ephe), falls back to Docker ENV SE_EPHE_PATH
-    val swephEphePath: String? = System.getenv("SWEPH_EPHE_PATH") ?: System.getenv("SE_EPHE_PATH")
+    // Auth / OAuth
+    val googleClientId: String = System.getenv("GOOGLE_CLIENT_ID") ?: "placeholder-client-id",
+    val googleClientSecret: String = System.getenv("GOOGLE_CLIENT_SECRET") ?: "placeholder-client-secret",
+    val googleRedirectUri: String = System.getenv("GOOGLE_REDIRECT_URI") ?: "http://localhost:8000/auth/google/callback",
+    val authStateSecret: String = System.getenv("AUTH_STATE_SECRET") ?: "dev-state-secret",
+    val authSessionTtlHours: Long = System.getenv("AUTH_SESSION_TTL_HOURS")?.toLongOrNull() ?: 24,
+    val authCookieName: String = System.getenv("AUTH_COOKIE_NAME") ?: "tracefield_session",
+    val authCookieSecure: Boolean = System.getenv("AUTH_COOKIE_SECURE")?.toBoolean() ?: false,
+    val authCookieDomain: String? = System.getenv("AUTH_COOKIE_DOMAIN"),
+    val authCookieSameSite: String = System.getenv("AUTH_COOKIE_SAMESITE") ?: "lax"
 )
 
 fun loadSettings(): Settings = Settings()

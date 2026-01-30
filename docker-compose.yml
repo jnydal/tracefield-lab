@@ -3,19 +3,6 @@ x-env: &default-env
   TZ: "Europe/Oslo"
 
 services:
-  # Local LLM runtime
-  local-llm:
-    image: ollama/ollama:latest
-    ports:
-      - "8001:11434"          # host:container
-    volumes:
-      - ollama:/root/.ollama  # cache models
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-
   # API (depends on db/kafka/minio + optional bootstrap)
   api:
     build:
@@ -23,12 +10,12 @@ services:
       dockerfile: ./service/api/Dockerfile
     env_file: ./.env
     environment:
-      PG_DSN: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/astro_reason}
+      PG_DSN: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/tracefield}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minio123}
-      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-astro-raw}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-tracefield-raw}
     ports:
       - "8000:8000"
     depends_on:
@@ -44,104 +31,13 @@ services:
       timeout: 2s
       retries: 10
 
-  # Traits processor (LLM + storages)
-  traits:
-    build:
-      context: .
-      dockerfile: ./service/traits/Dockerfile
-    env_file: ./.env
-    environment:
-      <<: *default-env
-      PG_DSN: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/astro_reason}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
-      KAFKA_GROUP_ID: ${KAFKA_TRAITS_GROUP_ID:-traits-worker}
-      OLLAMA_URL: ${OLLAMA_URL:-http://local-llm:11434}
-      LLM_MODEL: ${LLM_MODEL:-qwen2.5:7b-instruct-q4_K_M}
-    depends_on:
-      db:        { condition: service_healthy }
-      kafka:     { condition: service_healthy }
-      local-llm: { condition: service_healthy }
-      bootstrap: { condition: service_completed_successfully }
-
-  worker-ingest:
-    build:
-      context: .
-      dockerfile: ./service/worker-ingest/Dockerfile
-    env_file: ./.env
-    environment:
-      PG_DSN: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/astro_reason}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
-      KAFKA_GROUP_ID: ${KAFKA_INGEST_GROUP_ID:-worker-ingest}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minio123}
-    depends_on:
-      db:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-      minio:
-        condition: service_started
-
-  resolver:
-    build:
-      context: .
-      dockerfile: ./service/resolver/Dockerfile
-    env_file: ./.env
-    environment:
-      PG_DSN: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/astro_reason}
-      FETCH_BIO_URL: http://fetch-bio:8002
-      # Faster but still polite defaults for Wikidata API
-      WIKIDATA_MIN_INTERVAL_SEC: ${WIKIDATA_MIN_INTERVAL_SEC:-0.5}
-      WIKIDATA_JITTER_SEC: ${WIKIDATA_JITTER_SEC:-0.1}
-    depends_on:
-      db:
-        condition: service_healthy
-      fetch-bio:
-        condition: service_started
-
-  fetch-bio:
-    build:
-      context: .
-      dockerfile: ./service/ingest/Dockerfile
-    env_file: ./.env
-    environment:
-      PG_DSN: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/astro_reason}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/astro_reason}
-      PORT: 8002
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
-      KAFKA_TRAITS_TOPIC: ${KAFKA_TRAITS_TOPIC:-traits}
-      KAFKA_EMBEDDINGS_TOPIC: ${KAFKA_EMBEDDINGS_TOPIC:-embeddings}
-    ports:
-      - "8002:8002"
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/healthz"]
-      interval: 10s
-      timeout: 2s
-      retries: 10
-
-  astro:
-    build:
-      context: .
-      dockerfile: ./service/astro/Dockerfile.python
-    env_file: ./.env
-    environment:
-      PG_DSN: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/astro_reason}
-      SWEPH_EPHE_PATH: ${SWEPH_EPHE_PATH:-/opt/ephe}
-    depends_on:
-      db:
-        condition: service_healthy
-
   # Postgres with pgvector extension baked in
   db:
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-astro_reason}
+      POSTGRES_DB: ${POSTGRES_DB:-tracefield}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
       TZ: "Europe/Oslo"
     ports:
@@ -235,27 +131,6 @@ services:
       timeout: 3s
       retries: 20
 
-  # Optional: lightweight embedding service if you want local embeddings
-  embeddings:
-    build:
-      context: ./service/worker_embeddings
-      dockerfile: Dockerfile
-    env_file: ./.env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
-      KAFKA_GROUP_ID: ${KAFKA_EMBEDDINGS_GROUP_ID:-embeddings-worker}
-      KAFKA_EMBEDDINGS_TOPIC: ${KAFKA_EMBEDDINGS_TOPIC:-embeddings}
-      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-BAAI/bge-large-en-v1.5}
-    ports:
-      - "8090:8090"
-    deploy:
-      replicas: 1
-    depends_on:
-      db: { condition: service_healthy }
-      kafka: { condition: service_healthy }
-    command: [ "python", "-m", "jobs" ]
-
   # One-shot bootstrap job (buckets, seeds, migrations)
   bootstrap:
     image: minio/mc
@@ -265,7 +140,7 @@ services:
       # (optional) pass DB env if you do DB migrations here
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-astro_reason}
+      POSTGRES_DB: ${POSTGRES_DB:-tracefield}
     depends_on:
       db:    { condition: service_healthy }
       minio: { condition: service_healthy }
@@ -274,11 +149,10 @@ services:
       set -e
       echo "Configuring MinIO buckets…"
       mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
-      mc mb -p local/astro-raw     || true
-      mc mb -p local/astro-reports || true
+      mc mb -p local/tracefield-raw     || true
+      mc mb -p local/tracefield-reports || true
       echo "Bootstrap complete."
 
 volumes:
   db_data:
   minio_data:
-  ollama:

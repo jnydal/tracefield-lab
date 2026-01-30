@@ -1,4 +1,4 @@
-package com.astroreason.api.storage
+package com.tracefield.api.storage
 
 import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.model.*
@@ -6,7 +6,7 @@ import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
 import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
 import aws.smithy.kotlin.runtime.content.ByteStream
 import aws.smithy.kotlin.runtime.net.url.Url
-import com.astroreason.core.Config
+import com.tracefield.core.Config
 import kotlinx.coroutines.runBlocking
 import java.security.MessageDigest
 import java.time.Instant

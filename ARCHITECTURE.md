@@ -41,7 +41,7 @@ The Tracefield Lab is a generic, modular data pipeline for multi-dataset analysi
    └─→ Enqueues feature extraction jobs
 
 2. Feature Workers (Python/Kotlin)
-   ├─→ Embeddings / traits / astro / domain modules
+  ├─→ Embeddings / domain modules
    ├─→ Produce feature vectors
    └─→ Write → PostgreSQL (features table)
 
@@ -106,7 +106,7 @@ The Tracefield Lab is a generic, modular data pipeline for multi-dataset analysi
 - Normalize into staging tables
 - Enqueue feature extraction jobs
 
-### 3. Feature Workers (`service/worker_embeddings`, `service/traits`, `service/astro`)
+### 3. Feature Workers (Custom Modules)
 
 **Responsibilities**:
 - Transform data into standardized features
