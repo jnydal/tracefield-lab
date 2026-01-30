@@ -1,4 +1,4 @@
-# Research Lab
+# Tracefield Lab
 
 Research Lab is a modular pipeline for multi-dataset analysis. It abstracts ingestion,
 entity mapping, feature extraction, and statistical analysis into configurable modules,
