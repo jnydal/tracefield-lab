@@ -4,6 +4,12 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    // Use polling to make file watching reliable on Windows/network drives.
+    watch: {
+      usePolling: true,
+    },
+  },
   build: {
     // Modern build optimizations
     target: 'esnext',

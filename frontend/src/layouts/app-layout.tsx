@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAppSelector } from '../app/hooks';
-import { selectUser } from '../features/auth/redux/auth-slice';
+import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { clearAuth, selectUser } from '../features/auth/redux/auth-slice';
+import { useLogoutMutation } from '../services/api/auth-api';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -24,9 +25,24 @@ function getInitials(label: string): string {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const user = useAppSelector(selectUser);
+  const dispatch = useAppDispatch();
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const label = user?.displayName || user?.email || user?.username || 'User';
   const initials = getInitials(label);
+
+  const handleSignOut = async () => {
+    try {
+      await logout().unwrap();
+    } catch (error) {
+      // Ignore logout errors and still clear local auth state.
+    } finally {
+      dispatch(clearAuth());
+      setUserMenuOpen(false);
+      setMenuOpen(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -45,11 +61,39 @@ export function AppLayout({ children }: AppLayoutProps) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-medium text-slate-900">{label}</p>
-              <p className="text-xs text-slate-500">Signed in</p>
+            <div className="relative hidden sm:block">
+              <button
+                type="button"
+                className="flex items-center gap-3 text-right"
+                onClick={() => setUserMenuOpen((prev) => !prev)}
+                aria-expanded={userMenuOpen}
+                aria-haspopup="menu"
+              >
+                <span>
+                  <p className="text-sm font-medium text-slate-900">{label}</p>
+                  <p className="text-xs text-slate-500">Signed in</p>
+                </span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+                  {initials}
+                </span>
+              </button>
+              {userMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 w-40 rounded border border-slate-200 bg-white py-2 text-sm shadow"
+                >
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleSignOut}
+                    disabled={isLoggingOut}
+                  >
+                    {isLoggingOut ? 'Signing out…' : 'Sign out'}
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white sm:hidden">
               {initials}
             </div>
             <button
@@ -71,6 +115,14 @@ export function AppLayout({ children }: AppLayoutProps) {
                   {item.label}
                 </Link>
               ))}
+              <button
+                type="button"
+                className="text-left text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={handleSignOut}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? 'Signing out…' : 'Sign out'}
+              </button>
             </div>
           </div>
         )}
