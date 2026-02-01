@@ -13,6 +13,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.origin
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -26,6 +27,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.dao.id.EntityID
 import java.util.*
 import java.net.URI
 import java.net.URLEncoder
@@ -195,7 +197,7 @@ fun Application.module() {
                             id = row[Datasets.id].value.toString(),
                             name = row[Datasets.name],
                             description = row[Datasets.description],
-                            source = row[Datasets.source],
+                            source = row[Datasets.sourceText],
                             license = row[Datasets.license],
                             schema = parseJsonElement(row[Datasets.schemaJson]),
                             refreshSchedule = row[Datasets.refreshSchedule],
@@ -215,7 +217,7 @@ fun Application.module() {
                         it[Datasets.id] = id
                         it[Datasets.name] = req.name
                         it[Datasets.description] = req.description
-                        it[Datasets.source] = req.source
+                        it[Datasets.sourceText] = req.source
                         it[Datasets.license] = req.license
                         it[Datasets.schemaJson] = req.schema?.toString()
                         it[Datasets.refreshSchedule] = req.refreshSchedule
@@ -243,12 +245,12 @@ fun Application.module() {
                     return@get
                 }
                 val dataset = transaction(DatabaseManager.getDatabase()) {
-                    Datasets.select { Datasets.id eq id }.singleOrNull()?.let { row ->
+                    Datasets.select { Datasets.id eq EntityID(id, Datasets) }.singleOrNull()?.let { row ->
                         DatasetResponse(
                             id = row[Datasets.id].value.toString(),
                             name = row[Datasets.name],
                             description = row[Datasets.description],
-                            source = row[Datasets.source],
+                            source = row[Datasets.sourceText],
                             license = row[Datasets.license],
                             schema = parseJsonElement(row[Datasets.schemaJson]),
                             refreshSchedule = row[Datasets.refreshSchedule],
@@ -271,11 +273,12 @@ fun Application.module() {
                 val req = call.receive<DatasetRequest>()
                 val now = Instant.now()
                 val updated = transaction(DatabaseManager.getDatabase()) {
-                    val existing = Datasets.select { Datasets.id eq id }.singleOrNull() ?: return@transaction null
-                    Datasets.update({ Datasets.id eq id }) {
+                    val existing = Datasets.select { Datasets.id eq EntityID(id, Datasets) }.singleOrNull()
+                        ?: return@transaction null
+                    Datasets.update({ Datasets.id eq EntityID(id, Datasets) }) {
                         it[name] = req.name
                         it[description] = req.description
-                        it[source] = req.source
+                        it[Datasets.sourceText] = req.source
                         it[license] = req.license
                         it[schemaJson] = req.schema?.toString()
                         it[refreshSchedule] = req.refreshSchedule
@@ -306,8 +309,11 @@ fun Application.module() {
                     call.respond(HttpStatusCode.BadRequest, "Invalid dataset id")
                     return@delete
                 }
+                val datasetEntityId = EntityID(id, Datasets)
                 val deleted = transaction(DatabaseManager.getDatabase()) {
-                    Datasets.deleteWhere { Datasets.id eq id }
+                    Datasets.deleteWhere {
+                        SqlExpressionBuilder.run { Datasets.id eq datasetEntityId }
+                    }
                 }
                 if (deleted == 0) {
                     call.respond(HttpStatusCode.NotFound, "Dataset not found")
@@ -378,7 +384,7 @@ fun Application.module() {
                     return@get
                 }
                 val mapping = transaction(DatabaseManager.getDatabase()) {
-                    EntityMap.select { EntityMap.id eq id }.singleOrNull()?.let { row ->
+                    EntityMap.select { EntityMap.id eq EntityID(id, EntityMap) }.singleOrNull()?.let { row ->
                         EntityMappingResponse(
                             id = row[EntityMap.id].value.toString(),
                             datasetId = row[EntityMap.datasetId].toString(),
@@ -412,8 +418,9 @@ fun Application.module() {
                     return@put
                 }
                 val updated = transaction(DatabaseManager.getDatabase()) {
-                    val existing = EntityMap.select { EntityMap.id eq id }.singleOrNull() ?: return@transaction null
-                    EntityMap.update({ EntityMap.id eq id }) {
+                    val existing = EntityMap.select { EntityMap.id eq EntityID(id, EntityMap) }.singleOrNull()
+                        ?: return@transaction null
+                    EntityMap.update({ EntityMap.id eq EntityID(id, EntityMap) }) {
                         it[EntityMap.datasetId] = datasetId
                         it[EntityMap.entityId] = entityId
                         it[EntityMap.sourceRecordId] = req.sourceRecordId
@@ -445,8 +452,11 @@ fun Application.module() {
                     call.respond(HttpStatusCode.BadRequest, "Invalid mapping id")
                     return@delete
                 }
+                val mappingEntityId = EntityID(id, EntityMap)
                 val deleted = transaction(DatabaseManager.getDatabase()) {
-                    EntityMap.deleteWhere { EntityMap.id eq id }
+                    EntityMap.deleteWhere {
+                        SqlExpressionBuilder.run { EntityMap.id eq mappingEntityId }
+                    }
                 }
                 if (deleted == 0) {
                     call.respond(HttpStatusCode.NotFound, "Mapping not found")
@@ -509,7 +519,9 @@ fun Application.module() {
                     return@get
                 }
                 val feature = transaction(DatabaseManager.getDatabase()) {
-                    FeatureDefinitions.select { FeatureDefinitions.id eq id }.singleOrNull()?.let { row ->
+                    FeatureDefinitions.select { FeatureDefinitions.id eq EntityID(id, FeatureDefinitions) }
+                        .singleOrNull()
+                        ?.let { row ->
                         FeatureDefinitionResponse(
                             id = row[FeatureDefinitions.id].value.toString(),
                             name = row[FeatureDefinitions.name],
@@ -535,8 +547,10 @@ fun Application.module() {
                 }
                 val req = call.receive<FeatureDefinitionRequest>()
                 val updated = transaction(DatabaseManager.getDatabase()) {
-                    val existing = FeatureDefinitions.select { FeatureDefinitions.id eq id }.singleOrNull() ?: return@transaction null
-                    FeatureDefinitions.update({ FeatureDefinitions.id eq id }) {
+                    val existing = FeatureDefinitions.select { FeatureDefinitions.id eq EntityID(id, FeatureDefinitions) }
+                        .singleOrNull()
+                        ?: return@transaction null
+                    FeatureDefinitions.update({ FeatureDefinitions.id eq EntityID(id, FeatureDefinitions) }) {
                         it[name] = req.name
                         it[description] = req.description
                         it[valueType] = req.valueType
@@ -568,8 +582,11 @@ fun Application.module() {
                     call.respond(HttpStatusCode.BadRequest, "Invalid feature definition id")
                     return@delete
                 }
+                val definitionEntityId = EntityID(id, FeatureDefinitions)
                 val deleted = transaction(DatabaseManager.getDatabase()) {
-                    FeatureDefinitions.deleteWhere { FeatureDefinitions.id eq id }
+                    FeatureDefinitions.deleteWhere {
+                        SqlExpressionBuilder.run { FeatureDefinitions.id eq definitionEntityId }
+                    }
                 }
                 if (deleted == 0) {
                     call.respond(HttpStatusCode.NotFound, "Feature definition not found")
@@ -610,7 +627,7 @@ fun Application.module() {
                     return@get
                 }
                 val job = transaction(DatabaseManager.getDatabase()) {
-                    AnalysisJobs.select { AnalysisJobs.id eq id }.singleOrNull()?.let { row ->
+                    AnalysisJobs.select { AnalysisJobs.id eq EntityID(id, AnalysisJobs) }.singleOrNull()?.let { row ->
                         AnalysisJobResponse(
                             id = row[AnalysisJobs.id].value.toString(),
                             name = row[AnalysisJobs.name],
@@ -663,7 +680,7 @@ fun Application.module() {
             val user = transaction(DatabaseManager.getDatabase()) {
                 val row = Sessions
                     .innerJoin(Users, { Sessions.userId }, { Users.id })
-                    .select { (Sessions.id eq sessionId) and (Sessions.expiresAt greater now) }
+                        .select { (Sessions.id eq EntityID(sessionId, Sessions)) and (Sessions.expiresAt greater now) }
                     .singleOrNull()
                 row?.let {
                     UserResponse(
@@ -674,8 +691,11 @@ fun Application.module() {
                 }
             }
             if (user == null) {
+                val sessionEntityId = EntityID(sessionId, Sessions)
                 transaction(DatabaseManager.getDatabase()) {
-                    Sessions.deleteWhere { Sessions.id eq sessionId }
+                    Sessions.deleteWhere {
+                        SqlExpressionBuilder.run { Sessions.id eq sessionEntityId }
+                    }
                 }
                 call.respond(LoginStateResponse(authenticated = false))
                 return@get
@@ -737,7 +757,7 @@ fun Application.module() {
                 }.singleOrNull()
                 if (existing != null) {
                     val userId = existing[OauthIdentities.userId]
-                    OauthIdentities.update({ OauthIdentities.id eq existing[OauthIdentities.id].value }) {
+                    OauthIdentities.update({ OauthIdentities.id eq existing[OauthIdentities.id] }) {
                         it[OauthIdentities.email] = email
                         it[OauthIdentities.accessToken] = accessToken
                         it[OauthIdentities.refreshToken] = refreshToken
@@ -780,10 +800,13 @@ fun Application.module() {
                     it[Sessions.userAgent] = call.request.userAgent()
                 }
             }
+            val maxAgeSeconds = (settings.authSessionTtlHours * 3600)
+                .coerceAtMost(Int.MAX_VALUE.toLong())
+                .toInt()
             val sameSite = when (settings.authCookieSameSite.lowercase()) {
-                "strict" -> SameSite.Strict
-                "none" -> SameSite.None
-                else -> SameSite.Lax
+                "strict" -> "Strict"
+                "none" -> "None"
+                else -> "Lax"
             }
             call.response.cookies.append(
                 Cookie(
@@ -791,10 +814,10 @@ fun Application.module() {
                     value = sessionId.toString(),
                     httpOnly = true,
                     secure = settings.authCookieSecure,
-                    maxAge = settings.authSessionTtlHours * 3600,
+                    maxAge = maxAgeSeconds,
                     path = "/",
                     domain = settings.authCookieDomain,
-                    sameSite = sameSite
+                    extensions = mapOf("SameSite" to sameSite)
                 )
             )
             call.respondRedirect(returnTo)
@@ -803,8 +826,11 @@ fun Application.module() {
         post("/user/logout") {
             val sessionId = parseUuid(call.request.cookies[settings.authCookieName])
             if (sessionId != null) {
+                val sessionEntityId = EntityID(sessionId, Sessions)
                 transaction(DatabaseManager.getDatabase()) {
-                    Sessions.deleteWhere { Sessions.id eq sessionId }
+                    Sessions.deleteWhere {
+                        SqlExpressionBuilder.run { Sessions.id eq sessionEntityId }
+                    }
                 }
             }
             call.response.cookies.append(

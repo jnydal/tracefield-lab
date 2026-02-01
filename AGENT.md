@@ -45,7 +45,7 @@ curl -X POST http://localhost:8000/features/extract \
   -d '{
     "datasetId": "uuid-here",
     "module": "embeddings",
-    "inputs": {"textColumn": "bio_text"}
+    "inputs": {"textColumn": "text"}
   }'
 ```
 

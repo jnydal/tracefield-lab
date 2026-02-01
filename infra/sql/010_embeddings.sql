@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 -- 384
 CREATE TABLE IF NOT EXISTS embeddings_384 (
-  person_id UUID NOT NULL REFERENCES person_raw(id) ON DELETE CASCADE,
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
   model_name TEXT NOT NULL,
   dim INT NOT NULL CHECK (dim = 384),
   vector vector(384) NOT NULL,
@@ -11,12 +11,12 @@ CREATE TABLE IF NOT EXISTS embeddings_384 (
   source TEXT,
   updated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
-  PRIMARY KEY (person_id, model_name)
+  PRIMARY KEY (entity_id, model_name)
 );
 
 -- 768
 CREATE TABLE IF NOT EXISTS embeddings_768 (
-  person_id UUID NOT NULL REFERENCES person_raw(id) ON DELETE CASCADE,
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
   model_name TEXT NOT NULL,
   dim INT NOT NULL CHECK (dim = 768),
   vector vector(768) NOT NULL,
@@ -25,12 +25,12 @@ CREATE TABLE IF NOT EXISTS embeddings_768 (
   source TEXT,
   updated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
-  PRIMARY KEY (person_id, model_name)
+  PRIMARY KEY (entity_id, model_name)
 );
 
 -- 1024
 CREATE TABLE IF NOT EXISTS embeddings_1024 (
-  person_id UUID NOT NULL REFERENCES person_raw(id) ON DELETE CASCADE,
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
   model_name TEXT NOT NULL,
   dim INT NOT NULL CHECK (dim = 1024),
   vector vector(1024) NOT NULL,
@@ -39,12 +39,12 @@ CREATE TABLE IF NOT EXISTS embeddings_1024 (
   source TEXT,
   updated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
-  PRIMARY KEY (person_id, model_name)
+  PRIMARY KEY (entity_id, model_name)
 );
 
 -- 1536 (optional)
 CREATE TABLE IF NOT EXISTS embeddings_1536 (
-  person_id UUID NOT NULL REFERENCES person_raw(id) ON DELETE CASCADE,
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
   model_name TEXT NOT NULL,
   dim INT NOT NULL CHECK (dim = 1536),
   vector vector(1536) NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS embeddings_1536 (
   source TEXT,
   updated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
-  PRIMARY KEY (person_id, model_name)
+  PRIMARY KEY (entity_id, model_name)
 );
 
 -- Convenience view

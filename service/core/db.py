@@ -62,13 +62,13 @@ def claim_rows_for_update_skip_locked(cur, sql: str, limit: int, params: tuple =
     Helper to claim work rows safely in concurrent workers.
     Example SQL:
       WITH c AS (
-        SELECT person_id
-        FROM bio_text
-        WHERE text IS NULL AND qid IS NOT NULL
+        SELECT entity_id
+        FROM staging_entities
+        WHERE text IS NULL AND source_id IS NOT NULL
         FOR UPDATE SKIP LOCKED
         LIMIT %(limit)s
       )
-      SELECT person_id FROM c;
+      SELECT entity_id FROM c;
     """
     cur.execute(sql, {**{ "limit": limit }, **{}})
     return cur.fetchall()

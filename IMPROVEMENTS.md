@@ -16,7 +16,7 @@ Docker compose only defines api/db/kafka/minio/grafana; no worker services:
 I also searched for "/ingest" in the Kotlin API source and found no matches.
 High — Embeddings storage defined in SQL, but no matching table mappings in Kotlin schema
 SQL defines embeddings tables with vector dimensions:
-3:57:infra/sql/002_embeddings.sqlCREATE TABLE IF NOT EXISTS embeddings_384 (  person_id UUID NOT NULL REFERENCES person_raw(id) ON DELETE CASCADE,  ...  vector vector(384) NOT NULL,
+3:57:infra/sql/010_embeddings.sqlCREATE TABLE IF NOT EXISTS embeddings_384 (  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,  ...  vector vector(384) NOT NULL,
 Tables.kt defines many core tables but no embeddings tables (only vector column type helper), so any ORM access to embeddings is missing:
 49:179:service/core/src/main/kotlin/com/astroreason/core/schema/Tables.ktclass VectorColumnType(private val dim: Int) : ColumnType() { ... }...object Datasets : UUIDTable("datasets", ...)object DatasetFiles : UUIDTable("dataset_files", ...)object Entities : UUIDTable("entities", ...)object Features : UUIDTable("features", ...)object AnalysisJobs : UUIDTable("analysis_jobs", ...)object AnalysisResults : UUIDTable("analysis_results", ...)
 Medium — Docs describe a full pipeline, but the repo currently behaves like a CRUD system

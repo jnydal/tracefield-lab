@@ -97,7 +97,7 @@ object JobStatusTable : UUIDTable("job_status", columnName = "id") {
 object Datasets : UUIDTable("datasets", columnName = "id") {
     val name = text("name")
     val description = text("description").nullable()
-    val source = text("source").nullable()
+    val sourceText = text("source").nullable()
     val license = text("license").nullable()
     val schemaJson = jsonb("schema_json").nullable()
     val refreshSchedule = text("refresh_schedule").nullable()
@@ -145,7 +145,9 @@ object FeatureDefinitions : UUIDTable("feature_definitions", columnName = "id") 
 
 object Features : UUIDTable("features", columnName = "id") {
     val entityId = uuid("entity_id").references(Entities.id, onDelete = ReferenceOption.CASCADE)
-    val datasetId = uuid("dataset_id").nullable().references(Datasets.id, onDelete = ReferenceOption.SET_NULL)
+    val datasetId = uuid("dataset_id")
+        .references(Datasets.id, onDelete = ReferenceOption.SET_NULL)
+        .nullable()
     val featureDefinitionId = uuid("feature_definition_id")
         .references(FeatureDefinitions.id, onDelete = ReferenceOption.CASCADE)
     val valueJson = jsonb("value_json").nullable()
