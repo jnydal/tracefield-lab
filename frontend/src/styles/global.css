@@ -30,7 +30,7 @@
   }
 
   .login-sso-button {
-    @apply w-full border border-gray-200 bg-white text-gray-900 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200;
+    @apply w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-900 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200;
   }
 
   .login-divider {
@@ -45,6 +45,14 @@
 
   .login-error {
     @apply text-sm;
+  }
+
+  .login-field label {
+    @apply bg-white px-2 text-gray-600;
+  }
+
+  .login-field input {
+    @apply bg-transparent;
   }
 
   .login-links {

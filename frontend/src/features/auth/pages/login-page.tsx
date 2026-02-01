@@ -118,13 +118,13 @@ export function LoginPage() {
             <h1 className="login-title">Logg inn</h1>
 
             <div className="login-sso">
-              <Button
+              <button
                 type="button"
                 className="login-sso-button"
                 onClick={handleGoogleLogin}
               >
                 Fortsett med Google
-              </Button>
+              </button>
               <div className="login-divider" role="separator" aria-label="Eller">
                 <span>eller</span>
               </div>
@@ -151,7 +151,6 @@ export function LoginPage() {
                   label="E-post eller brukernavn"
                   type="text"
                   autoComplete="username"
-                  className="ui-input"
                   {...register('identifier')}
                   color={errors.identifier ? 'error' : undefined}
                   aria-describedby={errors.identifier ? 'identifier-error' : undefined}
@@ -172,7 +171,6 @@ export function LoginPage() {
                   label="Passord"
                   type="password"
                   autoComplete="current-password"
-                  className="ui-input"
                   {...register('password')}
                   color={errors.password ? 'error' : undefined}
                   aria-describedby={errors.password ? 'password-error' : undefined}
