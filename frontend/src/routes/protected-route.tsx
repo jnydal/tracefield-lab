@@ -12,7 +12,12 @@ interface ProtectedRouteProps {
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const isLoading = useAppSelector((state) => state.auth.isLoading);
   const location = useLocation();
+
+  if (isLoading) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     // Redirect to login with returnTo parameter

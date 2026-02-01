@@ -55,8 +55,8 @@ private fun parseJsonElement(value: String?): JsonElement? {
 }
 
 private fun sanitizeReturnTo(value: String?): String {
-    if (value.isNullOrBlank()) return "/"
-    return if (value.startsWith("/")) value else "/"
+    if (value.isNullOrBlank()) return "/datasets"
+    return if (value.startsWith("/")) value else "/datasets"
 }
 
 private fun hmacSha256(secret: String, data: String): String {
@@ -155,7 +155,19 @@ fun Application.module() {
         allowMethod(HttpMethod.Put)
         allowMethod(HttpMethod.Delete)
         allowHeader(HttpHeaders.ContentType)
-        anyHost()
+        allowCredentials = true
+
+        val frontendOrigin = runCatching { URI(settings.frontendBaseUrl) }.getOrNull()
+        val frontendHost = frontendOrigin?.host
+        val frontendScheme = frontendOrigin?.scheme ?: "http"
+        if (!frontendHost.isNullOrBlank()) {
+            val hostWithPort = if (frontendOrigin?.port == -1 || frontendOrigin?.port == null) {
+                frontendHost
+            } else {
+                "$frontendHost:${frontendOrigin.port}"
+            }
+            allowHost(hostWithPort, schemes = listOf(frontendScheme))
+        }
     }
     
     routing {
@@ -820,7 +832,8 @@ fun Application.module() {
                     extensions = mapOf("SameSite" to sameSite)
                 )
             )
-            call.respondRedirect(returnTo)
+            val frontendBaseUrl = settings.frontendBaseUrl.trimEnd('/')
+            call.respondRedirect("$frontendBaseUrl$returnTo")
         }
 
         post("/user/logout") {

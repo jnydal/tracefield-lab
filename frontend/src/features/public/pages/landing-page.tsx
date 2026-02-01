@@ -10,11 +10,11 @@ export function LandingPage() {
         <div className="landing-hero">
           <p className="landing-hero-kicker">Tracefield Lab</p>
           <h1 className="landing-hero-title">
-            Bygg, analyser og del forskningspipelines med sikker sporbarhet.
+            Build, analyze, and share research pipelines with secure traceability.
           </h1>
           <p className="landing-hero-copy">
-            Samle data, kartlegg entiteter og kjør analysejobber i ett samlet miljø
-            for forskningsarbeid som trenger både tempo og kontroll.
+            Collect data, map entities, and run analysis jobs in a unified workspace
+            for research teams that need both speed and control.
           </p>
         </div>
 
@@ -45,10 +45,9 @@ export function LandingPage() {
 
         <div className="landing-cta-card">
           <div>
-            <h2 className="landing-cta-title">Logg inn og start et nytt forskningsløp</h2>
+            <h2 className="landing-cta-title">Sign in to start a new research run</h2>
             <p className="landing-cta-copy">
-              Fortsett til innlogging for å administrere datasett, entiteter og
-              analysejobber.
+              Continue to sign in to manage datasets, entities, and analysis jobs.
             </p>
           </div>
           <div className="landing-cta-actions">
@@ -57,7 +56,7 @@ export function LandingPage() {
               className="landing-cta-button"
               onClick={() => navigate('/login')}
             >
-              Gå til innlogging
+              Go to sign in
             </Button>
           </div>
         </div>

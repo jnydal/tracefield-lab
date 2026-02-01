@@ -4,14 +4,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Alert, Button, FloatingLabel, Spinner } from 'flowbite-react';
 import { useLoginMutation } from '../../../services/api/auth-api';
-import { useAppDispatch } from '../../../app/hooks';
-import { setUser } from '../redux/auth-slice';
+import { useAppDispatch, useAppSelector } from '../../../app/hooks';
+import { selectIsAuthenticated, setUser } from '../redux/auth-slice';
 import { loginSchema, type LoginFormData } from '../types/login-schema';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dispatch = useAppDispatch();
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const isAuthLoading = useAppSelector((state) => state.auth.isLoading);
   const [login, { isLoading }] = useLoginMutation();
   const errorAlertRef = useRef<HTMLDivElement>(null);
   const apiBaseUrl =
@@ -42,6 +44,14 @@ export function LoginPage() {
       setFocus('password');
     }
   }, [errors, setFocus]);
+
+  useEffect(() => {
+    if (isAuthLoading) return;
+    if (isAuthenticated) {
+      const returnTo = searchParams.get('returnTo') || '/datasets';
+      navigate(returnTo, { replace: true });
+    }
+  }, [isAuthLoading, isAuthenticated, navigate, searchParams]);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
@@ -94,7 +104,7 @@ export function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    const returnTo = searchParams.get('returnTo') || '/';
+    const returnTo = searchParams.get('returnTo') || '/datasets';
     const authUrl = new URL('/auth/google/start', apiBaseUrl);
     authUrl.searchParams.set('returnTo', returnTo);
     window.location.assign(authUrl.toString());

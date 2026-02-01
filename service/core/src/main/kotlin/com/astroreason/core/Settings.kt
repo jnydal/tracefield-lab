@@ -40,7 +40,8 @@ data class Settings(
     val authCookieName: String = System.getenv("AUTH_COOKIE_NAME") ?: "tracefield_session",
     val authCookieSecure: Boolean = System.getenv("AUTH_COOKIE_SECURE")?.toBoolean() ?: false,
     val authCookieDomain: String? = System.getenv("AUTH_COOKIE_DOMAIN"),
-    val authCookieSameSite: String = System.getenv("AUTH_COOKIE_SAMESITE") ?: "lax"
+    val authCookieSameSite: String = System.getenv("AUTH_COOKIE_SAMESITE") ?: "lax",
+    val frontendBaseUrl: String = System.getenv("FRONTEND_BASE_URL") ?: "http://localhost:5173"
 )
 
 fun loadSettings(): Settings = Settings()
