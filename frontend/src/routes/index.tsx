@@ -10,11 +10,10 @@ import { AppLayout } from '../layouts/app-layout';
 export { ProtectedRoute };
 
 // Lazy-load heavier routes to keep initial bundle lean
-// For now, Home is simple, but this pattern is ready for future routes
 const HomePage = lazy(() =>
-  Promise.resolve({
-    default: () => <div>Home (placeholder)</div>,
-  })
+  import('../features/public/pages/landing-page').then((module) => ({
+    default: module.LandingPage,
+  }))
 );
 
 const DatasetsPage = lazy(() =>
