@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
     // Use polling to make file watching reliable on Windows/network drives.
     watch: {
       usePolling: true,
