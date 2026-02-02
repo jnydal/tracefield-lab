@@ -116,8 +116,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
-    ports:
-      - "3000:3000"
+      GF_FEATURE_TOGGLES_ENABLE: "publicDashboards"
     volumes:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
@@ -130,6 +129,17 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  # Grafana public proxy (rate limited)
+  grafana-proxy:
+    image: nginx:alpine
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      grafana:
+        condition: service_healthy
 
   # React frontend (Vite dev server)
   frontend:
