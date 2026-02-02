@@ -28,28 +28,6 @@ curl http://localhost:8000/healthz
 curl http://localhost:8001/api/tags
 ```
 
-### Tailscale access (Grafana + Frontend)
-
-Expose the services over your tailnet by binding them to all interfaces and
-using your machine's Tailscale IP (or MagicDNS name).
-
-```bash
-# Start everything (includes frontend + grafana)
-docker compose up -d --build
-```
-
-Frontend and Grafana bind to `0.0.0.0`, so they are reachable from your tailnet:
-
-- React frontend: `http://<tailscale-ip>:5173`
-- Grafana: `http://<tailscale-ip>:3000` (admin/admin by default)
-
-If you want the frontend to call the API over Tailscale from another device,
-start the stack with:
-
-```bash
-VITE_API_BASE_URL="http://<tailscale-ip>:8000" docker compose up -d --build
-```
-
 ## Data Pipeline Workflow (Target)
 
 ### Step 1: Register Dataset
