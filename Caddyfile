@@ -1,5 +1,6 @@
 tracefieldlab.thor-nydal.no {
-    reverse_proxy host.docker.internal:80
-
     tls /certs/origin.crt /certs/origin.key
+
+    reverse_proxy /api/* api:8000
+    reverse_proxy frontend:5173
 }
