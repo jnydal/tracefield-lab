@@ -1,6 +1,9 @@
 tracefieldlab.thor-nydal.no {
     tls /certs/origin.crt /certs/origin.key
 
-    reverse_proxy /api/* api:8000
+    handle_path /api/* {
+        reverse_proxy api:8000
+    }
+
     reverse_proxy frontend:5173
 }
