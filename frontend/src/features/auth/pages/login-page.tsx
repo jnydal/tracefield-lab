@@ -16,8 +16,23 @@ export function LoginPage() {
   const isAuthLoading = useAppSelector((state) => state.auth.isLoading);
   const [login, { isLoading }] = useLoginMutation();
   const errorAlertRef = useRef<HTMLDivElement>(null);
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  const apiBaseUrl = (() => {
+    const rawBase = import.meta.env.VITE_API_BASE_URL;
+    if (!rawBase) {
+      return 'http://localhost:8000';
+    }
+
+    // Allow relative base URLs like "/api" or "api"
+    if (rawBase.startsWith('/')) {
+      return new URL(rawBase, window.location.origin).toString();
+    }
+
+    if (!rawBase.startsWith('http://') && !rawBase.startsWith('https://')) {
+      return new URL(`/${rawBase}`, window.location.origin).toString();
+    }
+
+    return rawBase;
+  })();
 
   const {
     register,
@@ -105,7 +120,8 @@ export function LoginPage() {
 
   const handleGoogleLogin = () => {
     const returnTo = searchParams.get('returnTo') || '/datasets';
-    const authUrl = new URL('/auth/google/start', apiBaseUrl);
+    const baseWithSlash = apiBaseUrl.endsWith('/') ? apiBaseUrl : `${apiBaseUrl}/`;
+    const authUrl = new URL('auth/google/start', baseWithSlash);
     authUrl.searchParams.set('returnTo', returnTo);
     window.location.assign(authUrl.toString());
   };
