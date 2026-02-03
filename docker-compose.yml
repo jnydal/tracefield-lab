@@ -3,6 +3,17 @@ x-env: &default-env
   TZ: "Europe/Oslo"
 
 services:
+  # Caddy
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./certs:/certs
   # Nginx fontend
   edge:
     image: nginx:alpine
