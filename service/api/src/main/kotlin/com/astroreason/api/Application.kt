@@ -13,6 +13,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.origin
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -147,6 +148,9 @@ fun Application.module() {
             ignoreUnknownKeys = true
         })
     }
+
+    // Trust proxy headers so HTTPS is detected behind TLS termination
+    install(XForwardedHeaders)
     
     install(CORS) {
         allowMethod(HttpMethod.Options)
