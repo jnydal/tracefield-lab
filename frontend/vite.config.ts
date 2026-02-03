@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    allowedHosts: ['tracefieldlab.thor-nydal.no'],
     strictPort: true,
     // Use polling to make file watching reliable on Windows/network drives.
     watch: {
