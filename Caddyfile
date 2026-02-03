@@ -5,5 +5,9 @@ tracefieldlab.thor-nydal.no {
         reverse_proxy api:8000
     }
 
+    handle /auth/google/* {
+        reverse_proxy api:8000
+    }
+
     reverse_proxy frontend:5173
 }
