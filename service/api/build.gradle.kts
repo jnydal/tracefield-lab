@@ -17,6 +17,7 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation:2.3.7")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
     implementation("io.ktor:ktor-server-cors:2.3.7")
+    implementation("io.ktor:ktor-server-forwarded-header:2.3.7")
     
     // AWS SDK
     implementation("aws.sdk.kotlin:s3:1.0.21")
