@@ -28,6 +28,41 @@ curl http://localhost:8000/healthz
 curl http://localhost:8001/api/tags
 ```
 
+## Deployment (Polling Server)
+
+### Build Artifacts (GitHub Actions)
+
+The GitHub Actions workflow publishes a container image to GHCR:
+
+- `ghcr.io/<owner>/<repo>/api:main` (rolling)
+- `ghcr.io/<owner>/<repo>/api:<commit-sha>`
+
+It also uploads a `deploy/manifest.json` artifact for auditing.
+
+### Server Setup (WSL)
+
+```bash
+# 1) Configure deploy env
+cp deploy/deploy.env.example deploy/deploy.env
+
+# 2) Set your image in deploy/deploy.env
+# TRACEFIELD_API_IMAGE=ghcr.io/<owner>/<repo>/api:main
+
+# 3) Log in to GHCR (use a PAT with read:packages)
+echo "$GHCR_TOKEN" | docker login ghcr.io -u "<user>" --password-stdin
+
+# 4) Run the polling deploy
+bash deploy/poll-update.sh
+```
+
+### Schedule Polling
+
+```bash
+# Example: check every 5 minutes
+crontab -e
+*/5 * * * * /usr/bin/env bash /path/to/repo/deploy/poll-update.sh >> /var/log/tracefield-deploy.log 2>&1
+```
+
 ## Data Pipeline Workflow (Target)
 
 ### Step 1: Register Dataset
