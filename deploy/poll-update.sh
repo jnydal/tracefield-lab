@@ -42,8 +42,20 @@ fi
 
 if [[ "$old_digest" != "$new_digest" ]]; then
   echo "New image detected. Redeploying..."
-else
-  echo "No new image. Ensuring services are running..."
+  docker compose "${compose_args[@]}" up -d --no-build
+  exit 0
 fi
 
-docker compose "${compose_args[@]}" up -d --no-build
+container_id="$(docker compose "${compose_args[@]}" ps -q api 2>/dev/null || true)"
+if [[ -n "$container_id" ]]; then
+  is_running="$(docker inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null || echo "false")"
+else
+  is_running="false"
+fi
+
+if [[ "$is_running" == "true" ]]; then
+  echo "No new image and api is already running. Nothing to do."
+else
+  echo "No new image. Starting services..."
+  docker compose "${compose_args[@]}" up -d --no-build
+fi
