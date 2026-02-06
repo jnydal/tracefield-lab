@@ -1,0 +1,1 @@
+"""Worker embeddings application package."""
