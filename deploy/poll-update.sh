@@ -24,6 +24,32 @@ for file in "${compose_files[@]}"; do
   compose_args+=(-f "$file")
 done
 
+wait_for_docker() {
+  local timeout_seconds="${1:-60}"
+  local interval_seconds=2
+  local elapsed=0
+
+  echo "Waiting for Docker to be ready..."
+
+  # Docker is "ready" when the daemon responds
+  until docker info >/dev/null 2>&1; do
+    sleep "$interval_seconds"
+    elapsed=$((elapsed + interval_seconds))
+
+    if (( elapsed >= timeout_seconds )); then
+      echo "Docker did not become ready within ${timeout_seconds}s. Aborting." >&2
+      exit 1
+    fi
+
+    echo "Still waiting for Docker... (${elapsed}s)"
+  done
+
+  echo "Docker is ready 🚀"
+}
+
+# Ensure Docker is up before we do anything docker-related
+wait_for_docker "${DOCKER_STARTUP_TIMEOUT:-60}"
+
 get_digest() {
   docker image inspect --format='{{index .RepoDigests 0}}' "$TRACEFIELD_API_IMAGE" 2>/dev/null || true
 }
