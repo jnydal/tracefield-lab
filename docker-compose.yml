@@ -4,7 +4,7 @@ x-env: &default-env
 
 services:
   watchtower:
-    image: containrrr/watchtower
+    image: containrrr/watchtower:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --cleanup --interval 20000
@@ -13,18 +13,17 @@ services:
   caddy:
     image: caddy:latest
     container_name: caddy
-    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./certs:/certs:ro
-    depends_on:
-      frontend:
-        condition: service_started
-      api:
-        condition: service_healthy
+    #depends_on:
+    #  frontend:
+    #    condition: service_started
+    #  api:
+    #    condition: service_healthy
     restart: unless-stopped
   # API (depends on db/kafka/minio + optional bootstrap)
   api:
@@ -50,10 +49,14 @@ services:
       minio:
         condition: service_started
     healthcheck:
-      test: [ "CMD", "curl", "-fsS", "http://localhost:8000/healthz" ]
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://127.0.0.1:8000/healthz', r=>process.exit(r.statusCode===200?0:1)).on('error', ()=>process.exit(1))\""
+        ]
       interval: 10s
-      timeout: 2s
-      retries: 10
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
   # Postgres with pgvector extension baked in
   db:
@@ -177,9 +180,6 @@ services:
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
-    depends_on:
-      api:
-        condition: service_healthy
     restart: unless-stopped
   # One-shot bootstrap job (buckets, seeds, migrations)
   bootstrap:
