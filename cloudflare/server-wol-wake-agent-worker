@@ -8,13 +8,6 @@ export default {
     }
 
     // ---- IMPORTANT: bypass OAuth/SSO callback routes ----
-    // Update these patterns to match YOUR actual callback endpoints.
-    // Common examples:
-    //  - /auth/callback
-    //  - /oauth/callback
-    //  - /signin-google (ASP.NET)
-    //  - /api/auth/callback/google (NextAuth)
-    //  - /oauth2/callback
     const bypassPaths = [
       "/auth/callback",
       "/oauth/callback",
@@ -26,8 +19,6 @@ export default {
 
     const shouldBypass =
       bypassPaths.some((p) => url.pathname === p || url.pathname.startsWith(p)) ||
-      // Also bypass if Google sends params that indicate an OAuth callback
-      // (helps if your callback path is not in the list)
       url.searchParams.has("code") ||
       url.searchParams.has("state");
 
@@ -43,15 +34,12 @@ export default {
       return fetch(request);
     }
 
-    // Try to fetch the actual origin via the normal request path,
-    // but mark it so we don't re-run the wake logic recursively.
+    // Prevent recursion
+    const alreadyTried = request.headers.get("x-wake-tried") === "1";
     const req2 = new Request(request, { headers: new Headers(request.headers) });
     req2.headers.set("x-wake-tried", "1");
 
-    const alreadyTried = request.headers.get("x-wake-tried") === "1";
-
     if (alreadyTried) {
-      // On the retry pass, just proxy through (no more wake logic)
       return fetch(request);
     }
 
@@ -61,15 +49,35 @@ export default {
       if (resp.ok) return resp;
     } catch (_) {}
 
-    // Wake via tunnel (NOT port forwarded)
-    console.log("WAKE: calling wake endpoint");
-    const r = await fetch(
-      `https://wake.thor-nydal.no/wake?key=${env.WAKE_KEY}`,
-      { cf: { cacheTtl: 0 } }
-    );
-    console.log("WAKE: wake endpoint status", r.status);
+    // Wake via direct port-forwarded ESP32 endpoint
+    const WAKE_URL = "http://178.232.69.55:57986/wake";
+    const WAKE_KEY = env.WAKE_KEY || "9corrigatE!"; // keep in env if possible
+    const wakeUrlWithKey = `${WAKE_URL}?key=${encodeURIComponent(WAKE_KEY)}`;
 
-    // Show friendly "waking up" page + auto refresh
+    console.log("WAKE: calling ESP32", WAKE_URL);
+
+    // Add a timeout so the Worker doesn't hang
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+    try {
+      const r = await fetch(wakeUrlWithKey, {
+        method: "GET",
+        cf: { cacheTtl: 0 },
+        signal: controller.signal,
+        headers: {
+          // Optional: helps some routers/NATs/logs
+          "user-agent": "cf-worker-wake/1.0",
+        },
+      });
+      console.log("WAKE: ESP32 status", r.status);
+    } catch (e) {
+      console.log("WAKE: ESP32 call failed", String(e));
+    } finally {
+      clearTimeout(t);
+    }
+
+    // Friendly "waking up" page + auto refresh
     return new Response(
       `<!doctype html>
 <html><head>
