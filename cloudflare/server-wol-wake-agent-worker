@@ -1,0 +1,87 @@
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    // Only do this for your site route (safety)
+    if (url.hostname !== "tracefieldlab.thor-nydal.no") {
+      return fetch(request);
+    }
+
+    // ---- IMPORTANT: bypass OAuth/SSO callback routes ----
+    // Update these patterns to match YOUR actual callback endpoints.
+    // Common examples:
+    //  - /auth/callback
+    //  - /oauth/callback
+    //  - /signin-google (ASP.NET)
+    //  - /api/auth/callback/google (NextAuth)
+    //  - /oauth2/callback
+    const bypassPaths = [
+      "/auth/callback",
+      "/oauth/callback",
+      "/oauth2/callback",
+      "/signin-google",
+      "/api/auth",
+      "/api/auth/callback",
+    ];
+
+    const shouldBypass =
+      bypassPaths.some((p) => url.pathname === p || url.pathname.startsWith(p)) ||
+      // Also bypass if Google sends params that indicate an OAuth callback
+      // (helps if your callback path is not in the list)
+      url.searchParams.has("code") ||
+      url.searchParams.has("state");
+
+    if (shouldBypass) {
+      return fetch(request);
+    }
+
+    // Avoid waking on every asset request
+    const accept = request.headers.get("accept") || "";
+    const isPage = accept.includes("text/html") || url.pathname === "/";
+
+    if (!isPage) {
+      return fetch(request);
+    }
+
+    // Try to fetch the actual origin via the normal request path,
+    // but mark it so we don't re-run the wake logic recursively.
+    const req2 = new Request(request, { headers: new Headers(request.headers) });
+    req2.headers.set("x-wake-tried", "1");
+
+    const alreadyTried = request.headers.get("x-wake-tried") === "1";
+
+    if (alreadyTried) {
+      // On the retry pass, just proxy through (no more wake logic)
+      return fetch(request);
+    }
+
+    // Try origin once
+    try {
+      const resp = await fetch(req2, { cf: { cacheTtl: 0 } });
+      if (resp.ok) return resp;
+    } catch (_) {}
+
+    // Wake via tunnel (NOT port forwarded)
+    console.log("WAKE: calling wake endpoint");
+    const r = await fetch(
+      `https://wake.thor-nydal.no/wake?key=${env.WAKE_KEY}`,
+      { cf: { cacheTtl: 0 } }
+    );
+    console.log("WAKE: wake endpoint status", r.status);
+
+    // Show friendly "waking up" page + auto refresh
+    return new Response(
+      `<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="15">
+<title>Waking server...</title>
+</head>
+<body style="font-family:system-ui;padding:2rem">
+<h2>Waking the server…</h2>
+<p>Please wait ~15–60 seconds. This page will refresh automatically.</p>
+</body></html>`,
+      { headers: { "content-type": "text/html; charset=utf-8" }, status: 503 }
+    );
+  },
+};
