@@ -3,23 +3,28 @@ x-env: &default-env
   TZ: "Europe/Oslo"
 
 services:
+  watchtower:
+    image: containrrr/watchtower:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup --interval 20000
+    restart: unless-stopped
   # Caddy (public edge)
   caddy:
     image: caddy:latest
     container_name: caddy
-    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./certs:/certs:ro
-    depends_on:
-      frontend:
-        condition: service_started
-      api:
-        condition: service_healthy
-
+    #depends_on:
+    #  frontend:
+    #    condition: service_started
+    #  api:
+    #    condition: service_healthy
+    restart: unless-stopped
   # API (depends on db/kafka/minio + optional bootstrap)
   api:
     build:
@@ -44,11 +49,15 @@ services:
       minio:
         condition: service_started
     healthcheck:
-      test: [ "CMD", "curl", "-fsS", "http://localhost:8000/healthz" ]
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://127.0.0.1:8000/healthz', r=>process.exit(r.statusCode===200?0:1)).on('error', ()=>process.exit(1))\""
+        ]
       interval: 10s
-      timeout: 2s
-      retries: 10
-
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
   # Postgres with pgvector extension baked in
   db:
     image: pgvector/pgvector:pg16
@@ -68,7 +77,7 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
-
+    restart: unless-stopped
   # Kafka-compatible broker (Redpanda)
   kafka:
     image: redpandadata/redpanda:v23.3.10
@@ -97,7 +106,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-
+    restart: unless-stopped
   # Kafka UI (local only)
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -109,7 +118,7 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-
+    restart: unless-stopped
   # MinIO with readiness check
   minio:
     image: quay.io/minio/minio:latest
@@ -127,7 +136,7 @@ services:
       interval: 3s
       timeout: 2s
       retries: 40
-
+    restart: unless-stopped
   # Grafana (waits for DB)
   grafana:
     image: grafana/grafana:11.0.0
@@ -147,7 +156,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-
+    restart: unless-stopped
   # Grafana public proxy (rate limited)
   grafana-proxy:
     image: nginx:alpine
@@ -158,7 +167,7 @@ services:
     depends_on:
       grafana:
         condition: service_healthy
-
+    restart: unless-stopped
   # React frontend (Vite dev server)
   frontend:
     image: node:20-alpine
@@ -171,9 +180,7 @@ services:
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
-    depends_on:
-      api:
-        condition: service_healthy
+    restart: unless-stopped
   # One-shot bootstrap job (buckets, seeds, migrations)
   bootstrap:
     image: minio/mc
