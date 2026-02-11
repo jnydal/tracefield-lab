@@ -37,11 +37,8 @@ function normalizeError(
     const errorObj = error as Record<string, unknown>;
     
     // Check if it already has our normalized shape
-    if (
-      typeof errorObj.status === 'number' &&
-      typeof errorObj.message === 'string'
-    ) {
-      return errorObj as ApiErrorShape;
+    if (typeof errorObj.status === 'number' && typeof errorObj.message === 'string') {
+      return errorObj as unknown as ApiErrorShape;
     }
     
     // Try to extract message from common error shapes
@@ -82,7 +79,7 @@ const baseQueryWithRetry: BaseQueryFn<
     },
   });
 
-  let result = await baseQuery(args, api, extraOptions);
+  const result = await baseQuery(args, api, extraOptions);
   
   // Retry logic for transient errors (network errors and 5xx server errors)
   if (result.error) {

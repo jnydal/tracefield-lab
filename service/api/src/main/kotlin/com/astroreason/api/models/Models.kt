@@ -130,6 +130,12 @@ data class AnalysisResultResponse(
 )
 
 @Serializable
+data class RegisterRequest(
+    val email: String,
+    val password: String
+)
+
+@Serializable
 data class UserResponse(
     val id: String,
     val email: String,

@@ -183,6 +183,7 @@ object AnalysisResults : UUIDTable("analysis_results", columnName = "id") {
 object Users : UUIDTable("users", columnName = "id") {
     val email = text("email")
     val displayName = text("display_name").nullable()
+    val passwordHash = text("password_hash").nullable()
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp())
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp())
 }

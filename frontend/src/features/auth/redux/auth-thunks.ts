@@ -43,7 +43,7 @@ export const bootstrapAuth = createAsyncThunk<
       // No user data, clear auth state
       dispatch(clearAuth());
     }
-  } catch (error) {
+  } catch {
     // On error (401, etc.), clear auth state
     dispatch(clearAuth());
   } finally {

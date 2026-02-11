@@ -36,8 +36,11 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
+import java.security.SecureRandom
 import java.time.Instant
 import javax.crypto.Mac
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 fun main(args: Array<String>) {
@@ -92,6 +95,61 @@ private fun decodeState(secret: String, state: String): String? {
 private fun parseUuid(value: String?): UUID? {
     if (value.isNullOrBlank()) return null
     return runCatching { UUID.fromString(value) }.getOrNull()
+}
+
+private const val PASSWORD_HASH_ITERATIONS = 120_000
+private const val PASSWORD_HASH_KEY_LENGTH = 256
+private const val PASSWORD_HASH_SALT_BYTES = 16
+
+private fun isValidEmail(email: String): Boolean {
+    val atIndex = email.indexOf('@')
+    return atIndex > 0 && atIndex < email.length - 1
+}
+
+private fun hashPassword(password: String): String {
+    val salt = ByteArray(PASSWORD_HASH_SALT_BYTES)
+    SecureRandom().nextBytes(salt)
+    val spec = PBEKeySpec(password.toCharArray(), salt, PASSWORD_HASH_ITERATIONS, PASSWORD_HASH_KEY_LENGTH)
+    val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+    val hash = factory.generateSecret(spec).encoded
+    val saltEncoded = Base64.getEncoder().encodeToString(salt)
+    val hashEncoded = Base64.getEncoder().encodeToString(hash)
+    return "pbkdf2_sha256$${PASSWORD_HASH_ITERATIONS}$$saltEncoded$$hashEncoded"
+}
+
+private fun createSession(call: ApplicationCall, settings: com.tracefield.core.Settings, userId: UUID, now: Instant) {
+    val sessionId = UUID.randomUUID()
+    val expiresAt = now.plusSeconds(settings.authSessionTtlHours * 3600)
+    transaction(DatabaseManager.getDatabase()) {
+        Sessions.insert {
+            it[Sessions.id] = sessionId
+            it[Sessions.userId] = userId
+            it[Sessions.createdAt] = now
+            it[Sessions.expiresAt] = expiresAt
+            it[Sessions.ipAddress] = call.request.origin.remoteHost
+            it[Sessions.userAgent] = call.request.userAgent()
+        }
+    }
+    val maxAgeSeconds = (settings.authSessionTtlHours * 3600)
+        .coerceAtMost(Int.MAX_VALUE.toLong())
+        .toInt()
+    val sameSite = when (settings.authCookieSameSite.lowercase()) {
+        "strict" -> "Strict"
+        "none" -> "None"
+        else -> "Lax"
+    }
+    call.response.cookies.append(
+        Cookie(
+            name = settings.authCookieName,
+            value = sessionId.toString(),
+            httpOnly = true,
+            secure = settings.authCookieSecure,
+            maxAge = maxAgeSeconds,
+            path = "/",
+            domain = settings.authCookieDomain,
+            extensions = mapOf("SameSite" to sameSite)
+        )
+    )
 }
 
 private suspend fun exchangeGoogleCode(code: String, redirectUri: String, clientId: String, clientSecret: String): JsonElement {
@@ -804,38 +862,7 @@ fun Application.module() {
                 }
             }
 
-            val sessionId = UUID.randomUUID()
-            val expiresAt = now.plusSeconds(settings.authSessionTtlHours * 3600)
-            transaction(DatabaseManager.getDatabase()) {
-                Sessions.insert {
-                    it[Sessions.id] = sessionId
-                    it[Sessions.userId] = userId
-                    it[Sessions.createdAt] = now
-                    it[Sessions.expiresAt] = expiresAt
-                    it[Sessions.ipAddress] = call.request.origin.remoteHost
-                    it[Sessions.userAgent] = call.request.userAgent()
-                }
-            }
-            val maxAgeSeconds = (settings.authSessionTtlHours * 3600)
-                .coerceAtMost(Int.MAX_VALUE.toLong())
-                .toInt()
-            val sameSite = when (settings.authCookieSameSite.lowercase()) {
-                "strict" -> "Strict"
-                "none" -> "None"
-                else -> "Lax"
-            }
-            call.response.cookies.append(
-                Cookie(
-                    name = settings.authCookieName,
-                    value = sessionId.toString(),
-                    httpOnly = true,
-                    secure = settings.authCookieSecure,
-                    maxAge = maxAgeSeconds,
-                    path = "/",
-                    domain = settings.authCookieDomain,
-                    extensions = mapOf("SameSite" to sameSite)
-                )
-            )
+            createSession(call, settings, userId, now)
             val frontendBaseUrl = settings.frontendBaseUrl.trimEnd('/')
             call.respondRedirect("$frontendBaseUrl$returnTo")
         }
@@ -860,6 +887,47 @@ fun Application.module() {
                 )
             )
             call.respond(mapOf("status" to "ok"))
+        }
+
+        post("/user/register") {
+            val payload = runCatching { call.receive<RegisterRequest>() }.getOrElse {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request payload"))
+                return@post
+            }
+            val email = payload.email.trim().lowercase()
+            val password = payload.password
+
+            if (email.isBlank() || !isValidEmail(email) || password.isBlank()) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Email and password are required"))
+                return@post
+            }
+
+            val now = Instant.now()
+            val passwordHash = hashPassword(password)
+            val userId = transaction(DatabaseManager.getDatabase()) {
+                val existing = Users.select { Users.email eq email }.singleOrNull()
+                if (existing != null) {
+                    return@transaction null
+                }
+                val newUserId = UUID.randomUUID()
+                Users.insert {
+                    it[Users.id] = newUserId
+                    it[Users.email] = email
+                    it[Users.displayName] = null
+                    it[Users.passwordHash] = passwordHash
+                    it[Users.createdAt] = now
+                    it[Users.updatedAt] = now
+                }
+                newUserId
+            }
+
+            if (userId == null) {
+                call.respond(HttpStatusCode.Conflict, mapOf("error" to "User already exists"))
+                return@post
+            }
+
+            createSession(call, settings, userId, now)
+            call.respond(UserResponse(id = userId.toString(), email = email, displayName = null))
         }
 
         post("/user/login") {
