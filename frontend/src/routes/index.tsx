@@ -50,7 +50,7 @@ function NotFoundPage() {
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">404</h1>
         <p className="text-lg mb-4">Siden du leter etter ble ikke funnet.</p>
-        <Link to="/" className="text-blue-600 hover:underline">
+        <Link to="/" className="text-violet-600 hover:underline">
           Gå til forsiden
         </Link>
       </div>

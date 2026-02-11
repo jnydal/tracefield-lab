@@ -3,10 +3,35 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    position: relative;
+    min-height: 100vh;
+    background-color: #f7f4ff;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0.02)),
+      url('/images/patterns/floral-pattern.png');
+    background-repeat: no-repeat, repeat;
+    background-size: cover, 300px 300px;
+    background-position: center;
+    background-blend-mode: soft-light, normal;
+    opacity: 0.38;
+    filter: grayscale(100%) contrast(0.85) brightness(1.1);
+    pointer-events: none;
+  }
+}
+
 @layer components {
   /* ----- Login page ----- */
   .login-page {
-    @apply flex min-h-screen items-center justify-center bg-slate-50 px-6 py-8;
+    @apply flex min-h-screen items-center justify-center px-6 py-8;
   }
 
   .login-container {
@@ -60,7 +85,7 @@
   }
 
   .login-field input:focus {
-    @apply outline-none ring-2 ring-blue-400 ring-offset-0 text-slate-900;
+    @apply outline-none ring-2 ring-violet-400 ring-offset-0 text-slate-900;
   }
 
   .auth-field-error {
@@ -72,16 +97,16 @@
   }
 
   .login-link {
-    @apply text-blue-600 hover:text-blue-800 hover:underline;
+    @apply text-violet-600 hover:text-violet-800 hover:underline;
   }
 
   .login-page .ui-button {
-    @apply w-full bg-blue-600 text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600;
+    @apply w-full bg-violet-600 text-white hover:bg-violet-700 focus:ring-4 focus:ring-violet-300 dark:focus:ring-violet-600;
   }
 
   /* ----- Register page ----- */
   .register-page {
-    @apply flex min-h-screen items-center justify-center bg-slate-50 px-6 py-8;
+    @apply flex min-h-screen items-center justify-center px-6 py-8;
   }
 
   .register-container {
@@ -117,7 +142,7 @@
   }
 
   .register-field input:focus {
-    @apply outline-none ring-2 ring-emerald-400 ring-offset-0 text-slate-900;
+    @apply outline-none ring-2 ring-violet-400 ring-offset-0 text-slate-900;
   }
 
   .register-links {
@@ -125,16 +150,16 @@
   }
 
   .register-link {
-    @apply text-emerald-600 hover:text-emerald-800 hover:underline;
+    @apply text-violet-600 hover:text-violet-800 hover:underline;
   }
 
   .register-page .ui-button {
-    @apply w-full bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-300 dark:focus:ring-emerald-600;
+    @apply w-full bg-violet-600 text-white hover:bg-violet-700 focus:ring-4 focus:ring-violet-300 dark:focus:ring-violet-600;
   }
 
   /* ----- Forgot password page ----- */
   .forgot-password-page {
-    @apply flex min-h-screen items-center justify-center bg-slate-50 px-6 py-8;
+    @apply flex min-h-screen items-center justify-center px-6 py-8;
   }
 
   .forgot-password-container {
@@ -179,7 +204,7 @@
   }
 
   .forgot-password-field input:focus {
-    @apply outline-none ring-2 ring-blue-400 ring-offset-0 text-slate-900;
+    @apply outline-none ring-2 ring-violet-400 ring-offset-0 text-slate-900;
   }
 
   .forgot-password-links {
@@ -187,16 +212,16 @@
   }
 
   .forgot-password-link {
-    @apply text-blue-600 hover:text-blue-800 hover:underline;
+    @apply text-violet-600 hover:text-violet-800 hover:underline;
   }
 
   .forgot-password-page .ui-button {
-    @apply w-full bg-blue-600 text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600;
+    @apply w-full bg-violet-600 text-white hover:bg-violet-700 focus:ring-4 focus:ring-violet-300 dark:focus:ring-violet-600;
   }
 
   /* ----- Landing page ----- */
   .landing-page {
-    @apply flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10;
+    @apply flex min-h-screen items-center justify-center px-6 py-10;
   }
 
   .landing-shell {
@@ -208,7 +233,7 @@
   }
 
   .landing-hero-kicker {
-    @apply text-sm font-semibold uppercase tracking-[0.2em] text-blue-600;
+    @apply text-sm font-semibold uppercase tracking-[0.2em] text-violet-600;
   }
 
   .landing-hero-title {
@@ -245,7 +270,7 @@
   }
 
   .landing-cta-button {
-    @apply w-full bg-blue-600 text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 sm:w-auto dark:focus:ring-blue-600;
+    @apply w-full bg-violet-600 text-white hover:bg-violet-700 focus:ring-4 focus:ring-violet-300 sm:w-auto dark:focus:ring-violet-600;
   }
 
   /* ----- App nav (logged-in top menu) ----- */
