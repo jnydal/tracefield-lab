@@ -100,7 +100,8 @@ export function RegisterPage() {
       <div className="register-container">
         <div className="register-card">
           <div className="register-card-inner">
-            <h1 className="register-title">Opprett konto</h1>
+            <h1 className="register-title">Tracefield Lab</h1>
+            <h2 className="register-subtitle">Opprett konto</h2>
 
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="register-form">
               {errors.root && (

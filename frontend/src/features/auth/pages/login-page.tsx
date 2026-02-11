@@ -136,7 +136,8 @@ export function LoginPage() {
       <div className="login-container">
         <div className="login-card">
           <div className="login-card-inner">
-            <h1 className="login-title">Logg inn</h1>
+            <h1 className="login-title">Tracefield Lab</h1>
+            <h2 className="login-subtitle">Logg inn</h2>
 
             <div className="login-sso">
               <button
