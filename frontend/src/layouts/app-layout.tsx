@@ -35,7 +35,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const handleSignOut = async () => {
     try {
       await logout().unwrap();
-    } catch (error) {
+    } catch {
       // Ignore logout errors and still clear local auth state.
     } finally {
       dispatch(clearAuth());

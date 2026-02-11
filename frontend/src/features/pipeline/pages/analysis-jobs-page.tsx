@@ -20,7 +20,7 @@ export function AnalysisJobsPage() {
       const parsed = JSON.parse(config) as Record<string, unknown>;
       const result = await createJob({ name, config: parsed }).unwrap();
       setJobId(result.id);
-    } catch (err) {
+    } catch {
       setError('Invalid JSON config. Please fix and try again.');
     }
   };

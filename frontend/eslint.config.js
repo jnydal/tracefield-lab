@@ -11,17 +11,24 @@ export default tseslint.config(
     extends: [
       js.configs.recommended,
       ...tseslint.configs.recommended,
-      reactHooks.configs.recommended,
     ],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
     },
     plugins: {
+      'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
     },
     rules: {
+      ...reactHooks.configs.recommended.rules,
       ...reactRefresh.configs.vite.rules,
+    },
+  },
+  {
+    files: ['src/generated/**'],
+    rules: {
+      '@typescript-eslint/no-empty-object-type': 'off',
     },
   },
 )
