@@ -96,13 +96,13 @@ export function RegisterPage() {
   };
 
   return (
-    <section className="login-page">
-      <div className="w-full max-w-md">
-        <div className="login-card">
-          <div className="login-card-inner">
-            <h1 className="login-title">Opprett konto</h1>
+    <section className="register-page">
+      <div className="register-container">
+        <div className="register-card">
+          <div className="register-card-inner">
+            <h1 className="register-title">Opprett konto</h1>
 
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="login-form">
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="register-form">
               {errors.root && (
                 <Alert
                   ref={errorAlertRef}
@@ -110,13 +110,13 @@ export function RegisterPage() {
                   tabIndex={-1}
                   aria-live="assertive"
                   role="alert"
-                  className="login-error"
+                  className="register-error"
                 >
                   {errors.root.message}
                 </Alert>
               )}
 
-              <div className="login-field">
+              <div className="register-field">
                 <FloatingLabel
                   variant="outlined"
                   id="email"
@@ -130,13 +130,13 @@ export function RegisterPage() {
                   required
                 />
                 {errors.email && (
-                  <p id="email-error" className="text-sm text-red-600">
+                  <p id="email-error" className="auth-field-error">
                     {errors.email.message}
                   </p>
                 )}
               </div>
 
-              <div className="login-field">
+              <div className="register-field">
                 <FloatingLabel
                   variant="outlined"
                   id="password"
@@ -150,7 +150,7 @@ export function RegisterPage() {
                   required
                 />
                 {errors.password && (
-                  <p id="password-error" className="text-sm text-red-600">
+                  <p id="password-error" className="auth-field-error">
                     {errors.password.message}
                   </p>
                 )}
@@ -168,9 +168,9 @@ export function RegisterPage() {
               </Button>
             </form>
 
-            <div className="login-links">
+            <div className="register-links">
               <div>
-                <Link to="/login" className="login-link">
+                <Link to="/login" className="register-link">
                   Har du allerede en konto? Logg inn
                 </Link>
               </div>

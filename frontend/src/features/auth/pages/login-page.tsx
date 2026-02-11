@@ -133,7 +133,7 @@ export function LoginPage() {
 
   return (
     <section className="login-page">
-      <div className="w-full max-w-md">
+      <div className="login-container">
         <div className="login-card">
           <div className="login-card-inner">
             <h1 className="login-title">Logg inn</h1>
@@ -179,7 +179,7 @@ export function LoginPage() {
                   required
                 />
                 {errors.identifier && (
-                  <p id="identifier-error" className="text-sm text-red-600">
+                  <p id="identifier-error" className="auth-field-error">
                     {errors.identifier.message}
                   </p>
                 )}
@@ -199,7 +199,7 @@ export function LoginPage() {
                   required
                 />
                 {errors.password && (
-                  <p id="password-error" className="text-sm text-red-600">
+                  <p id="password-error" className="auth-field-error">
                     {errors.password.message}
                   </p>
                 )}

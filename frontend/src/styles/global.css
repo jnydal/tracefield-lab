@@ -4,13 +4,17 @@
 @tailwind utilities;
 
 @layer components {
-  /* Login page layout */
+  /* ----- Login page ----- */
   .login-page {
-    @apply flex min-h-screen items-center justify-center bg-gray-50 px-6 py-8;
+    @apply flex min-h-screen items-center justify-center bg-slate-50 px-6 py-8;
+  }
+
+  .login-container {
+    @apply w-full max-w-md;
   }
 
   .login-card {
-    @apply rounded-lg border border-slate-100/80 bg-white/95 shadow-xl backdrop-blur sm:border-slate-200;
+    @apply rounded-xl border border-slate-200/80 bg-white shadow-xl sm:border-slate-300;
   }
 
   .login-card-inner {
@@ -18,7 +22,7 @@
   }
 
   .login-title {
-    @apply text-2xl font-bold tracking-tight text-gray-900 text-center;
+    @apply text-2xl font-bold tracking-tight text-slate-900 text-center;
   }
 
   .login-form {
@@ -30,17 +34,17 @@
   }
 
   .login-sso-button {
-    @apply w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-900 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200;
+    @apply w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200;
   }
 
   .login-divider {
-    @apply flex items-center gap-3 text-xs uppercase tracking-wide text-gray-500;
+    @apply flex items-center gap-3 text-xs uppercase tracking-wide text-slate-500;
   }
 
   .login-divider::before,
   .login-divider::after {
     content: '';
-    @apply h-px flex-1 bg-gray-200;
+    @apply h-px flex-1 bg-slate-200;
   }
 
   .login-error {
@@ -48,15 +52,23 @@
   }
 
   .login-field label {
-    @apply bg-white px-2 text-gray-600;
+    @apply bg-white px-2 text-slate-600;
   }
 
   .login-field input {
-    @apply bg-transparent;
+    @apply bg-transparent text-slate-900 outline-none placeholder:text-slate-400;
+  }
+
+  .login-field input:focus {
+    @apply outline-none ring-2 ring-blue-400 ring-offset-0 text-slate-900;
+  }
+
+  .auth-field-error {
+    @apply text-sm text-red-600;
   }
 
   .login-links {
-    @apply flex flex-col gap-2 text-center text-sm text-gray-700;
+    @apply flex flex-col gap-2 text-center text-sm text-slate-700;
   }
 
   .login-link {
@@ -67,9 +79,62 @@
     @apply w-full bg-blue-600 text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600;
   }
 
-  /* Landing page layout */
+  /* ----- Register page ----- */
+  .register-page {
+    @apply flex min-h-screen items-center justify-center bg-slate-50 px-6 py-8;
+  }
+
+  .register-container {
+    @apply w-full max-w-md;
+  }
+
+  .register-card {
+    @apply rounded-xl border border-slate-200/80 bg-white shadow-xl sm:border-slate-300;
+  }
+
+  .register-card-inner {
+    @apply flex flex-col gap-8 p-6 sm:p-8;
+  }
+
+  .register-title {
+    @apply text-2xl font-bold tracking-tight text-slate-900 text-center;
+  }
+
+  .register-form {
+    @apply flex flex-col gap-5;
+  }
+
+  .register-error {
+    @apply text-sm;
+  }
+
+  .register-field label {
+    @apply bg-white px-2 text-slate-600;
+  }
+
+  .register-field input {
+    @apply bg-transparent text-slate-900 outline-none placeholder:text-slate-400;
+  }
+
+  .register-field input:focus {
+    @apply outline-none ring-2 ring-emerald-400 ring-offset-0 text-slate-900;
+  }
+
+  .register-links {
+    @apply flex flex-col gap-2 text-center text-sm text-slate-700;
+  }
+
+  .register-link {
+    @apply text-emerald-600 hover:text-emerald-800 hover:underline;
+  }
+
+  .register-page .ui-button {
+    @apply w-full bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-300 dark:focus:ring-emerald-600;
+  }
+
+  /* ----- Landing page ----- */
   .landing-page {
-    @apply flex min-h-screen items-center justify-center bg-gray-50 px-6 py-10;
+    @apply flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10;
   }
 
   .landing-shell {
@@ -85,15 +150,15 @@
   }
 
   .landing-hero-title {
-    @apply text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl;
+    @apply text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl;
   }
 
   .landing-hero-copy {
-    @apply text-base text-gray-600 sm:text-lg;
+    @apply text-base text-slate-600 sm:text-lg;
   }
 
   .landing-illustration {
-    @apply mt-8 rounded-3xl border border-slate-100/80 bg-white/95 p-4 shadow-lg;
+    @apply mt-8 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-lg;
   }
 
   .landing-illustration svg {
@@ -102,15 +167,15 @@
   }
 
   .landing-cta-card {
-    @apply mt-8 flex flex-col gap-6 rounded-lg border border-slate-100/80 bg-white/95 p-6 text-center shadow-xl backdrop-blur sm:p-8 sm:border-slate-200;
+    @apply mt-8 flex flex-col gap-6 rounded-xl border border-slate-200/80 bg-white p-6 text-center shadow-xl sm:p-8 sm:border-slate-300;
   }
 
   .landing-cta-title {
-    @apply text-xl font-semibold text-gray-900;
+    @apply text-xl font-semibold text-slate-900;
   }
 
   .landing-cta-copy {
-    @apply text-sm text-gray-600 sm:text-base;
+    @apply text-sm text-slate-600 sm:text-base;
   }
 
   .landing-cta-actions {
