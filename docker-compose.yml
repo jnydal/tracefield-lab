@@ -12,7 +12,7 @@ services:
   # Caddy (public edge)
   caddy:
     image: caddy:latest
-    container_name: caddy
+    #container_name: caddy
     ports:
       - "80:80"
       - "443:443"
