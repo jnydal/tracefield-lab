@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { clearAuth, selectUser } from '../features/auth/redux/auth-slice';
 import { useLogoutMutation } from '../services/api/auth-api';
@@ -54,9 +54,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             </Link>
             <nav className="hidden md:flex items-center gap-4 text-sm text-slate-600">
               {navItems.map((item) => (
-                <Link key={item.to} to={item.to} className="hover:text-slate-900">
+                <NavLink key={item.to} to={item.to} className="app-nav-link">
                   {item.label}
-                </Link>
+                </NavLink>
               ))}
             </nav>
           </div>
@@ -108,12 +108,16 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </div>
         {menuOpen && (
-          <div id="mobile-nav" className="border-t border-slate-100 bg-white md:hidden">
+            <div id="mobile-nav" className="border-t border-slate-100 bg-white md:hidden">
             <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-sm">
               {navItems.map((item) => (
-                <Link key={item.to} to={item.to} className="text-slate-700">
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className="app-nav-link-mobile"
+                >
                   {item.label}
-                </Link>
+                </NavLink>
               ))}
               <button
                 type="button"

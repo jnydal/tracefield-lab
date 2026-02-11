@@ -38,7 +38,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minio123}
       MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-tracefield-raw}
-      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:5173}
     ports:
       - "8000:8000"
     depends_on:
