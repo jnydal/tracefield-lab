@@ -89,9 +89,21 @@ Examples:
 
 ### Start services
 
+**Dev** (API built locally; no Watchtower updates from registry):
+
 ```bash
 docker compose up -d --build
 ```
+
+**Prod** (API from registry; Watchtower can pull CI pushes). Set the image then use the prod override:
+
+```bash
+# One-time: copy and edit deploy/deploy.env (see deploy/deploy.env.example)
+# Then start (or use deploy/poll-update.sh for pull + up):
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Ensure `TRACEFIELD_API_IMAGE` is set (e.g. in `deploy/deploy.env` or `.env`) to your registry image, e.g. `ghcr.io/<owner>/<repo>/api:main`. See [RUNBOOK.md](RUNBOOK.md) deployment section.
 
 ### Kafka topics (required)
 
