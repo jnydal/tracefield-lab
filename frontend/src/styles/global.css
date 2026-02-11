@@ -47,7 +47,11 @@
   }
 
   .login-title {
-    @apply text-2xl font-bold tracking-tight text-slate-900 text-center;
+    @apply text-lg font-semibold tracking-tight text-slate-900 text-center;
+  }
+
+  .login-subtitle {
+    @apply -mt-6 text-center text-base font-medium text-slate-600;
   }
 
   .login-form {
@@ -122,7 +126,11 @@
   }
 
   .register-title {
-    @apply text-2xl font-bold tracking-tight text-slate-900 text-center;
+    @apply text-lg font-semibold tracking-tight text-slate-900 text-center;
+  }
+
+  .register-subtitle {
+    @apply -mt-6 text-center text-base font-medium text-slate-600;
   }
 
   .register-form {
@@ -175,7 +183,11 @@
   }
 
   .forgot-password-title {
-    @apply text-2xl font-bold tracking-tight text-slate-900 text-center;
+    @apply text-lg font-semibold tracking-tight text-slate-900 text-center;
+  }
+
+  .forgot-password-subtitle {
+    @apply -mt-6 text-center text-base font-medium text-slate-600;
   }
 
   .forgot-password-intro,

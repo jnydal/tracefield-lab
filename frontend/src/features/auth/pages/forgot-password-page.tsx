@@ -61,7 +61,8 @@ export function ForgotPasswordPage() {
         <div className="forgot-password-container">
           <div className="forgot-password-card">
             <div className="forgot-password-card-inner">
-              <h1 className="forgot-password-title">Sjekk e-posten din</h1>
+              <h1 className="forgot-password-title">Tracefield Lab</h1>
+              <h2 className="forgot-password-subtitle">Sjekk e-posten din</h2>
               <p className="forgot-password-success-text">
                 Hvis det finnes en konto med den e-postadressen du oppga, har vi sendt deg en lenke
                 for å tilbakestille passordet.
@@ -86,7 +87,8 @@ export function ForgotPasswordPage() {
       <div className="forgot-password-container">
         <div className="forgot-password-card">
           <div className="forgot-password-card-inner">
-            <h1 className="forgot-password-title">Glemt passord</h1>
+            <h1 className="forgot-password-title">Tracefield Lab</h1>
+            <h2 className="forgot-password-subtitle">Glemt passord</h2>
             <p className="forgot-password-intro">
               Skriv inn e-postadressen din, så sender vi deg en lenke for å tilbakestille passordet.
             </p>
