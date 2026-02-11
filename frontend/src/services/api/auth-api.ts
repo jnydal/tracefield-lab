@@ -18,6 +18,10 @@ type RegisterRequest = {
   password: string;
 };
 
+type ForgotPasswordRequest = {
+  email: string;
+};
+
 type LoginPayload =
   | { username: string; password: string }
   | { email: string; password: string };
@@ -65,6 +69,13 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Auth'],
     }),
+    forgotPassword: builder.mutation<{ message?: string }, ForgotPasswordRequest>({
+      query: (body) => ({
+        url: '/user/forgot-password',
+        method: 'POST',
+        body,
+      }),
+    }),
   }),
 });
 
@@ -75,6 +86,7 @@ export const {
   useLazyGetMeQuery,
   useRefreshMutation,
   useLogoutMutation,
+  useForgotPasswordMutation,
 } = authApi;
 
 function mapIdentifierToPayload(credentials: LoginRequest): LoginPayload {

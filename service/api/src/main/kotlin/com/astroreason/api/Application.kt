@@ -114,7 +114,21 @@ private fun hashPassword(password: String): String {
     val hash = factory.generateSecret(spec).encoded
     val saltEncoded = Base64.getEncoder().encodeToString(salt)
     val hashEncoded = Base64.getEncoder().encodeToString(hash)
-    return "pbkdf2_sha256$${PASSWORD_HASH_ITERATIONS}$$saltEncoded$$hashEncoded"
+    return "pbkdf2_sha256\$${PASSWORD_HASH_ITERATIONS}\$${saltEncoded}\$${hashEncoded}"
+}
+
+private data class LoginUser(val id: UUID, val email: String, val displayName: String?, val passwordHash: String)
+
+private fun verifyPassword(password: String, storedHash: String): Boolean {
+    val parts = storedHash.split("$")
+    if (parts.size != 4 || parts[0] != "pbkdf2_sha256") return false
+    val iterations = parts[1].toIntOrNull() ?: return false
+    val salt = runCatching { Base64.getDecoder().decode(parts[2]) }.getOrNull() ?: return false
+    val expectedHash = runCatching { Base64.getDecoder().decode(parts[3]) }.getOrNull() ?: return false
+    val spec = PBEKeySpec(password.toCharArray(), salt, iterations, PASSWORD_HASH_KEY_LENGTH)
+    val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+    val actualHash = factory.generateSecret(spec).encoded
+    return actualHash.contentEquals(expectedHash)
 }
 
 private fun createSession(call: ApplicationCall, settings: com.tracefield.core.Settings, userId: UUID, now: Instant) {
@@ -217,6 +231,7 @@ fun Application.module() {
         allowMethod(HttpMethod.Put)
         allowMethod(HttpMethod.Delete)
         allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.Accept)
         allowCredentials = true
 
         val frontendOrigin = runCatching { URI(settings.frontendBaseUrl) }.getOrNull()
@@ -890,48 +905,90 @@ fun Application.module() {
         }
 
         post("/user/register") {
-            val payload = runCatching { call.receive<RegisterRequest>() }.getOrElse {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request payload"))
-                return@post
-            }
-            val email = payload.email.trim().lowercase()
-            val password = payload.password
-
-            if (email.isBlank() || !isValidEmail(email) || password.isBlank()) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Email and password are required"))
-                return@post
-            }
-
-            val now = Instant.now()
-            val passwordHash = hashPassword(password)
-            val userId = transaction(DatabaseManager.getDatabase()) {
-                val existing = Users.select { Users.email eq email }.singleOrNull()
-                if (existing != null) {
-                    return@transaction null
+            try {
+                val payload = runCatching { call.receive<RegisterRequest>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request payload"))
+                    return@post
                 }
-                val newUserId = UUID.randomUUID()
-                Users.insert {
-                    it[Users.id] = newUserId
-                    it[Users.email] = email
-                    it[Users.displayName] = null
-                    it[Users.passwordHash] = passwordHash
-                    it[Users.createdAt] = now
-                    it[Users.updatedAt] = now
+                val email = payload.email.trim().lowercase()
+                val password = payload.password
+
+                if (email.isBlank() || !isValidEmail(email) || password.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Email and password are required"))
+                    return@post
                 }
-                newUserId
-            }
 
-            if (userId == null) {
-                call.respond(HttpStatusCode.Conflict, mapOf("error" to "User already exists"))
-                return@post
-            }
+                val now = Instant.now()
+                val passwordHash = hashPassword(password)
+                val userId = transaction(DatabaseManager.getDatabase()) {
+                    val existing = Users.select { Users.email eq email }.singleOrNull()
+                    if (existing != null) {
+                        return@transaction null
+                    }
+                    val newUserId = UUID.randomUUID()
+                    Users.insert {
+                        it[Users.id] = newUserId
+                        it[Users.email] = email
+                        it[Users.displayName] = null
+                        it[Users.passwordHash] = passwordHash
+                        it[Users.createdAt] = now
+                        it[Users.updatedAt] = now
+                    }
+                    newUserId
+                }
 
-            createSession(call, settings, userId, now)
-            call.respond(UserResponse(id = userId.toString(), email = email, displayName = null))
+                if (userId == null) {
+                    call.respond(HttpStatusCode.Conflict, mapOf("error" to "User already exists"))
+                    return@post
+                }
+
+                createSession(call, settings, userId, now)
+                call.respond(UserResponse(id = userId.toString(), email = email, displayName = null))
+            } catch (e: Throwable) {
+                call.application.log.error("Register failed", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Server error. Please try again later."))
+            }
         }
 
         post("/user/login") {
-            call.respond(HttpStatusCode.NotImplemented, mapOf("error" to "Password login not enabled"))
+            try {
+                val payload = runCatching { call.receive<LoginRequest>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request payload"))
+                    return@post
+                }
+                val identifier = (payload.email ?: payload.username)?.trim()?.lowercase()
+                val password = payload.password
+                if (identifier.isNullOrBlank() || password.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Email/username and password are required"))
+                    return@post
+                }
+                // Look up by email (username is treated as email for now)
+                val loginUser = transaction(DatabaseManager.getDatabase()) {
+                    val row = Users.select { Users.email eq identifier }.singleOrNull()
+                    if (row == null) return@transaction null
+                    val hash = row[Users.passwordHash]
+                    if (hash == null) return@transaction null
+                    LoginUser(
+                        row[Users.id].value,
+                        row[Users.email],
+                        row[Users.displayName],
+                        hash
+                    )
+                } ?: run {
+                    call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Invalid email/username or password"))
+                    return@post
+                }
+                if (!verifyPassword(password, loginUser.passwordHash)) {
+                    call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Invalid email/username or password"))
+                    return@post
+                }
+                val now = Instant.now()
+                createSession(call, settings, loginUser.id, now)
+                call.respond(UserResponse(id = loginUser.id.toString(), email = loginUser.email, displayName = loginUser.displayName))
+            } catch (e: Throwable) {
+                call.application.log.error("Login failed", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Server error. Please try again later."))
+            }
         }
 
     }

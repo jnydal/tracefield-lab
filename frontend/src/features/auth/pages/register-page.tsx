@@ -73,7 +73,7 @@ export function RegisterPage() {
       };
       dispatch(setUser(user));
 
-      const returnTo = searchParams.get('returnTo') || '/';
+      const returnTo = searchParams.get('returnTo') || '/datasets';
       navigate(returnTo, { replace: true });
     } catch (error) {
       const status =

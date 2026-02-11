@@ -26,39 +26,71 @@ export function setAuthClearHandler(handler: () => void) {
   authClearHandler = handler;
 }
 
+// Default user-facing messages per status when response body has no message
+function defaultMessageForStatus(status: number): string {
+  switch (status) {
+    case 0:
+      return 'Nettverksfeil. Sjekk tilkoblingen og prøv igjen.';
+    case 400:
+      return 'Ugyldig forespørsel. Sjekk at alle felt er fylt ut riktig.';
+    case 409:
+      return 'E-post er allerede i bruk. Vennligst velg en annen.';
+    case 401:
+      return 'Du må logge inn på nytt.';
+    case 403:
+      return 'Du har ikke tilgang.';
+    case 404:
+      return 'Fant ikke forespurt ressurs.';
+    case 422:
+      return 'Data kunne ikke valideres. Sjekk at informasjonen er riktig.';
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return 'Serverfeil. Vennligst prøv igjen senere.';
+    default:
+      return status >= 500
+        ? 'Serverfeil. Vennligst prøv igjen senere.'
+        : 'Noe gikk galt. Vennligst prøv igjen.';
+  }
+}
+
 // Normalize error from various sources into consistent shape
 function normalizeError(
   error: unknown,
   status?: number
 ): ApiErrorShape {
-  const errorStatus = status || 500;
-  
+  const errorStatus = status ?? 500;
+  const defaultMessage = defaultMessageForStatus(errorStatus);
+
   if (typeof error === 'object' && error !== null) {
     const errorObj = error as Record<string, unknown>;
-    
+
     // Check if it already has our normalized shape
     if (typeof errorObj.status === 'number' && typeof errorObj.message === 'string') {
       return errorObj as unknown as ApiErrorShape;
     }
-    
-    // Try to extract message from common error shapes
+
+    // Try to extract message from common error shapes (API uses "error" per OpenAPI ErrorResponse)
     const message =
       (typeof errorObj.message === 'string' && errorObj.message) ||
       (typeof errorObj.error === 'string' && errorObj.error) ||
       (typeof errorObj.detail === 'string' && errorObj.detail) ||
-      'An error occurred';
-    
+      (Array.isArray(errorObj.detail)
+        ? (errorObj.detail as unknown[]).map((d) => (typeof d === 'string' ? d : (d as { msg?: string })?.msg ?? '')).filter(Boolean).join('. ') || defaultMessage
+        : defaultMessage);
+
     return {
       status: errorStatus,
       code: typeof errorObj.code === 'string' ? errorObj.code : undefined,
-      message,
+      message: message || defaultMessage,
       details: errorObj.details || errorObj,
     };
   }
-  
+
   return {
     status: errorStatus,
-    message: typeof error === 'string' ? error : 'An unknown error occurred',
+    message: typeof error === 'string' ? error : defaultMessage,
   };
 }
 

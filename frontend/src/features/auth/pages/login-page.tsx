@@ -99,7 +99,7 @@ export function LoginPage() {
       dispatch(setUser(user));
 
       // Redirect to returnTo or default route
-      const returnTo = searchParams.get('returnTo') || '/';
+      const returnTo = searchParams.get('returnTo') || '/datasets';
       navigate(returnTo, { replace: true });
     } catch (error) {
       // Error is now normalized to ApiErrorShape { status, code?, message, details? }
