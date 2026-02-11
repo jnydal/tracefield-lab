@@ -45,8 +45,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen">
+      <header className="border-b border-slate-200/70 bg-white/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Link to="/" className="text-lg font-semibold text-slate-900">
@@ -108,7 +108,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </div>
         {menuOpen && (
-            <div id="mobile-nav" className="border-t border-slate-100 bg-white md:hidden">
+          <div id="mobile-nav" className="border-t border-slate-100 bg-white md:hidden">
             <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-sm">
               {navItems.map((item) => (
                 <NavLink
@@ -132,7 +132,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
       </header>
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
-        {children}
+        <div className="rounded-3xl border border-white/60 bg-white/85 p-6 shadow-lg backdrop-blur-sm sm:p-8">
+          {children}
+        </div>
       </main>
     </div>
   );
