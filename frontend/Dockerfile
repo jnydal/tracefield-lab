@@ -2,9 +2,9 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Install dependencies
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+# Install dependencies (package-lock.json optional; frontend/.gitignore may exclude it)
+COPY frontend/package.json ./
+RUN npm install
 
 # Copy source and build (VITE_API_BASE_URL baked in at build time)
 COPY frontend/ ./
