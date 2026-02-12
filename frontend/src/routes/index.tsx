@@ -16,6 +16,11 @@ const HomePage = lazy(() =>
     default: module.LandingPage,
   }))
 );
+const AboutPage = lazy(() =>
+  import('../features/public/pages/about-page').then((module) => ({
+    default: module.AboutPage,
+  }))
+);
 
 const DatasetsPage = lazy(() =>
   import('../features/pipeline/pages/datasets-page').then((module) => ({
@@ -65,6 +70,14 @@ const routes: RouteObject[] = [
     element: (
       <ErrorBoundary>
         <HomePage />
+      </ErrorBoundary>
+    ),
+  },
+  {
+    path: '/about',
+    element: (
+      <ErrorBoundary>
+        <AboutPage />
       </ErrorBoundary>
     ),
   },
