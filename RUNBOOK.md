@@ -39,29 +39,15 @@ The GitHub Actions workflow publishes a container image to GHCR:
 
 It also uploads a `deploy/manifest.json` artifact for auditing.
 
-### Server Setup (WSL)
+### Production server setup
 
-```bash
-# 1) Configure deploy env
-cp deploy/deploy.env.example deploy/deploy.env
+Use this flow to run the **production** environment (registry images + Watchtower for updates).
 
-# 2) Set your image in deploy/deploy.env
-# TRACEFIELD_API_IMAGE=ghcr.io/<owner>/<repo>/api:main
-
-# 3) Log in to GHCR (use a PAT with read:packages)
-echo "$GHCR_TOKEN" | docker login ghcr.io -u "<user>" --password-stdin
-
-# 4) Run the polling deploy
-bash deploy/poll-update.sh
-```
-
-### Schedule Polling
-
-```bash
-# Example: check every 5 minutes
-crontab -e
-*/5 * * * * /usr/bin/env bash /path/to/repo/deploy/poll-update.sh >> /var/log/tracefield-deploy.log 2>&1
-```
+1. **Configure deploy env**: copy `deploy/deploy.env.example` to `deploy/deploy.env` and set your registry images (e.g. `TRACEFIELD_API_IMAGE=ghcr.io/<owner>/<repo>/api:main`).
+2. **Log in to GHCR** (use a PAT with `read:packages`):  
+   `echo "$GHCR_TOKEN" | docker login ghcr.io -u "<user>" --password-stdin`
+3. **Start the production stack**: run `deploy/start.ps1` (Windows) or `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`.  
+   **Watchtower** (in the base compose) periodically pulls new images from the registry and restarts updated containers; no separate polling script or cron is required.
 
 ## Data Pipeline Workflow (Target)
 
