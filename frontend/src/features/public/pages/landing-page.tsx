@@ -8,23 +8,24 @@ export function LandingPage() {
   return (
     <section className="landing-page">
       <div className="landing-shell">
-        <div className="landing-hero">
-          <p className="landing-hero-kicker">Tracefield Lab</p>
-          <h1 className="landing-hero-title">
-            Build, analyze, and share research pipelines with secure traceability.
-          </h1>
-          <p className="landing-hero-copy">
-            Collect data, map entities, and run analysis jobs in a unified workspace
-            for research teams that need both speed and control.
-          </p>
-        </div>
-
-        <div className="landing-illustration" aria-hidden="true">
-          <img
-            src="/images/main.png"
-            alt="Entity Resolver: data ingestion, entity mapping, and statistical analysis pipeline"
-            className="w-full h-auto rounded-2xl object-contain"
-          />
+        <div className="landing-hero-card">
+          <div className="landing-hero">
+            <p className="landing-hero-kicker">Tracefield Lab</p>
+            <h1 className="landing-hero-title">
+              Build, analyze, and share research pipelines with secure traceability.
+            </h1>
+            <p className="landing-hero-copy">
+              Collect data, map entities, and run analysis jobs in a unified workspace
+              for research teams that need both speed and control.
+            </p>
+          </div>
+          <div className="landing-hero-card-visual" aria-hidden="true">
+            <img
+              src="/images/main.png"
+              alt="Entity Resolver: data ingestion, entity mapping, and statistical analysis pipeline"
+              className="w-full h-auto rounded-2xl object-contain"
+            />
+          </div>
         </div>
 
         <div className="landing-cta-card">
