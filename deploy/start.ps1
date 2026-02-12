@@ -9,10 +9,10 @@ for($i=0;$i -lt 60;$i++){
     Start-Sleep 5
 }
 
-# Start compose stack
+# Start compose stack in prod
 Set-Location 'C:\workspace\tracefield-lab'
 "Running docker compose up..."
-docker compose up -d --remove-orphans 2>&1
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans 2>&1
 
 "--- docker ps ---" | Out-File -Append $log
 docker ps --format "table {{.Names}}\t{{.Status}}" 2>&1
