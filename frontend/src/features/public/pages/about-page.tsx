@@ -16,6 +16,14 @@ export function AboutPage() {
           </p>
         </div>
 
+        <div className="mt-8 flex justify-center">
+          <img
+            src="/images/main.png"
+            alt="Entity Resolver: data ingestion, entity mapping, and statistical analysis pipeline"
+            className="max-w-full rounded-xl border border-slate-200/80 shadow-xl object-contain"
+          />
+        </div>
+
         <div className="mt-8 rounded-xl border border-slate-200/80 bg-white p-6 shadow-xl sm:p-8 sm:border-slate-300 text-left space-y-4">
           <h2 className="text-lg font-semibold text-slate-900">What it does</h2>
           <p className="text-slate-600 text-sm sm:text-base">
