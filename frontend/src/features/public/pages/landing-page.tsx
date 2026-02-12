@@ -1,5 +1,5 @@
 import { Button } from 'flowbite-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { PublicFooter } from '../../../components/public-footer';
 
 export function LandingPage() {
