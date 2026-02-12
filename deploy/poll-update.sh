@@ -47,27 +47,63 @@ wait_for_docker() {
   echo "Docker is ready 🚀"
 }
 
+get_digest() {
+  local img="$1"
+  docker image inspect --format='{{index .RepoDigests 0}}' "$img" 2>/dev/null || true
+}
+
 # Ensure Docker is up before we do anything docker-related
 wait_for_docker "${DOCKER_STARTUP_TIMEOUT:-60}"
 
-get_digest() {
-  docker image inspect --format='{{index .RepoDigests 0}}' "$TRACEFIELD_API_IMAGE" 2>/dev/null || true
-}
+# Services we may pull (compose service name : env var name)
+# Only pull services whose image env var is set
+services_to_pull=()
+[[ -n "${TRACEFIELD_API_IMAGE:-}" ]] && services_to_pull+=(api)
+[[ -n "${TRACEFIELD_FRONTEND_IMAGE:-}" ]] && services_to_pull+=(frontend)
+[[ -n "${TRACEFIELD_WORKER_INGEST_IMAGE:-}" ]] && services_to_pull+=(worker-ingest)
+[[ -n "${TRACEFIELD_WORKER_EMBEDDINGS_IMAGE:-}" ]] && services_to_pull+=(worker-embeddings)
+[[ -n "${TRACEFIELD_RESOLVER_IMAGE:-}" ]] && services_to_pull+=(resolver)
 
-old_digest="$(get_digest)"
+# Capture digests before pull
+declare -A old_digests
+for svc in "${services_to_pull[@]}"; do
+  case "$svc" in
+    api) img="${TRACEFIELD_API_IMAGE:-}" ;;
+    frontend) img="${TRACEFIELD_FRONTEND_IMAGE:-}" ;;
+    worker-ingest) img="${TRACEFIELD_WORKER_INGEST_IMAGE:-}" ;;
+    worker-embeddings) img="${TRACEFIELD_WORKER_EMBEDDINGS_IMAGE:-}" ;;
+    resolver) img="${TRACEFIELD_RESOLVER_IMAGE:-}" ;;
+    *) continue ;;
+  esac
+  [[ -n "$img" ]] && old_digests[$svc]=$(get_digest "$img")
+done
 
-echo "Checking for updates: $TRACEFIELD_API_IMAGE"
-docker compose "${compose_args[@]}" pull api
+echo "Pulling images for: ${services_to_pull[*]}"
+docker compose "${compose_args[@]}" pull "${services_to_pull[@]}"
 
-new_digest="$(get_digest)"
+any_new=0
+for svc in "${services_to_pull[@]}"; do
+  case "$svc" in
+    api) img="${TRACEFIELD_API_IMAGE:-}" ;;
+    frontend) img="${TRACEFIELD_FRONTEND_IMAGE:-}" ;;
+    worker-ingest) img="${TRACEFIELD_WORKER_INGEST_IMAGE:-}" ;;
+    worker-embeddings) img="${TRACEFIELD_WORKER_EMBEDDINGS_IMAGE:-}" ;;
+    resolver) img="${TRACEFIELD_RESOLVER_IMAGE:-}" ;;
+    *) continue ;;
+  esac
+  new_digest=$(get_digest "$img")
+  if [[ -z "$new_digest" ]]; then
+    echo "Image not present after pull for $svc ($img). Aborting." >&2
+    exit 1
+  fi
+  if [[ "${old_digests[$svc]:-}" != "$new_digest" ]]; then
+    echo "New image detected for $svc."
+    any_new=1
+  fi
+done
 
-if [[ -z "$new_digest" ]]; then
-  echo "Image not present after pull. Aborting." >&2
-  exit 1
-fi
-
-if [[ "$old_digest" != "$new_digest" ]]; then
-  echo "New image detected. Redeploying..."
+if (( any_new )); then
+  echo "Redeploying..."
   docker compose "${compose_args[@]}" up -d --no-build
   exit 0
 fi
@@ -80,8 +116,8 @@ else
 fi
 
 if [[ "$is_running" == "true" ]]; then
-  echo "No new image and api is already running. Nothing to do."
+  echo "No new images and api is already running. Nothing to do."
 else
-  echo "No new image. Starting services..."
+  echo "No new images. Starting services..."
   docker compose "${compose_args[@]}" up -d --no-build
 fi

@@ -1,0 +1,4 @@
+# Shared deps for Python workers (ingest, embeddings, resolver)
+-r base.txt
+confluent-kafka>=2.13
+uvicorn

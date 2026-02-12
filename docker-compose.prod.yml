@@ -5,3 +5,27 @@ services:
     image: ${TRACEFIELD_FRONTEND_IMAGE}
     volumes: []
     command: ["nginx", "-g", "daemon off;"]
+  worker-ingest:
+    image: ${TRACEFIELD_WORKER_INGEST_IMAGE}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+  worker-embeddings:
+    image: ${TRACEFIELD_WORKER_EMBEDDINGS_IMAGE}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+  resolver:
+    image: ${TRACEFIELD_RESOLVER_IMAGE}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped

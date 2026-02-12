@@ -1,0 +1,16 @@
+"""Worker-ingest: placeholder entrypoint. Replace with Kafka consumer when ready."""
+from __future__ import annotations
+
+import uvicorn
+from fastapi import FastAPI
+
+app = FastAPI(title="worker-ingest")
+
+
+@app.get("/healthz")
+def healthz() -> dict[str, str]:
+    return {"status": "ok", "service": "worker-ingest"}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
