@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
-import { lazy } from 'react';
-import { createBrowserRouter, Link } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { createBrowserRouter, Link, Outlet } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
+import { Spinner } from 'flowbite-react';
 import { authRoutes } from '../features/auth/routes';
 import { ProtectedRoute } from './protected-route';
 import { ErrorBoundary } from '../components/error-boundary';
@@ -48,6 +49,15 @@ const AnalysisResultsPage = lazy(() =>
   }))
 );
 
+// Content-only loading fallback (used inside AppLayout so header stays visible)
+function AppPageFallback() {
+  return (
+    <div className="flex min-h-[20rem] items-center justify-center">
+      <Spinner size="xl" />
+    </div>
+  );
+}
+
 // 404 Page component
 function NotFoundPage() {
   return (
@@ -69,77 +79,84 @@ const routes: RouteObject[] = [
     path: '/',
     element: (
       <ErrorBoundary>
-        <HomePage />
+        <Outlet />
       </ErrorBoundary>
     ),
-  },
-  {
-    path: '/about',
-    element: (
-      <ErrorBoundary>
-        <AboutPage />
-      </ErrorBoundary>
-    ),
-  },
-  {
-    path: '/datasets',
-    element: (
-      <ErrorBoundary>
-        <ProtectedRoute>
-          <AppLayout>
-            <DatasetsPage />
-          </AppLayout>
-        </ProtectedRoute>
-      </ErrorBoundary>
-    ),
-  },
-  {
-    path: '/entity-mappings',
-    element: (
-      <ErrorBoundary>
-        <ProtectedRoute>
-          <AppLayout>
-            <EntityMappingsPage />
-          </AppLayout>
-        </ProtectedRoute>
-      </ErrorBoundary>
-    ),
-  },
-  {
-    path: '/features',
-    element: (
-      <ErrorBoundary>
-        <ProtectedRoute>
-          <AppLayout>
-            <FeatureDefinitionsPage />
-          </AppLayout>
-        </ProtectedRoute>
-      </ErrorBoundary>
-    ),
-  },
-  {
-    path: '/analysis-jobs',
-    element: (
-      <ErrorBoundary>
-        <ProtectedRoute>
-          <AppLayout>
-            <AnalysisJobsPage />
-          </AppLayout>
-        </ProtectedRoute>
-      </ErrorBoundary>
-    ),
-  },
-  {
-    path: '/analysis-results',
-    element: (
-      <ErrorBoundary>
-        <ProtectedRoute>
-          <AppLayout>
-            <AnalysisResultsPage />
-          </AppLayout>
-        </ProtectedRoute>
-      </ErrorBoundary>
-    ),
+    children: [
+      {
+        index: true,
+        element: (
+          <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }>
+            <HomePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'about',
+        element: (
+          <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }>
+            <AboutPage />
+          </Suspense>
+        ),
+      },
+      {
+        element: (
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: 'datasets',
+            element: (
+              <Suspense fallback={<AppPageFallback />}>
+                <DatasetsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'entity-mappings',
+            element: (
+              <Suspense fallback={<AppPageFallback />}>
+                <EntityMappingsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'features',
+            element: (
+              <Suspense fallback={<AppPageFallback />}>
+                <FeatureDefinitionsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'analysis-jobs',
+            element: (
+              <Suspense fallback={<AppPageFallback />}>
+                <AnalysisJobsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'analysis-results',
+            element: (
+              <Suspense fallback={<AppPageFallback />}>
+                <AnalysisResultsPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+    ],
   },
   {
     path: '*',
