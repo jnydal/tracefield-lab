@@ -1,12 +1,8 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { clearAuth, selectUser } from '../features/auth/redux/auth-slice';
 import { useLogoutMutation } from '../services/api/auth-api';
-
-interface AppLayoutProps {
-  children: React.ReactNode;
-}
 
 const navItems = [
   { label: 'Datasets', to: '/datasets' },
@@ -23,7 +19,7 @@ function getInitials(label: string): string {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout() {
   const user = useAppSelector(selectUser);
   const dispatch = useAppDispatch();
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
@@ -133,7 +129,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       </header>
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
         <div className="rounded-3xl border border-white/60 bg-white/85 p-6 shadow-lg backdrop-blur-sm sm:p-8">
-          {children}
+          <Outlet />
         </div>
       </main>
     </div>
