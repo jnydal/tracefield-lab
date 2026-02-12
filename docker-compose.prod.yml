@@ -1,3 +1,7 @@
 services:
   api:
     image: ${TRACEFIELD_API_IMAGE}
+  frontend:
+    image: ${TRACEFIELD_FRONTEND_IMAGE}
+    volumes: []
+    command: ["nginx", "-g", "daemon off;"]
