@@ -8,6 +8,7 @@ export function LandingPage() {
   return (
     <section className="landing-page">
       <div className="landing-shell">
+
         <div className="landing-hero-card">
           <div className="landing-hero">
             <p className="landing-hero-kicker">Tracefield Lab</p>
@@ -19,6 +20,7 @@ export function LandingPage() {
               for research teams that need both speed and control.
             </p>
           </div>
+
           <div className="landing-hero-card-visual" aria-hidden="true">
             <img
               src="/images/main.png"

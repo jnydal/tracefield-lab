@@ -285,6 +285,68 @@
     @apply w-full bg-violet-600 text-white hover:bg-violet-700 focus:ring-4 focus:ring-violet-300 sm:w-auto dark:focus:ring-violet-600;
   }
 
+  /* ----- About page ----- */
+  .about-page {
+    @apply flex min-h-screen items-center justify-center px-6 py-10;
+  }
+
+  .about-shell {
+    @apply w-full max-w-4xl;
+  }
+
+  .about-hero-card {
+    @apply mt-8 flex flex-col gap-6 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-lg sm:p-8 sm:border-slate-300;
+  }
+
+  .about-hero {
+    @apply flex flex-col items-center gap-4 text-center;
+  }
+
+  .about-hero-kicker {
+    @apply text-sm font-semibold uppercase tracking-[0.2em] text-violet-600;
+  }
+
+  .about-hero-title {
+    @apply text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl;
+  }
+
+  .about-hero-copy {
+    @apply text-base text-slate-600 sm:text-lg;
+  }
+
+  .about-hero-card-visual {
+    @apply overflow-hidden;
+  }
+
+  .about-hero-card-visual svg {
+    width: 100%;
+    height: auto;
+  }
+
+  .about-content-card {
+    @apply mt-8 flex flex-col gap-6 rounded-xl border border-slate-200/80 bg-white p-6 text-left shadow-xl sm:p-8 sm:border-slate-300;
+  }
+
+  .about-content-card > div:first-child > * + * {
+    @apply mt-4;
+  }
+
+  .about-content-title {
+    @apply text-lg font-semibold text-slate-900;
+  }
+
+  .about-content-copy {
+    @apply text-slate-600 text-sm sm:text-base;
+  }
+
+  .about-content-back {
+    @apply pt-2;
+  }
+
+  .about-content-back-link {
+    @apply font-medium text-violet-600 hover:text-violet-800 hover:underline;
+  }
+
   /* ----- App nav (logged-in top menu) ----- */
   .app-nav-link {
     @apply inline-block py-1 transition-colors;
