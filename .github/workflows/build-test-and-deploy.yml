@@ -52,6 +52,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/api:main
+            ghcr.io/${{ github.repository }}/api:latest
             ghcr.io/${{ github.repository }}/api:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
@@ -64,7 +65,7 @@ jobs:
           cat <<'EOF' > deploy/manifest.json
           {
             "image": "ghcr.io/${{ github.repository }}/api",
-            "tags": ["main", "${{ github.sha }}"],
+            "tags": ["main", "latest", "${{ github.sha }}"],
             "digest": "${{ steps.api_build.outputs.digest }}",
             "commit": "${{ github.sha }}",
             "run_id": "${{ github.run_id }}",
@@ -107,6 +108,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/frontend:main
+            ghcr.io/${{ github.repository }}/frontend:latest
             ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
@@ -136,6 +138,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/worker-ingest:main
+            ghcr.io/${{ github.repository }}/worker-ingest:latest
             ghcr.io/${{ github.repository }}/worker-ingest:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
@@ -165,6 +168,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/worker-embeddings:main
+            ghcr.io/${{ github.repository }}/worker-embeddings:latest
             ghcr.io/${{ github.repository }}/worker-embeddings:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
@@ -194,6 +198,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/resolver:main
+            ghcr.io/${{ github.repository }}/resolver:latest
             ghcr.io/${{ github.repository }}/resolver:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
