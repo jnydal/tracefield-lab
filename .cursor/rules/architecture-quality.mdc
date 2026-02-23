@@ -53,6 +53,29 @@ alwaysApply: true
 - When there are multiple valid approaches, briefly explain the tradeoffs rather than silently picking one.
 - Flag if a suggestion has meaningful performance, maintainability, or scalability implications.
 
+## Documentation Updates — Required Step
+
+Documentation must be updated as part of any change, not as an afterthought. This is part of the definition of done.
+
+**When to update:**
+- Any change that affects behavior, architecture, APIs, configuration, or operational procedures
+- New services, modules, endpoints, or pipeline stages
+- Schema changes, new environment variables, or deployment steps
+- Changes that invalidate existing runbook steps or agent guidance
+
+**Key project documentation:**
+| Document | Update when |
+|----------|-------------|
+| `ARCHITECTURE.md` | New components, data flows, or architectural decisions |
+| `NFR.md` | Performance, scalability, retention, or compliance changes |
+| `RUNBOOK.md` | New operational procedures, troubleshooting steps, or config changes |
+| `AGENT.md` | New interaction patterns, API usage, or commands |
+| `README.md` | Setup, quickstart, or high-level project description changes |
+
+- Do not skip documentation updates to save time. If a change affects a doc, update it in the same change.
+- When unsure whether documentation applies, flag it for review rather than omitting.
+- Feature-specific or module-specific docs (e.g. `frontend/architecture.md`) should be updated when those areas change.
+
 ## Definition of Done
 A task is only complete when all of the following are true:
 1. Code works and is tested (see testing rules)
@@ -60,5 +83,5 @@ A task is only complete when all of the following are true:
 3. No hardcoded values or secrets
 4. Change aligns with `docs/ARCHITECTURE.md`
 5. NFRs in `docs/NFR.md` are not degraded
-6. Relevant documentation updated if behavior changed
+6. **Documentation updated** — all relevant `.md` files reflect the change (see "Documentation Updates" above)
 7. Observability requirements met (logging, metrics where needed)

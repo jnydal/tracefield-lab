@@ -96,3 +96,4 @@ When generating a new feature worker, API route, or pipeline stage, confirm all 
 7. Added to `docker-compose.yml` and registered in API config (if a new module)
 8. Migration is backward compatible (if schema change required)
 9. No real PII in fixtures, seeds, or comments
+10. **Relevant documentation updated** — ARCHITECTURE.md, RUNBOOK.md, AGENT.md, or README.md as applicable (see architecture-quality rules)
