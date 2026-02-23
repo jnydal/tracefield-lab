@@ -45,6 +45,18 @@ export function AboutPage() {
               effect sizes and correction. Provenance and licensing metadata are tracked
               so workflows stay reproducible and auditable.
             </p>
+            <h2 className="about-content-title">What makes it different</h2>
+            <p className="about-content-copy">
+              Most research tools work within a single dataset or domain. Tracefield Lab
+              is built for correlation discovery across heterogeneous sources—different
+              labs, disciplines, and formats that rarely get compared. Entity resolution
+              (exact keys plus semantic matching with embeddings) lets you map “the same
+              thing” across datasets. The feature store and analysis layer then surface
+              correlations that emerge only when you can cross-reference. That makes it
+              a tool for cracking open hermeticized science: bringing siloed knowledge
+              into one auditable, reproducible system so you can find the patterns that
+              live at the boundaries.
+            </p>
             <h2 className="about-content-title">Why this project</h2>
             <p className="about-content-copy">
               This is an upskilling initiative: a place to explore

@@ -16,9 +16,10 @@ export function LandingPage() {
               Build, analyze, and share research pipelines with secure traceability.
             </h1>
             <p className="landing-hero-copy">
-              Ingest datasets, infer schemas from samples, map entities manually or via
-              semantic resolution, and run feature extraction and analysis jobs in a
-              unified workspace for research teams that need both speed and control.
+              A modular pipeline for multi-dataset analysis—ingest heterogeneous sources,
+              map entities across them with semantic resolution, and run correlation and
+              analysis jobs in one auditable workspace. Built for finding patterns that
+              emerge only when you can cross-reference siloed research.
             </p>
           </div>
 
