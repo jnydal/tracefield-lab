@@ -127,6 +127,10 @@ export const pipelineApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/features/definitions/${id}`, method: 'DELETE' }),
       invalidatesTags: ['FeatureDefinitions'],
     }),
+    listAnalysisJobs: builder.query<AnalysisJob[], void>({
+      query: () => ({ url: '/analysis-jobs', method: 'GET' }),
+      providesTags: ['AnalysisJobs'],
+    }),
     createAnalysisJob: builder.mutation<AnalysisJob, AnalysisJobRequest>({
       query: (body) => ({ url: '/analysis-jobs', method: 'POST', body }),
       invalidatesTags: ['AnalysisJobs'],
@@ -134,6 +138,10 @@ export const pipelineApi = baseApi.injectEndpoints({
     getAnalysisJob: builder.query<AnalysisJob, string>({
       query: (id) => ({ url: `/analysis-jobs/${id}`, method: 'GET' }),
       providesTags: ['AnalysisJobs'],
+    }),
+    listAnalysisResults: builder.query<AnalysisResult[], void>({
+      query: () => ({ url: '/analysis-results', method: 'GET' }),
+      providesTags: ['AnalysisResults'],
     }),
     getAnalysisResults: builder.query<AnalysisResult[], string>({
       query: (jobId) => ({
@@ -156,7 +164,9 @@ export const {
   useListFeatureDefinitionsQuery,
   useCreateFeatureDefinitionMutation,
   useDeleteFeatureDefinitionMutation,
+  useListAnalysisJobsQuery,
   useCreateAnalysisJobMutation,
   useLazyGetAnalysisJobQuery,
+  useListAnalysisResultsQuery,
   useLazyGetAnalysisResultsQuery,
 } = pipelineApi;

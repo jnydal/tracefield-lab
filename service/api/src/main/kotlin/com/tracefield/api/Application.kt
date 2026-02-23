@@ -686,6 +686,22 @@ fun Application.module() {
         }
 
         route("/analysis-jobs") {
+            get {
+                val items = transaction(DatabaseManager.getDatabase()) {
+                    AnalysisJobs.selectAll().orderBy(AnalysisJobs.createdAt, SortOrder.DESC).map { row ->
+                        AnalysisJobResponse(
+                            id = row[AnalysisJobs.id].value.toString(),
+                            name = row[AnalysisJobs.name],
+                            status = row[AnalysisJobs.status],
+                            config = parseJsonElement(row[AnalysisJobs.configJson]) ?: jsonParser.parseToJsonElement("{}"),
+                            createdAt = row[AnalysisJobs.createdAt].toString(),
+                            startedAt = row[AnalysisJobs.startedAt]?.toString(),
+                            endedAt = row[AnalysisJobs.endedAt]?.toString()
+                        )
+                    }
+                }
+                call.respond(items)
+            }
             post {
                 val req = call.receive<AnalysisJobRequest>()
                 val id = UUID.randomUUID()
@@ -737,12 +753,13 @@ fun Application.module() {
         }
 
         get("/analysis-results") {
-            val jobId = parseUuid(call.request.queryParameters["jobId"]) ?: run {
-                call.respond(HttpStatusCode.BadRequest, "Missing jobId")
-                return@get
-            }
+            val jobId = parseUuid(call.request.queryParameters["jobId"])
             val results = transaction(DatabaseManager.getDatabase()) {
-                AnalysisResults.select { AnalysisResults.jobId eq jobId }.map { row ->
+                val query = when (jobId) {
+                    null -> AnalysisResults.selectAll()
+                    else -> AnalysisResults.select { AnalysisResults.jobId eq jobId }
+                }
+                query.map { row ->
                     AnalysisResultResponse(
                         id = row[AnalysisResults.id].value.toString(),
                         jobId = row[AnalysisResults.jobId].toString(),

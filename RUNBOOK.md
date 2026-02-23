@@ -309,6 +309,16 @@ watch -n 5 'docker compose exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh --b
 
 ## Common Tasks
 
+### Load Test Data (thor.nydal@uptimeconsulting.no)
+
+To populate test data so you can run a job:
+
+```bash
+docker compose exec -T db psql -U postgres -d tracefield < infra/sql/099_seed_test_data.sql
+```
+
+This creates: user, dataset `test-survey-2024`, 3 entities (Alice, Bob, Carol), entity mappings, 2 feature definitions, 6 feature values, and 1 analysis job. Safe to re-run (idempotent).
+
 ### Reset Pipeline for New Dataset
 
 ```sql

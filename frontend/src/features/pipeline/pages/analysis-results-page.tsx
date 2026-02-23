@@ -1,61 +1,125 @@
-import { useState } from 'react';
-import { useLazyGetAnalysisResultsQuery } from '../../../services/api/pipeline-api';
+import {
+  useListAnalysisJobsQuery,
+  useListAnalysisResultsQuery,
+} from '../../../services/api/pipeline-api';
 
 export function AnalysisResultsPage() {
-  const [jobId, setJobId] = useState('');
-  const [fetchResults, { data, isFetching }] = useLazyGetAnalysisResultsQuery();
+  const { data: jobs = [], isLoading: isLoadingJobs } = useListAnalysisJobsQuery();
+  const { data: allResults = [], isLoading: isLoadingResults } =
+    useListAnalysisResultsQuery();
 
-  const handleFetch = async () => {
-    if (!jobId.trim()) return;
-    await fetchResults(jobId).unwrap();
-  };
+  const completedJobs = jobs.filter(
+    (j) => j.status === 'completed' || j.status === 'finished'
+  );
+  const resultsByJob = allResults.reduce<Record<string, typeof allResults>>(
+    (acc, r) => {
+      (acc[r.jobId] ??= []).push(r);
+      return acc;
+    },
+    {}
+  );
+
+  const formatNum = (n: number | undefined | null) =>
+    n != null ? n.toFixed(4) : '—';
+
+  if (isLoadingJobs || isLoadingResults) {
+    return (
+      <section className="p-6">
+        <header>
+          <h1 className="text-2xl font-semibold">Analysis results</h1>
+          <p className="text-sm text-slate-500">Loading…</p>
+        </header>
+      </section>
+    );
+  }
+
+  if (completedJobs.length === 0) {
+    return (
+      <section className="p-6 space-y-6">
+        <header>
+          <h1 className="text-2xl font-semibold">Analysis results</h1>
+          <p className="text-sm text-slate-500">
+            Results for completed analysis jobs appear here.
+          </p>
+        </header>
+        <p className="text-sm text-slate-500">No completed jobs yet.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="p-6 space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Analysis results</h1>
         <p className="text-sm text-slate-500">
-          Retrieve results for a submitted analysis job.
+          Results for completed analysis jobs.
         </p>
       </header>
 
-      <div className="space-y-3 max-w-xl">
-        <div className="flex gap-2">
-          <input
-            className="flex-1 rounded border border-slate-300 px-3 py-2"
-            value={jobId}
-            onChange={(event) => setJobId(event.target.value)}
-            placeholder="Job ID"
-          />
-          <button
-            type="button"
-            className="rounded border border-slate-300 px-4 py-2 text-sm"
-            onClick={handleFetch}
-            disabled={isFetching}
-          >
-            {isFetching ? 'Loading…' : 'Fetch'}
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        {data && data.length === 0 && (
-          <p className="text-sm text-slate-500">No results yet.</p>
-        )}
-        {data && data.length > 0 && (
-          <ul className="divide-y divide-slate-200 rounded border border-slate-200">
-            {data.map((result) => (
-              <li key={result.id} className="p-3">
-                <p className="text-sm font-medium">
-                  {result.featureXId} × {result.featureYId}
-                </p>
+      <div className="space-y-6">
+        {completedJobs.map((job) => {
+          const results = resultsByJob[job.id] ?? [];
+          return (
+            <div key={job.id} className="rounded border border-slate-200 overflow-hidden">
+              <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
+                <p className="font-medium">{job.name}</p>
                 <p className="text-xs text-slate-500">
-                  p={result.pValue ?? 'n/a'} • effect={result.effectSize ?? 'n/a'}
+                  Job ID: {job.id} · Status: {job.status}
                 </p>
-              </li>
-            ))}
-          </ul>
-        )}
+              </div>
+              {results.length === 0 ? (
+                <p className="p-4 text-sm text-slate-500">
+                  No result rows for this job.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Feature X
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Feature Y
+                        </th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          p-value
+                        </th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Effect size
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Correction
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {results.map((r) => (
+                        <tr key={r.id}>
+                          <td className="px-4 py-2 text-sm font-mono">
+                            {r.featureXId.slice(0, 8)}…
+                          </td>
+                          <td className="px-4 py-2 text-sm font-mono">
+                            {r.featureYId.slice(0, 8)}…
+                          </td>
+                          <td className="px-4 py-2 text-sm text-right tabular-nums">
+                            {formatNum(r.pValue)}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-right tabular-nums">
+                            {formatNum(r.effectSize)}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-slate-500">
+                            {r.correction ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
