@@ -236,7 +236,7 @@ export function DatasetsPage() {
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium" htmlFor="dataset-file">
-            Data file (optional)
+            Data file
           </label>
           <div className="flex items-center gap-2">
             <input

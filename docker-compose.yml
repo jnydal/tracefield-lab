@@ -49,11 +49,7 @@ services:
       minio:
         condition: service_started
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "node -e \"require('http').get('http://127.0.0.1:8000/healthz', r=>process.exit(r.statusCode===200?0:1)).on('error', ()=>process.exit(1))\""
-        ]
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8000/healthz || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 20

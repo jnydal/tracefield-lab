@@ -22,8 +22,16 @@ $env:TRACEFIELD_RESOLVER_IMAGE         = "$registry/resolver:latest"
 
 # Start compose stack in prod
 Set-Location 'C:\workspace\tracefield-lab'
+
+# Windows: add override to disable Watchtower (avoids restart loop on Docker Desktop)
+$composeFiles = "-f docker-compose.yml -f docker-compose.prod.yml"
+if ($IsWindows -ne $false) {
+    $composeFiles += " -f deploy/docker-compose.windows.yml"
+}
+
 "Running docker compose up..." | Out-File -FilePath $log -Append
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans 2>&1 | Out-File -FilePath $log -Append
+# Use cmd /c to avoid PowerShell treating docker stderr (progress messages) as errors
+cmd /c "docker compose $composeFiles up -d --remove-orphans 2>&1" | Out-File -FilePath $log -Append
 "--- docker ps ---" | Out-File -Append $log
-docker ps --format "table {{.Names}}`t{{.Status}}" 2>&1 | Out-File -FilePath $log -Append
+cmd /c "docker ps --format ""table {{.Names}}`t{{.Status}}"" 2>&1" | Out-File -FilePath $log -Append
 "Done." | Out-File -FilePath $log -Append

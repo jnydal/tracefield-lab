@@ -1,0 +1,6 @@
+# Windows override: disable Watchtower restart loop.
+# On Docker Desktop for Windows, Watchtower often fails (socket timing, etc.) and restarts repeatedly.
+# Use Task Scheduler + deploy/start.ps1 on a schedule instead for image updates.
+services:
+  watchtower:
+    restart: "no"
