@@ -94,6 +94,7 @@ The Tracefield Lab is a generic, modular data pipeline for multi-dataset analysi
 
 **Responsibilities**:
 - Dataset registration and schema management
+- **Schema inference**: `POST /schema/infer` — infer column types and mapping suggestions (textColumn, idColumn, joinKeys, semanticFields) from pasted CSV/JSON sample; uses heuristic inference always, optionally enhances with LLM (Ollama) when `OLLAMA_URL` or `LLM_URL` is set
 - Ingest job submission and status
 - Entity mapping configuration
 - Feature extraction job orchestration
@@ -217,8 +218,8 @@ These services become modular feature providers in the generic system.
 - `PG_DSN` / `DATABASE_URL` - PostgreSQL connection
 - `KAFKA_BOOTSTRAP_SERVERS` - Kafka connection
 - `OBJECT_STORE_*` - Object storage configuration
-- `LLM_URL` - LLM service URL
-- `LLM_MODEL` - Model name for feature modules
+- `OLLAMA_URL` / `LLM_URL` - LLM service URL (Ollama); used for schema inference when set
+- `LLM_MODEL` - Model name for schema inference and feature modules (default: qwen2.5:7b-instruct-q4_K_M)
 - `EMBEDDINGS_MODEL` - BGE model for resolver (e.g. BAAI/bge-small-en-v1.5)
 
 ## Scalability Considerations

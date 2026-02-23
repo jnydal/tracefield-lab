@@ -6,15 +6,25 @@ import {
   useGetDatasetQuery,
   useTriggerFeatureExtractMutation,
   useLazyGetJobStatusQuery,
+  useInferSchemaMutation,
 } from '../../../services/api/pipeline-api';
+import type { SchemaColumn } from '../../../services/api/pipeline-api';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'flowbite-react';
 
 export function DatasetsPage() {
   const { data = [], isLoading } = useListDatasetsQuery();
   const [createDataset, { isLoading: isCreating }] = useCreateDatasetMutation();
   const [deleteDataset] = useDeleteDatasetMutation();
+  const [inferSchema, { isLoading: isInferring }] = useInferSchemaMutation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [inferredSchema, setInferredSchema] = useState<{ columns: SchemaColumn[] } | null>(null);
+
+  const [inferModalOpen, setInferModalOpen] = useState(false);
+  const [inferMode, setInferMode] = useState<'create' | 'extract'>('create');
+  const [sampleContent, setSampleContent] = useState('');
+  const [sampleFormat, setSampleFormat] = useState<'csv' | 'json'>('csv');
+  const [inferError, setInferError] = useState<string | null>(null);
 
   const [extractDatasetId, setExtractDatasetId] = useState<string | null>(null);
   const [textColumn, setTextColumn] = useState('');
@@ -48,9 +58,47 @@ export function DatasetsPage() {
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!name.trim()) return;
-    await createDataset({ name, description: description || undefined }).unwrap();
+    await createDataset({
+      name,
+      description: description || undefined,
+      schema: inferredSchema ?? undefined,
+    }).unwrap();
     setName('');
     setDescription('');
+    setInferredSchema(null);
+  };
+
+  const openInferModal = (mode: 'create' | 'extract') => {
+    setInferMode(mode);
+    setSampleContent('');
+    setSampleFormat('csv');
+    setInferError(null);
+    setInferModalOpen(true);
+  };
+
+  const handleInferSchema = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setInferError(null);
+    if (!sampleContent.trim()) {
+      setInferError('Paste a sample (CSV or JSON) to infer schema.');
+      return;
+    }
+    try {
+      const result = await inferSchema({
+        sampleContent: sampleContent.trim(),
+        format: sampleFormat,
+      }).unwrap();
+      if (inferMode === 'create') {
+        setInferredSchema({ columns: result.columns });
+        setInferModalOpen(false);
+      } else {
+        if (result.suggestions.textColumn) setTextColumn(result.suggestions.textColumn);
+        if (result.suggestions.idColumn) setIdColumn(result.suggestions.idColumn);
+        setInferModalOpen(false);
+      }
+    } catch {
+      setInferError('Schema inference failed. Check the sample format and try again.');
+    }
   };
 
   const openExtractModal = (datasetId: string) => {
@@ -135,13 +183,37 @@ export function DatasetsPage() {
             placeholder="Short summary of this dataset."
           />
         </div>
-        <button
-          type="submit"
-          className="rounded bg-slate-900 px-4 py-2 text-sm text-white"
-          disabled={isCreating}
-        >
-          {isCreating ? 'Creating…' : 'Create dataset'}
-        </button>
+        {inferredSchema && inferredSchema.columns.length > 0 && (
+          <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
+            <p className="font-medium text-slate-700">Inferred schema ({inferredSchema.columns.length} columns)</p>
+            <p className="text-slate-500 mt-1">
+              {inferredSchema.columns.map((c) => `${c.name}: ${c.type}`).join(', ')}
+            </p>
+            <button
+              type="button"
+              className="mt-2 text-xs text-slate-600 hover:underline"
+              onClick={() => setInferredSchema(null)}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            className="rounded bg-slate-900 px-4 py-2 text-sm text-white"
+            disabled={isCreating}
+          >
+            {isCreating ? 'Creating…' : 'Create dataset'}
+          </button>
+          <button
+            type="button"
+            className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
+            onClick={() => openInferModal('create')}
+          >
+            Infer schema from sample
+          </button>
+        </div>
       </form>
 
       <div className="space-y-2">
@@ -226,12 +298,21 @@ export function DatasetsPage() {
               </p>
             )}
             <div className="space-y-1">
-              <label
-                className="text-sm font-medium"
-                htmlFor="extract-text-column"
-              >
-                Text column (required)
-              </label>
+              <div className="flex items-center justify-between">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="extract-text-column"
+                >
+                  Text column (required)
+                </label>
+                <button
+                  type="button"
+                  className="text-xs text-slate-600 hover:underline"
+                  onClick={() => openInferModal('extract')}
+                >
+                  Suggest from sample
+                </button>
+              </div>
               <input
                 id="extract-text-column"
                 className="w-full rounded border border-slate-300 px-3 py-2"
@@ -307,6 +388,73 @@ export function DatasetsPage() {
               onClick={closeExtractModal}
             >
               Close
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      <Modal
+        show={inferModalOpen}
+        onClose={() => setInferModalOpen(false)}
+        size="md"
+      >
+        <ModalHeader>
+          {inferMode === 'create' ? 'Infer schema from sample' : 'Suggest columns from sample'}
+        </ModalHeader>
+        <form onSubmit={handleInferSchema}>
+          <ModalBody className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Paste a few rows of CSV or JSON data. Column types and mapping suggestions will be inferred.
+            </p>
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="sample-format">
+                Format
+              </label>
+              <select
+                id="sample-format"
+                className="w-full rounded border border-slate-300 px-3 py-2"
+                value={sampleFormat}
+                onChange={(e) => setSampleFormat(e.target.value as 'csv' | 'json')}
+              >
+                <option value="csv">CSV</option>
+                <option value="json">JSON</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="sample-content">
+                Sample content
+              </label>
+              <textarea
+                id="sample-content"
+                className="w-full rounded border border-slate-300 px-3 py-2 font-mono text-sm"
+                rows={8}
+                value={sampleContent}
+                onChange={(e) => setSampleContent(e.target.value)}
+                placeholder={
+                  sampleFormat === 'csv'
+                    ? 'id,name,description\n1,Alice,Researcher\n2,Bob,Engineer'
+                    : '[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]'
+                }
+              />
+            </div>
+            {inferError && (
+              <p className="text-sm text-red-600">{inferError}</p>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <button
+              type="submit"
+              className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+              disabled={!sampleContent.trim() || isInferring}
+            >
+              {isInferring ? 'Inferring…' : 'Infer schema'}
+            </button>
+            <button
+              type="button"
+              className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              onClick={() => setInferModalOpen(false)}
+            >
+              Cancel
             </button>
           </ModalFooter>
         </form>

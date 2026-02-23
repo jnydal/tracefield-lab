@@ -218,3 +218,29 @@ data class SimilaritySearchResponse(
     val model: String,
     val results: List<SimilarEntityResult>
 )
+
+@Serializable
+data class SchemaInferRequest(
+    val sampleContent: String,
+    val format: String = "csv"
+)
+
+@Serializable
+data class SchemaColumn(
+    val name: String,
+    val type: String
+)
+
+@Serializable
+data class SchemaInferSuggestions(
+    val textColumn: String? = null,
+    val idColumn: String? = null,
+    val joinKeys: List<String>? = null,
+    val semanticFields: List<String>? = null
+)
+
+@Serializable
+data class SchemaInferResponse(
+    val columns: List<SchemaColumn>,
+    val suggestions: SchemaInferSuggestions
+)

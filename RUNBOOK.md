@@ -301,6 +301,10 @@ docker compose exec api java -jar app.jar
 docker compose exec api env | grep PG_DSN
 ```
 
+### Schema Inference
+
+Schema inference (`POST /schema/infer`) infers column types and mapping suggestions from pasted CSV/JSON samples. It always uses heuristic inference (no LLM required). To enable LLM-enhanced inference, set `OLLAMA_URL` or `LLM_URL` (e.g. `http://local-llm:11434`) in the API environment. See AGENT.md for curl examples.
+
 ### LLM Not Responding
 
 ```bash

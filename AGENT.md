@@ -7,6 +7,17 @@ Operational commands, troubleshooting, and step-by-step procedures live in `RUNB
 
 ### 1. API Service (Port 8000)
 
+**Infer schema from sample** (proposes column types and mapping suggestions):
+```bash
+curl -X POST http://localhost:8000/schema/infer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sampleContent": "id,name,description\n1,Alice,Researcher\n2,Bob,Engineer",
+    "format": "csv"
+  }'
+```
+Returns `{"columns":[{"name":"id","type":"string"},...],"suggestions":{"textColumn":"description","idColumn":"id","joinKeys":["id"],"semanticFields":["name"]}}`. Uses heuristic inference always; enhances with LLM when `OLLAMA_URL` or `LLM_URL` is set.
+
 **Register a Dataset**:
 ```bash
 curl -X POST http://localhost:8000/datasets \

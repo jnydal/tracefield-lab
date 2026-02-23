@@ -14,7 +14,7 @@ for that workflow, with a feature store, analysis jobs, and provenance tracking.
 
 The system:
 
-1. Registers datasets with schemas and licensing metadata.
+1. Registers datasets with schemas and licensing metadata (schema can be inferred from CSV/JSON samples).
 2. Ingests raw data into staging tables and object storage.
 3. Maps entities across datasets using manual mapping or automated semantic resolution (exact keys + BGE embeddings).
 4. Extracts features via modular workers: **text-to-embedding** (BGE 1024-dim) and domain-specific scalar features.
@@ -139,7 +139,7 @@ curl http://localhost:8001/api/tags
 
 ## Typical Usage Flow
 
-1. Register a dataset (name, schema, license)
+1. Register a dataset (optionally infer schema from a pasted CSV/JSON sample)
 2. Upload raw data
 3. Map entities (manual via Entity Mappings UI, or automated via resolution jobs with embeddings)
 4. Trigger feature extraction

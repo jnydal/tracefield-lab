@@ -24,7 +24,7 @@ data class Settings(
     val s3UseSsl: Boolean = System.getenv("S3_USE_SSL")?.toBoolean() ?: false,
     
     // LLM / Embeddings
-    val ollamaUrl: String? = System.getenv("OLLAMA_URL"),
+    val llmUrl: String? = System.getenv("OLLAMA_URL") ?: System.getenv("LLM_URL"),
     val llmModel: String = System.getenv("LLM_MODEL") ?: "qwen2.5:7b-instruct-q4_K_M",
     val embeddingsModel: String = System.getenv("EMBEDDINGS_MODEL") ?: "BAAI/bge-large-en-v1.5",
     

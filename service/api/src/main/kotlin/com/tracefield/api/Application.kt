@@ -1,6 +1,7 @@
 package com.tracefield.api
 
 import com.tracefield.api.models.*
+import com.tracefield.api.schema.inferSchema
 import com.tracefield.api.storage.createS3Storage
 import com.tracefield.api.jobs.ApiJobQueue
 import com.tracefield.core.Config
@@ -254,6 +255,17 @@ fun Application.module() {
         
         get("/version") {
             call.respond(VersionInfo())
+        }
+
+        post("/schema/infer") {
+            val req = call.receive<SchemaInferRequest>()
+            if (req.sampleContent.isBlank()) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "sampleContent is required"))
+                return@post
+            }
+            val format = req.format.takeIf { it.lowercase() in listOf("csv", "json") } ?: "csv"
+            val result = inferSchema(req.sampleContent, format)
+            call.respond(result)
         }
         
         get("/jobs/{jobId}") {

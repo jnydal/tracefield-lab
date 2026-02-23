@@ -160,6 +160,25 @@ export type SimilaritySearchParams = {
   datasetIds?: string[];
 };
 
+export type SchemaInferRequest = {
+  sampleContent: string;
+  format?: 'csv' | 'json';
+};
+
+export type SchemaColumn = { name: string; type: string };
+
+export type SchemaInferSuggestions = {
+  textColumn?: string;
+  idColumn?: string;
+  joinKeys?: string[];
+  semanticFields?: string[];
+};
+
+export type SchemaInferResponse = {
+  columns: SchemaColumn[];
+  suggestions: SchemaInferSuggestions;
+};
+
 export const pipelineApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     listDatasets: builder.query<Dataset[], void>({
@@ -265,6 +284,13 @@ export const pipelineApi = baseApi.injectEndpoints({
         },
       }),
     }),
+    inferSchema: builder.mutation<SchemaInferResponse, SchemaInferRequest>({
+      query: ({ sampleContent, format = 'csv' }) => ({
+        url: '/schema/infer',
+        method: 'POST',
+        body: { sampleContent, format },
+      }),
+    }),
   }),
 });
 
@@ -292,4 +318,5 @@ export const {
   useCreateResolutionJobMutation,
   useLazyGetResolutionJobQuery,
   useLazySimilaritySearchQuery,
+  useInferSchemaMutation,
 } = pipelineApi;
