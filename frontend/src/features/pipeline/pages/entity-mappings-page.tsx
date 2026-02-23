@@ -249,123 +249,122 @@ export function EntityMappingsPage() {
         <>
           <form
             onSubmit={handleCreateResolutionJob}
-            className="space-y-3 max-w-2xl"
+            className="space-y-4 max-w-3xl rounded-lg bg-slate-50 border border-slate-200 p-5"
           >
             <h2 className="text-lg font-semibold">Run resolution job</h2>
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="resolution-name">
-                Job name
-              </label>
-              <input
-                id="resolution-name"
-                className="w-full rounded border border-slate-300 px-3 py-2"
-                value={jobName}
-                onChange={(event) => setJobName(event.target.value)}
-                placeholder="e.g. Resolve survey 2024"
-              />
-            </div>
-            <div className="space-y-1">
-              <label
-                className="text-sm font-medium"
-                htmlFor="resolution-dataset"
-              >
-                Dataset
-              </label>
-              <select
-                id="resolution-dataset"
-                className="w-full rounded border border-slate-300 px-3 py-2"
-                value={resolutionDatasetId}
-                onChange={(event) => setResolutionDatasetId(event.target.value)}
-              >
-                <option value="">Select a dataset</option>
-                {datasets.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label
-                className="text-sm font-medium"
-                htmlFor="resolution-entity-type"
-              >
-                Entity type
-              </label>
-              <input
-                id="resolution-entity-type"
-                className="w-full rounded border border-slate-300 px-3 py-2"
-                value={entityType}
-                onChange={(event) => setEntityType(event.target.value)}
-                placeholder="e.g. person"
-              />
-            </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="resolution-join-keys">
-                Join keys
-              </label>
-              <p className="text-xs text-slate-500 mb-1">
-                Comma-separated field names for exact matching (e.g. id, name).
-              </p>
-              <input
-                id="resolution-join-keys"
-                className="w-full rounded border border-slate-300 px-3 py-2"
-                value={joinKeys}
-                onChange={(event) => setJoinKeys(event.target.value)}
-                placeholder="id, name"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="resolution-semantic-fields">
-                Semantic fields
-              </label>
-              <p className="text-xs text-slate-500 mb-1">
-                Comma-separated field names to embed for semantic matching (e.g. name).
-              </p>
-              <input
-                id="resolution-semantic-fields"
-                className="w-full rounded border border-slate-300 px-3 py-2"
-                value={semanticFields}
-                onChange={(event) => setSemanticFields(event.target.value)}
-                placeholder="name"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
               <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="resolution-name">
+                  Job name
+                </label>
+                <input
+                  id="resolution-name"
+                  className="w-full rounded border border-slate-300 px-3 py-2"
+                  value={jobName}
+                  onChange={(event) => setJobName(event.target.value)}
+                  placeholder="e.g. Resolve survey 2024"
+                />
+              </div>
+              <div className="space-y-1">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="resolution-dataset"
+                >
+                  Dataset
+                </label>
+                <select
+                  id="resolution-dataset"
+                  className="w-full rounded border border-slate-300 px-3 py-2"
+                  value={resolutionDatasetId}
+                  onChange={(event) => setResolutionDatasetId(event.target.value)}
+                >
+                  <option value="">Select a dataset</option>
+                  {datasets.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="resolution-entity-type"
+                >
+                  Entity type
+                </label>
+                <input
+                  id="resolution-entity-type"
+                  className="w-full rounded border border-slate-300 px-3 py-2"
+                  value={entityType}
+                  onChange={(event) => setEntityType(event.target.value)}
+                  placeholder="e.g. person"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="resolution-join-keys">
+                  Join keys
+                </label>
+                <p className="text-xs text-slate-500 mb-1">
+                  Comma-separated for exact matching.
+                </p>
+                <input
+                  id="resolution-join-keys"
+                  className="w-full rounded border border-slate-300 px-3 py-2"
+                  value={joinKeys}
+                  onChange={(event) => setJoinKeys(event.target.value)}
+                  placeholder="id, name"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="resolution-semantic-fields">
+                  Semantic fields
+                </label>
+                <p className="text-xs text-slate-500 mb-1">
+                  Comma-separated for embeddings.
+                </p>
+                <input
+                  id="resolution-semantic-fields"
+                  className="w-full rounded border border-slate-300 px-3 py-2"
+                  value={semanticFields}
+                  onChange={(event) => setSemanticFields(event.target.value)}
+                  placeholder="name"
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-2 lg:col-span-1">
                 <label className="text-sm font-medium" htmlFor="resolution-threshold">
                   Similarity threshold
                 </label>
                 <p className="text-xs text-slate-500 mb-1">
-                  Min cosine similarity (0–1) for semantic match.
+                  Min cosine (0–1) for semantic match.
                 </p>
-                <input
-                  id="resolution-threshold"
-                  type="number"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  className="w-24 rounded border border-slate-300 px-3 py-2"
-                  value={threshold}
-                  onChange={(event) => setThreshold(Number(event.target.value))}
-                />
-              </div>
-              <div className="flex items-end pb-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <div className="flex flex-wrap items-center gap-4">
                   <input
-                    type="checkbox"
-                    checked={createIfNoMatch}
-                    onChange={(event) => setCreateIfNoMatch(event.target.checked)}
-                    className="rounded border-slate-300"
+                    id="resolution-threshold"
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    className="w-20 rounded border border-slate-300 px-3 py-2"
+                    value={threshold}
+                    onChange={(event) => setThreshold(Number(event.target.value))}
                   />
-                  <span className="text-sm font-medium">Create entity if no match</span>
-                </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createIfNoMatch}
+                      onChange={(event) => setCreateIfNoMatch(event.target.checked)}
+                      className="rounded border-slate-300"
+                    />
+                    <span className="text-sm">Create if no match</span>
+                  </label>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 pt-1">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Records</label>
                 <button
@@ -379,11 +378,11 @@ export function EntityMappingsPage() {
               <p className="text-xs text-slate-500">
                 Each record needs a source_record_id and keys (e.g. id: 1, name: John).
               </p>
-              <div className="space-y-3 rounded border border-slate-200 p-3">
+              <div className="space-y-2 rounded border border-slate-200 p-3 bg-white">
                 {records.map((rec, index) => (
                   <div
                     key={index}
-                    className="flex flex-wrap gap-3 items-start p-3 rounded bg-slate-50"
+                    className="flex flex-wrap gap-3 items-start p-3 rounded bg-slate-50 border border-slate-100"
                   >
                     <div className="flex-1 min-w-[120px] space-y-1">
                       <label className="text-xs font-medium text-slate-500">
@@ -507,9 +506,12 @@ export function EntityMappingsPage() {
                 className="flex items-center justify-between p-3"
               >
                 <div>
-                  <p className="font-medium">{mapping.id}</p>
+                  <p className="font-medium">
+                    {mapping.datasetName ?? mapping.datasetId} → {mapping.entityDisplayName ?? mapping.entityId}
+                  </p>
                   <p className="text-sm text-slate-500">
-                    Dataset {mapping.datasetId} → Entity {mapping.entityId}
+                    {formatDate(mapping.createdAt)}
+                    {mapping.method && ` · ${mapping.method}`}
                   </p>
                 </div>
                 <button

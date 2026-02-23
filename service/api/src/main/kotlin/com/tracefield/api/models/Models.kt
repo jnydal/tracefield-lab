@@ -69,6 +69,8 @@ data class EntityMappingResponse(
     val id: String,
     val datasetId: String,
     val entityId: String,
+    val datasetName: String? = null,
+    val entityDisplayName: String? = null,
     val sourceRecordId: String? = null,
     val sourceKeys: JsonElement? = null,
     val method: String? = null,

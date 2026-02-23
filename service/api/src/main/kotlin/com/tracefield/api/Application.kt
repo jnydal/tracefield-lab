@@ -415,18 +415,24 @@ fun Application.module() {
         route("/entity-mappings") {
             get {
                 val items = transaction(DatabaseManager.getDatabase()) {
-                    EntityMap.selectAll().map { row ->
-                        EntityMappingResponse(
-                            id = row[EntityMap.id].value.toString(),
-                            datasetId = row[EntityMap.datasetId].toString(),
-                            entityId = row[EntityMap.entityId].toString(),
-                            sourceRecordId = row[EntityMap.sourceRecordId],
-                            sourceKeys = parseJsonElement(row[EntityMap.sourceKeys]),
-                            method = row[EntityMap.method],
-                            score = row[EntityMap.score],
-                            createdAt = row[EntityMap.createdAt].toString()
-                        )
-                    }
+                    EntityMap
+                        .innerJoin(Datasets, { EntityMap.datasetId }, { Datasets.id })
+                        .innerJoin(Entities, { EntityMap.entityId }, { Entities.id })
+                        .selectAll()
+                        .map { row ->
+                            EntityMappingResponse(
+                                id = row[EntityMap.id].value.toString(),
+                                datasetId = row[EntityMap.datasetId].toString(),
+                                entityId = row[EntityMap.entityId].toString(),
+                                datasetName = row[Datasets.name],
+                                entityDisplayName = row[Entities.displayName],
+                                sourceRecordId = row[EntityMap.sourceRecordId],
+                                sourceKeys = parseJsonElement(row[EntityMap.sourceKeys]),
+                                method = row[EntityMap.method],
+                                score = row[EntityMap.score],
+                                createdAt = row[EntityMap.createdAt].toString()
+                            )
+                        }
                 }
                 call.respond(items)
             }
@@ -473,18 +479,24 @@ fun Application.module() {
                     return@get
                 }
                 val mapping = transaction(DatabaseManager.getDatabase()) {
-                    EntityMap.select { EntityMap.id eq EntityID(id, EntityMap) }.singleOrNull()?.let { row ->
-                        EntityMappingResponse(
-                            id = row[EntityMap.id].value.toString(),
-                            datasetId = row[EntityMap.datasetId].toString(),
-                            entityId = row[EntityMap.entityId].toString(),
-                            sourceRecordId = row[EntityMap.sourceRecordId],
-                            sourceKeys = parseJsonElement(row[EntityMap.sourceKeys]),
-                            method = row[EntityMap.method],
-                            score = row[EntityMap.score],
-                            createdAt = row[EntityMap.createdAt].toString()
-                        )
-                    }
+                    EntityMap
+                        .innerJoin(Datasets, { EntityMap.datasetId }, { Datasets.id })
+                        .innerJoin(Entities, { EntityMap.entityId }, { Entities.id })
+                        .select { EntityMap.id eq EntityID(id, EntityMap) }
+                        .singleOrNull()?.let { row ->
+                            EntityMappingResponse(
+                                id = row[EntityMap.id].value.toString(),
+                                datasetId = row[EntityMap.datasetId].toString(),
+                                entityId = row[EntityMap.entityId].toString(),
+                                datasetName = row[Datasets.name],
+                                entityDisplayName = row[Entities.displayName],
+                                sourceRecordId = row[EntityMap.sourceRecordId],
+                                sourceKeys = parseJsonElement(row[EntityMap.sourceKeys]),
+                                method = row[EntityMap.method],
+                                score = row[EntityMap.score],
+                                createdAt = row[EntityMap.createdAt].toString()
+                            )
+                        }
                 }
                 if (mapping == null) {
                     call.respond(HttpStatusCode.NotFound, "Mapping not found")

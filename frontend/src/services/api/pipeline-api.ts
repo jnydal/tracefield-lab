@@ -25,6 +25,8 @@ export type EntityMapping = {
   id: string;
   datasetId: string;
   entityId: string;
+  datasetName?: string;
+  entityDisplayName?: string;
   sourceRecordId?: string;
   sourceKeys?: Record<string, unknown>;
   method?: string;
