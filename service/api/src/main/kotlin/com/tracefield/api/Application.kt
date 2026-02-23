@@ -16,6 +16,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.origin
+import io.ktor.http.content.PartData
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -267,6 +268,75 @@ fun Application.module() {
             val result = inferSchema(req.sampleContent, format)
             call.respond(result)
         }
+
+        post("/ingest") {
+            val MAX_FILE_BYTES = 50 * 1024 * 1024L
+            var datasetIdStr: String? = null
+            var fileBytes: ByteArray? = null
+            var filename: String? = null
+            var contentType: String? = null
+            val multipart = call.receiveMultipart()
+            var part = multipart.readPart()
+            while (part != null) {
+                when (part) {
+                    is PartData.FormItem -> {
+                        if (part.name == "datasetId") datasetIdStr = part.value
+                    }
+                    is PartData.FileItem -> {
+                        if (part.name == "file") {
+                            val channel = part.provider()
+                            val stream = java.nio.channels.Channels.newInputStream(channel as java.nio.channels.ReadableByteChannel)
+                            fileBytes = stream.readBytes()
+                            filename = part.originalFileName
+                            contentType = part.contentType?.toString()
+                        }
+                    }
+                    else -> {}
+                }
+                part.dispose()
+                part = multipart.readPart()
+            }
+            if (fileBytes != null && fileBytes!!.size > MAX_FILE_BYTES) {
+                call.respond(HttpStatusCode.PayloadTooLarge, mapOf("error" to "File too large; max 50MB"))
+                return@post
+            }
+            val datasetId = parseUuid(datasetIdStr)
+            if (datasetId == null || datasetIdStr.isNullOrBlank()) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "datasetId is required"))
+                return@post
+            }
+            if (fileBytes == null || fileBytes!!.isEmpty()) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "file is required"))
+                return@post
+            }
+            val exists = transaction(DatabaseManager.getDatabase()) {
+                Datasets.select { Datasets.id eq EntityID(datasetId, Datasets) }.count() > 0
+            }
+            if (!exists) {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Dataset not found"))
+                return@post
+            }
+            val namespace = "datasets/$datasetId"
+            val objectUri = storage.putFile(namespace, fileBytes!!, filename, contentType)
+            val fileId = UUID.randomUUID()
+            val now = Instant.now()
+            transaction(DatabaseManager.getDatabase()) {
+                DatasetFiles.insert {
+                    it[DatasetFiles.id] = EntityID(fileId, DatasetFiles)
+                    it[DatasetFiles.datasetId] = datasetId
+                    it[DatasetFiles.objectUri] = objectUri
+                    it[DatasetFiles.filename] = filename
+                    it[DatasetFiles.contentType] = contentType
+                    it[DatasetFiles.sizeBytes] = fileBytes!!.size.toLong()
+                    it[DatasetFiles.createdAt] = now
+                }
+            }
+            org.slf4j.LoggerFactory.getLogger("com.tracefield.api").info(
+                "ingest dataset_id={} filename={} object_uri={} size_bytes={}",
+                datasetIdStr, filename, objectUri, fileBytes!!.size
+            )
+            call.respond(IngestResponse(jobId = "", objectUri = objectUri))
+        }
         
         get("/jobs/{jobId}") {
             val jobId = call.parameters["jobId"] ?: run {
@@ -294,8 +364,11 @@ fun Application.module() {
             get {
                 val items = transaction(DatabaseManager.getDatabase()) {
                     Datasets.selectAll().map { row ->
+                        val datasetId = row[Datasets.id].value
+                        val fileCount = DatasetFiles.select { DatasetFiles.datasetId eq datasetId }.count()
+                        val mappingsCount = EntityMap.select { EntityMap.datasetId eq datasetId }.count()
                         DatasetResponse(
-                            id = row[Datasets.id].value.toString(),
+                            id = datasetId.toString(),
                             name = row[Datasets.name],
                             description = row[Datasets.description],
                             source = row[Datasets.sourceText],
@@ -303,7 +376,9 @@ fun Application.module() {
                             schema = parseJsonElement(row[Datasets.schemaJson]),
                             refreshSchedule = row[Datasets.refreshSchedule],
                             createdAt = row[Datasets.createdAt].toString(),
-                            updatedAt = row[Datasets.updatedAt].toString()
+                            updatedAt = row[Datasets.updatedAt].toString(),
+                            fileCount = fileCount,
+                            mappingsCount = mappingsCount
                         )
                     }
                 }

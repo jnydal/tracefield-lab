@@ -103,10 +103,12 @@ const baseQueryWithRetry: BaseQueryFn<
   const baseQuery = fetchBaseQuery({
     baseUrl: API_BASE_URL,
     credentials: 'include',
-    prepareHeaders: (headers) => {
-      // Add consistent headers
+    prepareHeaders: (headers, { endpoint }) => {
+      // For multipart uploads, let the browser set Content-Type with boundary
+      if (endpoint === 'uploadDatasetFile') {
+        return headers;
+      }
       headers.set('Content-Type', 'application/json');
-      
       return headers;
     },
   });

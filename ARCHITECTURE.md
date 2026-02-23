@@ -95,6 +95,7 @@ The Tracefield Lab is a generic, modular data pipeline for multi-dataset analysi
 **Responsibilities**:
 - Dataset registration and schema management
 - **Schema inference**: `POST /schema/infer` — infer column types and mapping suggestions (textColumn, idColumn, joinKeys, semanticFields) from pasted CSV/JSON sample; uses heuristic inference always, optionally enhances with LLM (Ollama) when `OLLAMA_URL` or `LLM_URL` is set
+- **Ingest**: `POST /ingest` — multipart form with `datasetId` and `file`; stores file in object storage, inserts into `dataset_files`; returns `objectUri` (and optional `jobId`); supports CSV/JSON; worker-embeddings reads from `dataset_files.object_uri`
 - Ingest job submission and status
 - Entity mapping configuration
 - Feature extraction job orchestration

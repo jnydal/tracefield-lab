@@ -36,6 +36,7 @@ curl -X POST http://localhost:8000/ingest \
   -F "datasetId=uuid-here" \
   -F "file=@data/example.csv"
 ```
+Returns `{"objectUri":"s3://bucket/key"}`. The UI supports file upload when creating a dataset or via "Upload file" for datasets with no files. Files are stored in object storage and registered in `dataset_files` for worker-embeddings.
 
 **Create Entity Mapping (manual, one mapping)**:
 ```bash

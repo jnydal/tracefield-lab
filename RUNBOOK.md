@@ -66,23 +66,21 @@ curl -X POST http://localhost:8000/datasets \
 
 ### Step 2: Ingest Raw Data
 
+The UI supports file upload at dataset registration (optional file input in the create form) or via "Upload file" for existing datasets with no files. Alternatively, use the API:
+
 ```bash
 curl -X POST http://localhost:8000/ingest \
   -F "datasetId=uuid-here" \
   -F "file=@data/example.csv"
-
-# Get job ID from response
-JOB_ID="..."
-
-# Monitor job
-watch -n 2 "curl -s http://localhost:8000/jobs/$JOB_ID | jq .status"
 ```
+
+Returns `{"objectUri":"s3://bucket/key"}`. Files are stored in object storage and inserted into `dataset_files`. The worker-embeddings reads from `dataset_files.object_uri` when processing feature extraction jobs.
 
 **What Happens**:
 1. API stores raw files in object storage
-2. Enqueues ingest job on Kafka
-3. Worker-ingest parses data into staging tables
-4. Downstream feature jobs are enqueued
+2. API inserts record into `dataset_files`
+3. (Future) Enqueues ingest job on Kafka; worker-ingest parses data into staging tables
+4. For embeddings: worker-embeddings reads raw files from S3 via `dataset_files.object_uri`
 
 ### Step 3: Entity Mapping
 

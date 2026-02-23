@@ -65,6 +65,40 @@ class S3Storage(
         
         return "s3://$bucket/$key"
     }
+
+    fun putFile(
+        namespace: String,
+        content: ByteArray,
+        filename: String?,
+        contentType: String?
+    ): String {
+        val ext = when {
+            filename != null && "." in filename -> filename.substringAfterLast('.', "").take(8)
+            contentType != null && "csv" in contentType.lowercase() -> "csv"
+            contentType != null && "json" in contentType.lowercase() -> "json"
+            else -> "bin"
+        }.ifEmpty { "bin" }
+        val hash = MessageDigest.getInstance("SHA-256")
+            .digest(content)
+            .take(16)
+            .joinToString("") { "%02x".format(it) }
+        val timestamp = Instant.now().toEpochMilli()
+        val key = "$namespace/$hash-$timestamp.$ext"
+        val ct = contentType ?: when (ext) {
+            "csv" -> "text/csv"
+            "json" -> "application/json"
+            else -> "application/octet-stream"
+        }
+        runBlocking {
+            s3Client.putObject(PutObjectRequest {
+                bucket = this@S3Storage.bucket
+                this.key = key
+                body = ByteStream.fromBytes(content)
+                this.contentType = ct
+            })
+        }
+        return "s3://$bucket/$key"
+    }
 }
 
 fun createS3Storage(): S3Storage {

@@ -179,6 +179,11 @@ export type SchemaInferResponse = {
   suggestions: SchemaInferSuggestions;
 };
 
+export type IngestResponse = {
+  jobId?: string;
+  objectUri: string;
+};
+
 export const pipelineApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     listDatasets: builder.query<Dataset[], void>({
@@ -291,6 +296,19 @@ export const pipelineApi = baseApi.injectEndpoints({
         body: { sampleContent, format },
       }),
     }),
+    uploadDatasetFile: builder.mutation<IngestResponse, { datasetId: string; file: File }>({
+      query: ({ datasetId, file }) => {
+        const formData = new FormData();
+        formData.append('datasetId', datasetId);
+        formData.append('file', file, file.name);
+        return {
+          url: '/ingest',
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: ['Datasets'],
+    }),
   }),
 });
 
@@ -319,4 +337,5 @@ export const {
   useLazyGetResolutionJobQuery,
   useLazySimilaritySearchQuery,
   useInferSchemaMutation,
+  useUploadDatasetFileMutation,
 } = pipelineApi;

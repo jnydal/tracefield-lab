@@ -7,6 +7,7 @@ import {
   useTriggerFeatureExtractMutation,
   useLazyGetJobStatusQuery,
   useInferSchemaMutation,
+  useUploadDatasetFileMutation,
 } from '../../../services/api/pipeline-api';
 import type { SchemaColumn } from '../../../services/api/pipeline-api';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'flowbite-react';
@@ -19,6 +20,13 @@ export function DatasetsPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [inferredSchema, setInferredSchema] = useState<{ columns: SchemaColumn[] } | null>(null);
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const [uploadDatasetId, setUploadDatasetId] = useState<string | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [inferModalOpen, setInferModalOpen] = useState(false);
   const [inferMode, setInferMode] = useState<'create' | 'extract'>('create');
@@ -36,6 +44,8 @@ export function DatasetsPage() {
   });
   const [triggerExtract, { isLoading: isExtracting }] =
     useTriggerFeatureExtractMutation();
+  const [uploadDatasetFile, { isLoading: isUploading }] =
+    useUploadDatasetFileMutation();
   const [getJobStatus] = useLazyGetJobStatusQuery();
   const [jobStatus, setJobStatus] = useState<{
     status: string;
@@ -57,15 +67,31 @@ export function DatasetsPage() {
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
+    setCreateError(null);
     if (!name.trim()) return;
-    await createDataset({
-      name,
-      description: description || undefined,
-      schema: inferredSchema ?? undefined,
-    }).unwrap();
-    setName('');
-    setDescription('');
-    setInferredSchema(null);
+    try {
+      const dataset = await createDataset({
+        name,
+        description: description || undefined,
+        schema: inferredSchema ?? undefined,
+      }).unwrap();
+      if (selectedFile) {
+        await uploadDatasetFile({
+          datasetId: dataset.id,
+          file: selectedFile,
+        }).unwrap();
+      }
+      setName('');
+      setDescription('');
+      setInferredSchema(null);
+      setSelectedFile(null);
+    } catch (e) {
+      const msg =
+        e && typeof e === 'object' && 'message' in e
+          ? String((e as { message: unknown }).message)
+          : 'Failed to create dataset';
+      setCreateError(msg);
+    }
   };
 
   const openInferModal = (mode: 'create' | 'extract') => {
@@ -113,6 +139,31 @@ export function DatasetsPage() {
     setExtractDatasetId(null);
     setExtractJobId(null);
     setJobStatus(null);
+  };
+
+  const closeUploadModal = () => {
+    setUploadDatasetId(null);
+    setUploadFile(null);
+    setUploadError(null);
+  };
+
+  const handleUploadFile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setUploadError(null);
+    if (!uploadDatasetId || !uploadFile) return;
+    try {
+      await uploadDatasetFile({
+        datasetId: uploadDatasetId,
+        file: uploadFile,
+      }).unwrap();
+      closeUploadModal();
+    } catch (e) {
+      const msg =
+        e && typeof e === 'object' && 'message' in e
+          ? String((e as { message: unknown }).message)
+          : 'Upload failed';
+      setUploadError(msg);
+    }
   };
 
   const handleExtract = async (event: React.FormEvent) => {
@@ -183,6 +234,35 @@ export function DatasetsPage() {
             placeholder="Short summary of this dataset."
           />
         </div>
+        <div className="space-y-1">
+          <label className="text-sm font-medium" htmlFor="dataset-file">
+            Data file (optional)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="dataset-file"
+              type="file"
+              accept=".csv,.json,text/csv,application/json"
+              className="w-full text-sm text-slate-600 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+            />
+            {selectedFile && (
+              <button
+                type="button"
+                className="text-sm text-slate-500 hover:underline"
+                onClick={() => setSelectedFile(null)}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {selectedFile && (
+            <p className="text-xs text-slate-500">{selectedFile.name}</p>
+          )}
+        </div>
+        {createError && (
+          <p className="text-sm text-red-600">{createError}</p>
+        )}
         {inferredSchema && inferredSchema.columns.length > 0 && (
           <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
             <p className="font-medium text-slate-700">Inferred schema ({inferredSchema.columns.length} columns)</p>
@@ -248,13 +328,27 @@ export function DatasetsPage() {
                       {dataset.description ?? '—'}
                     </td>
                     <td className="px-4 py-2 text-right">
-                      <button
-                        type="button"
-                        className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
-                        onClick={() => openExtractModal(dataset.id)}
-                      >
-                        Extract embeddings
-                      </button>
+                      {Number(dataset.fileCount ?? 0) === 0 ? (
+                        <button
+                          type="button"
+                          className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
+                          onClick={() => {
+                            setUploadDatasetId(dataset.id);
+                            setUploadFile(null);
+                            setUploadError(null);
+                          }}
+                        >
+                          Upload file
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
+                          onClick={() => openExtractModal(dataset.id)}
+                        >
+                          Extract embeddings
+                        </button>
+                      )}
                       <span className="mx-2 text-slate-300">·</span>
                       <button
                         type="button"
@@ -388,6 +482,51 @@ export function DatasetsPage() {
               onClick={closeExtractModal}
             >
               Close
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      <Modal show={!!uploadDatasetId} onClose={closeUploadModal} size="md">
+        <ModalHeader>Upload file</ModalHeader>
+        <form onSubmit={handleUploadFile}>
+          <ModalBody className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Select a CSV or JSON file to ingest into this dataset.
+            </p>
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="upload-file">
+                File
+              </label>
+              <input
+                id="upload-file"
+                type="file"
+                accept=".csv,.json,text/csv,application/json"
+                className="w-full text-sm text-slate-600 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium"
+                onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+              />
+              {uploadFile && (
+                <p className="text-xs text-slate-500">{uploadFile.name}</p>
+              )}
+            </div>
+            {uploadError && (
+              <p className="text-sm text-red-600">{uploadError}</p>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <button
+              type="submit"
+              className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+              disabled={!uploadFile || isUploading}
+            >
+              {isUploading ? 'Uploading…' : 'Upload'}
+            </button>
+            <button
+              type="button"
+              className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              onClick={closeUploadModal}
+            >
+              Cancel
             </button>
           </ModalFooter>
         </form>
