@@ -41,13 +41,13 @@ It also uploads a `deploy/manifest.json` artifact for auditing.
 
 ### Production server setup
 
-Use this flow to run the **production** environment (registry images + Watchtower for updates).
+Use this flow to run the **production** environment (registry images).
 
 1. **Configure deploy env**: copy `deploy/deploy.env.example` to `deploy/deploy.env` and set your registry images (e.g. `TRACEFIELD_API_IMAGE=ghcr.io/<owner>/<repo>/api:main`).
 2. **Log in to GHCR** (use a PAT with `read:packages`):  
    `echo "$GHCR_TOKEN" | docker login ghcr.io -u "<user>" --password-stdin`
-3. **Start the production stack**: run `deploy/start.ps1` (Windows) or `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`.  
-   **Watchtower** (in the base compose) periodically pulls new images from the registry and restarts updated containers; no separate polling script or cron is required.
+3. **Start the production stack**: run `deploy/start.ps1` (Windows) or `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always`.  
+   **Image updates**: `deploy/start.ps1` uses `--pull always`, so each run fetches the latest images. Schedule it (e.g. Task Scheduler on Windows, cron on Linux) to get updates automatically.
 
 ## Data Pipeline Workflow (Target)
 
@@ -313,25 +313,13 @@ curl http://localhost:8001/api/tags
 docker compose exec local-llm ollama pull qwen2.5:7b-instruct-q4_K_M
 ```
 
-### Watchtower Restart Loop (Windows)
-
-Watchtower can enter a restart loop on Docker Desktop for Windows (Docker socket timing, GHCR auth, or registry access issues).
-
-**Diagnose:**
-```powershell
-docker logs tracefield-lab-watchtower-1
-```
-
-**Workarounds:**
-1. **`deploy/start.ps1` on Windows** already uses `deploy/docker-compose.windows.yml` to set `restart: "no"` for Watchtower, so it will exit once and not restart. Use Task Scheduler to run `start.ps1` on a schedule for image updates.
-2. **Manual override**: Run `docker compose -f docker-compose.yml -f docker-compose.prod.yml -f deploy/docker-compose.windows.yml up -d`.
-3. **Start Watchtower later**: If you want Watchtower, start the stack first, wait 30s for the socket, then `docker start tracefield-lab-watchtower-1`.
-
 ### Windows / Production Deployment
 
 **PowerShell "NativeCommandError" in logs**: Docker writes progress (Pulling, Running) to stderr. `deploy/start.ps1` uses `cmd /c` to avoid this; ensure you have the latest script.
 
 **API shows "unhealthy"**: Ensure the API image includes `curl` for the healthcheck. The Dockerfile installs it; rebuild and push the API image if you see persistent unhealthy status.
+
+**Getting latest images**: `deploy/start.ps1` uses `--pull always`. Run it via Task Scheduler (e.g. at boot or on a schedule) to always start with the latest registry images.
 
 ## Development Workflow
 

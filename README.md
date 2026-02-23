@@ -91,7 +91,7 @@ Examples:
 
 ### Start services
 
-**Dev** (API built locally; no Watchtower updates from registry):
+**Dev** (API built locally):
 
 ```bash
 docker compose up -d --build
@@ -101,7 +101,7 @@ docker compose up -d --build
 
 ```bash
 # One-time: copy and edit deploy/deploy.env (see deploy/deploy.env.example)
-# Start production stack (start.ps1 runs this, or run manually); Watchtower handles image updates.
+# Start production stack (start.ps1 uses --pull always for latest images; schedule it for automatic updates).
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 

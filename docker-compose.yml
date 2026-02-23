@@ -3,12 +3,6 @@ x-env: &default-env
   TZ: "Europe/Oslo"
 
 services:
-  watchtower:
-    image: containrrr/watchtower:latest
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --cleanup --interval 20000
-    restart: unless-stopped
   # Caddy (public edge)
   caddy:
     image: caddy:latest
