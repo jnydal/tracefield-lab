@@ -16,7 +16,7 @@ export function LandingPage() {
               Build, analyze, and share research pipelines with secure traceability.
             </h1>
             <p className="landing-hero-copy">
-              A modular pipeline for multi-dataset analysis—ingest heterogeneous sources,
+              A modular pipeline for multi-dataset analysis: ingest heterogeneous sources,
               map entities across them with semantic resolution, and run correlation and
               analysis jobs in one auditable workspace. Built for finding patterns that
               emerge only when you can cross-reference siloed research.

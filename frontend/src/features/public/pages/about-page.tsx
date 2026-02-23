@@ -48,7 +48,7 @@ export function AboutPage() {
             <h2 className="about-content-title">What makes it different</h2>
             <p className="about-content-copy">
               Most research tools work within a single dataset or domain. Tracefield Lab
-              is built for correlation discovery across heterogeneous sources—different
+              is built for correlation discovery across heterogeneous sources: different
               labs, disciplines, and formats that rarely get compared. Entity resolution
               (exact keys plus semantic matching with embeddings) lets you map “the same
               thing” across datasets. The feature store and analysis layer then surface
