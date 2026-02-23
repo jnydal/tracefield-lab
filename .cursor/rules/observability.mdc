@@ -1,0 +1,38 @@
+---
+description: Observability standards - logging, metrics, and alertability
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Observability Rules
+
+## Core Principle
+If something can go wrong silently, it needs an alert surface.
+Observability is not an afterthought — it is part of the definition of done for any new service, endpoint, or critical path.
+
+## Structured Logging
+- Use structured logging (JSON or key-value) — not raw string concatenation.
+- Every log entry on a critical path must include context: request/correlation ID, action, outcome.
+- Never log PII (personally identifiable information) — names, emails, passwords, tokens, card numbers, or external entity identifiers from source datasets.
+- This includes comments in SQL seed files, test fixtures, and migration scripts — use fake placeholders (e.g. `test@example.com`) everywhere, never real data.
+- When logging pipeline events that touch entity records, explicitly exclude raw entity fields. Log IDs and types only (e.g. `entity_id`, `entity_type`) — not the values.
+- Log at appropriate levels: DEBUG for dev detail, INFO for normal operations, WARN for recoverable issues, ERROR for failures requiring attention.
+- New endpoints must log: request received, key decision points, final outcome (success/failure).
+
+## Metrics
+- Expose metrics for things that matter operationally: latency (p50/p95/p99), error rates, throughput, queue depths.
+- New services must expose a health check endpoint.
+- Background jobs and async workers must emit success/failure counts and processing duration.
+- If a metric isn't being tracked, you can't alert on it.
+
+## Alertability
+- When adding a new critical path, consider: what does failure look like, and will we know about it?
+- Prefer proactive observability: emit signals that allow detection before users report issues.
+- Silent failures (swallowed exceptions, empty catch blocks, fire-and-forget without error handling) are forbidden on critical paths.
+
+## What to Flag
+When generating code for a new service, endpoint, or background job — explicitly confirm:
+1. Logging is in place with appropriate context
+2. Errors are surfaced (not swallowed)
+3. A health/readiness check exists if it's a service
+4. Key operational metrics are emitted

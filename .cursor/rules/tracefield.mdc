@@ -1,0 +1,98 @@
+---
+description: Tracefield Lab specific rules - provenance, feature module contract, Kafka pipeline integrity, and statistical validity
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Tracefield Lab — Project-Specific Rules
+
+These rules are specific to the Tracefield Lab system. They complement the generic rules and
+reflect the architecture defined in `docs/ARCHITECTURE.md`, the NFR in `docs/NFR.md`,
+and the agent contract in `AGENT.md`.
+
+---
+
+## Provenance — Non-Negotiable
+
+Tracefield is a research system. Reproducibility depends entirely on a complete audit trail.
+
+- Every new pipeline stage that produces or transforms data **must** emit a `provenance_event` record.
+- Provenance must capture at minimum: `module`, `version`, `config_hash`, `source_dataset_id`, `job_id`, `timestamp`.
+- Never silently skip provenance emission "to keep it simple". If provenance is hard to add, flag it — don't omit it.
+- When modifying an existing pipeline stage, check whether the provenance schema needs updating to reflect the change.
+- Analysis jobs must store the full config, code version, and all input identifiers — results must be reproducible from provenance alone.
+
+---
+
+## Feature Module Contract
+
+All feature workers implement a shared contract. Cursor must enforce this whenever creating or modifying a feature module.
+
+**Required outputs per feature record:**
+```
+entity_id      - canonical entity identifier
+feature_name   - namespaced string (e.g. "trait.openness")
+value          - the feature value
+type           - data type string ("float", "int", "string", "vector")
+provenance     - { module, version, config_hash, source_dataset_id }
+```
+
+- Never add a feature worker that writes to the features table in a non-standard schema.
+- Feature names must be namespaced (e.g. `embeddings.bge_large`, `traits.openness`) — no bare names.
+- New feature modules must be registered in the API configuration and added to `docker-compose.yml`.
+- New modules must implement the full module contract: inputs (dataset_id, entity_type, column mapping) → outputs (feature records with provenance).
+
+---
+
+## Kafka Pipeline Integrity
+
+The pipeline is event-driven over Kafka. Cursor must apply these rules to all worker code.
+
+- **Idempotency is mandatory**: every worker must handle redelivery of the same message without corrupting state.
+  - Use upserts (not blind inserts) when writing pipeline outputs to PostgreSQL.
+  - Check for existing records before creating duplicates.
+- **Out-of-order tolerance**: workers must not assume messages arrive in order. State must be derivable from the message itself, not position.
+- **No fire-and-forget on Kafka produces**: all `producer.send()` calls must handle failures — log and surface errors, do not silently drop.
+- **Consumer offset commits**: only commit offsets after successful processing and write. Never pre-commit before the work is done.
+- **Dead-letter handling**: failed jobs that exhaust retries must be logged with full context (job_id, dataset_id, error reason) so they can be re-enqueued manually.
+- **Job status updates**: always update `job_status` in PostgreSQL on job start, completion, and failure. Do not leave jobs in a `queued` state indefinitely.
+
+---
+
+## Statistical & Scientific Integrity
+
+Tracefield produces research outputs. Changes to analysis logic are high-risk.
+
+- **Never silently change a statistical test, correction method, or effect size calculation.** These changes directly affect research validity. Always flag them explicitly and require human sign-off.
+- **Multiple-testing correction is required** for any analysis producing multiple p-values. Do not omit `correction` from analysis job configs.
+- **Effect sizes and confidence intervals must accompany p-values** in analysis results. A p-value alone is not a complete result.
+- **Data quality checks must run before analysis**: flag missing values, low-variance features, and outliers. Do not silently drop or impute without recording it in provenance.
+- **Config versioning**: analysis job configs must be stored in full at the time of job creation — not referenced by pointer that could change later.
+- **Do not change default statistical parameters** (thresholds, correction methods, test types) without explicit instruction. Defaults are scientifically considered choices.
+
+---
+
+## PII & Data Governance (Tracefield-Specific)
+
+Your NFR explicitly mandates PII minimization. Your RUNBOOK already demonstrates a real slip (email in seed SQL comments).
+
+- **Never include real personal data (emails, names, identifiers) in seed files, test fixtures, migrations, or comments.** Use clearly fake placeholders: `test@example.com`, `Alice / Bob / Carol`.
+- When generating log statements for pipeline stages that process entity data, explicitly exclude fields that could contain PII (names, emails, external IDs from source datasets).
+- Dataset license metadata must be preserved through the pipeline. Do not strip `license` fields when transforming or copying dataset records.
+- Raw data in object storage and derived features in PostgreSQL follow the retention policies in `docs/NFR.md`. Do not add new storage paths or tables without flagging their retention category.
+
+---
+
+## New Service / Module Checklist
+
+When generating a new feature worker, API route, or pipeline stage, confirm all of the following:
+
+1. Implements or respects the feature module contract (if a feature worker)
+2. Emits provenance records for all data it produces
+3. Kafka consumer is idempotent and offset-commits after successful write
+4. Job status is updated in `job_status` table on start, success, and failure
+5. Structured logging with `service`, `stage`, `job_id`, `dataset_id`, `trace_id` — no PII
+6. Health check endpoint exists (if a new service)
+7. Added to `docker-compose.yml` and registered in API config (if a new module)
+8. Migration is backward compatible (if schema change required)
+9. No real PII in fixtures, seeds, or comments

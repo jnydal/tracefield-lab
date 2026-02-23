@@ -1,0 +1,64 @@
+---
+description: Architecture alignment and code quality standards
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Architecture & Code Quality Rules
+
+## Understand Before You Generate
+- Before writing any code, explain what you're about to do and why.
+- Identify which existing modules, patterns, or abstractions are relevant.
+- If the task is ambiguous, ask a clarifying question before generating.
+
+## Architecture Alignment
+- Before proposing any solution, check if it fits the existing architecture defined in `docs/ARCHITECTURE.md`.
+- Do not introduce new patterns, layers, or abstractions if existing ones already solve the problem.
+- Prefer consistency over cleverness. When in doubt, match what's already there.
+- If a structural change is genuinely needed, flag it explicitly and explain the reasoning — don't do it silently.
+
+## NFR Compliance
+- All suggestions must respect the non-functional requirements in `docs/NFR.md`.
+- This includes: performance targets, scalability constraints, availability requirements, and observability standards.
+- If a suggestion risks degrading an NFR, say so before presenting it.
+
+## Small, Focused Changes
+- Prefer small, single-purpose changes.
+- If a task requires touching more than 3-4 unrelated areas, stop and flag it for decomposition.
+- Do not broadly refactor when asked for a targeted fix. Scope changes to what's required.
+
+## Don't Break the Contract
+- Before making any change, check if it affects a public API, shared interface, event schema, or DB model.
+- If it does, explicitly flag the downstream impact before proceeding.
+- Backward compatibility is a default requirement unless explicitly stated otherwise.
+
+## Code Quality Baseline
+- Follow the project's existing naming conventions, file structure, and code style.
+- Do not introduce new conventions without flagging them for team discussion.
+- Prefer readability over brevity. Code is read far more often than it is written.
+- Remove dead code. Do not leave commented-out blocks or unused imports.
+
+## No Speculative Code (YAGNI)
+- Only write code that serves the current, defined requirement.
+- Do not add parameters, abstractions, or flexibility "for future use".
+- If you think something might be needed later, flag it as a comment or note — don't build it.
+- Every line of code must earn its place.
+
+## Dependency Discipline
+- Do not add a new dependency without briefly justifying: what it solves, why an existing dependency doesn't cover it, and whether it's actively maintained.
+- Prefer extending what's already in the project over introducing new packages.
+- Pin dependency versions. Flag if a suggested package hasn't been updated in 12+ months or has known CVEs.
+
+## Explain Tradeoffs
+- When there are multiple valid approaches, briefly explain the tradeoffs rather than silently picking one.
+- Flag if a suggestion has meaningful performance, maintainability, or scalability implications.
+
+## Definition of Done
+A task is only complete when all of the following are true:
+1. Code works and is tested (see testing rules)
+2. No new lint or type errors introduced
+3. No hardcoded values or secrets
+4. Change aligns with `docs/ARCHITECTURE.md`
+5. NFRs in `docs/NFR.md` are not degraded
+6. Relevant documentation updated if behavior changed
+7. Observability requirements met (logging, metrics where needed)

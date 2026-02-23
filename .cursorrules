@@ -1,0 +1,39 @@
+# Cursor AI Rules — Dev Process & Quality Mindset
+# Full rules are in .cursor/rules/*.mdc
+# This file provides the top-level summary for Cursor context.
+
+## CORE PRINCIPLES
+- Understand before you generate. Reason first, code second.
+- Consistency over cleverness. Fit the existing codebase.
+- Every line must earn its place. No speculative code.
+- A task isn't done until it's tested, observed, and documented.
+
+## ALWAYS DO
+- Consult docs/ARCHITECTURE.md before proposing structural changes.
+- Consult docs/NFR.md before any solution that touches performance, scalability, or availability.
+- Consult AGENT.md for the feature module contract and API interaction patterns.
+- Validate and sanitize all user input. Never trust client-side data.
+- Use environment variables or a secrets manager for all credentials.
+- Include structured logging and error handling in every new endpoint or service.
+- Write tests for business logic, auth flows, data transformations, and integration points.
+- Flag N+1 queries, missing pagination, and unbounded data fetches.
+- Migrations must be backward compatible. Never auto-apply without human review.
+
+## NEVER DO
+- Hardcode secrets, API keys, tokens, or passwords.
+- Expose stack traces, internal paths, or DB errors to the client.
+- Add a new dependency without brief justification.
+- Write speculative or "future-proof" code not required by the current task.
+- Skip auth/authorization checks on any route or endpoint.
+- Generate migrations or schema changes without flagging downstream impact.
+- Chase coverage metrics — test what matters, not everything.
+- Silently change a statistical test, correction method, or effect size calculation.
+- Log or embed PII (names, emails, entity values) anywhere — logs, seeds, fixtures, or comments.
+- Write feature records outside the module contract (entity_id, feature_name, value, type, provenance).
+
+## TRACEFIELD PIPELINE — ALWAYS DO
+- Emit provenance_event records for every pipeline stage that produces or transforms data.
+- All Kafka consumers must be idempotent — use upserts, handle redelivery safely.
+- Only commit Kafka offsets after successful processing and DB write.
+- Update job_status (start / success / failure) for every pipeline job.
+- Feature names must be namespaced: e.g. "trait.openness", "embeddings.bge_large".

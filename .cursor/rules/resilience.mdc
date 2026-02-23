@@ -1,0 +1,41 @@
+---
+description: Resilience patterns and error handling for external dependencies and critical paths
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Resilience & Error Handling Rules
+
+## Core Principle
+One failing dependency should not take down the whole system.
+Design for partial failure. Graceful degradation over hard failure.
+
+## External Calls (APIs, DBs, Queues, Third-Party Services)
+- All external calls must have a timeout defined. No unbounded waits.
+- Use retries with exponential backoff and jitter for transient failures.
+  - Do not retry non-idempotent operations (e.g. payments, sends) without deduplication logic.
+- For critical or frequently-called dependencies, consider a circuit breaker pattern to fail fast and recover gracefully.
+- Always handle the case where an external dependency is unavailable — return a sensible degraded response rather than a hard crash.
+
+## Error Handling
+- Never swallow exceptions silently (empty catch blocks are forbidden on critical paths).
+- Every error must be: caught, logged with context, and handled — either recovered from or surfaced appropriately.
+- Distinguish between operational errors (expected, handle gracefully) and programmer errors (unexpected, alert and investigate).
+- Use typed/structured error handling where the language supports it — avoid stringly-typed error passing.
+
+## Graceful Degradation
+- Where a non-critical dependency fails, the system should continue with reduced functionality rather than a full outage.
+- Define and document what "degraded mode" looks like for key user-facing flows.
+- Use feature flags or fallback values where appropriate to handle unavailability.
+
+## Async & Background Jobs
+- All background jobs must handle failures explicitly: log, retry with backoff, or move to a dead-letter queue.
+- Do not fire-and-forget without error handling on operations that matter.
+- Idempotency: background jobs and event handlers should be safe to re-run.
+
+## What to Flag
+When generating code that calls an external system or handles critical operations, explicitly confirm:
+1. Timeout is set
+2. Error is caught and handled (not swallowed)
+3. Retry logic is appropriate for the operation type
+4. Failure mode is graceful, not a hard crash

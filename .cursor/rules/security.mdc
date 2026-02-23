@@ -1,0 +1,47 @@
+---
+description: Security guardrails for all code generation and suggestions
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Security Rules
+
+## Secrets & Credentials
+- Never hardcode API keys, tokens, passwords, or secrets in code or config files.
+- Always use environment variables (`process.env`, `.env` gitignored) or a secrets manager (AWS Secrets Manager, HashiCorp Vault, etc.).
+- If you spot a hardcoded credential in existing code, flag it immediately.
+
+## Input Validation & Sanitization
+- Always validate and sanitize user input server-side. Never trust client-side data.
+- Use allowlists over denylists wherever possible.
+- Validate data type, length, format, and range at the boundary of the system.
+
+## Injection Prevention
+- Always use parameterized queries or ORMs for database access.
+- Never concatenate user input into SQL strings, shell commands, or HTML output.
+- Escape all output rendered in HTML to prevent XSS.
+
+## Authentication & Authorization
+- Every route and endpoint must include authentication and authorization checks.
+- Never assume the frontend enforces access control — always enforce server-side.
+- Use proven libraries for auth (bcrypt, argon2, established JWT libraries). Never roll custom crypto.
+
+## Least Privilege
+- Database queries must select only required fields.
+- API endpoints must expose only necessary data.
+- IAM roles, DB users, and service accounts must be scoped minimally.
+
+## Error Handling — No Information Leakage
+- Catch all errors gracefully. Never expose stack traces, internal paths, or DB error details to the client.
+- Return generic error messages to clients. Log full details server-side only.
+- Use structured error logging with context (request ID, user ID if available, action).
+
+## Secure Defaults
+- Default to HTTPS for all connections.
+- Use secure cookies: HttpOnly, SameSite=Strict, Secure flag.
+- Apply strict CORS policies — no wildcard origins in production.
+- Add Content Security Policy headers for web-facing services.
+
+## Critical Path Review
+- Before generating any code involving auth, file I/O, network calls, or DB access — reason about security implications first and state them explicitly.
+- Never generate security-sensitive logic (token signing, encryption, hashing) without flagging it for manual review.

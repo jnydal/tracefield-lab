@@ -1,0 +1,42 @@
+---
+description: Data integrity, migration safety, and schema change standards
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Data Integrity Rules
+
+## Core Principle
+Schema and data changes are high-risk, often irreversible operations.
+Treat them with more caution than regular code changes.
+
+## Migrations
+- Every DB schema change requires a migration file — no manual schema edits in any environment.
+- Migrations must be backward compatible with the currently running application version.
+  - The app must work correctly both before and after the migration is applied (during rolling deploys).
+- Never auto-generate and auto-apply migrations without human review. Always flag them for inspection.
+- Migration files are immutable once merged. Never edit a migration that has been applied to any shared environment.
+
+## Breaking Change Prevention
+Multi-step migration strategy is required for:
+- **Column renames**: add new column → dual-write → migrate data → remove old column (separate deploys)
+- **Column drops**: deprecate in code first → verify no usage → then drop in a later migration
+- **Table renames**: same dual-step approach
+- **Type changes**: add new column with correct type, migrate, remove old
+
+## Data Loss Prevention
+- Before generating any migration, explicitly flag if the change could cause data loss.
+- Destructive operations (DROP COLUMN, DROP TABLE, TRUNCATE) require a comment confirming intent and that data has been backed up or is intentionally discarded.
+- Prefer nullable new columns over NOT NULL without defaults when adding to existing tables.
+
+## Data Quality
+- Define constraints at the DB level where possible (NOT NULL, UNIQUE, FK constraints, CHECK constraints) — don't rely solely on application-layer validation.
+- New columns should have sensible defaults where appropriate.
+- Foreign keys should have explicit ON DELETE behavior defined.
+
+## What to Flag
+When generating a migration or schema change, explicitly state:
+1. Whether it is backward compatible with the current app version
+2. Whether it could cause data loss
+3. Whether a multi-step deploy strategy is required
+4. Whether indexes are needed for new columns used in queries

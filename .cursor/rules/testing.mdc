@@ -1,0 +1,53 @@
+---
+description: Pragmatic, risk-focused testing standards based on the Pareto principle
+globs: ["**/*.test.*", "**/*.spec.*", "**/*"]
+alwaysApply: true
+---
+
+# Testing Rules — Pareto Principle Approach
+
+## Core Philosophy
+Apply the 80/20 rule to testing. Focus effort on the 20% of code that carries 80% of the risk.
+Do not chase coverage metrics — a focused 60% is more valuable than a padded 90%.
+
+## Always Test
+The following always require tests, regardless of perceived simplicity:
+- **Business and domain logic** — rules, calculations, decisions, workflows
+- **Data validation and transformation** — anything that shapes or gates data
+- **Auth and access control** — who can do what
+- **Integration points** — external APIs, queues, DB interactions
+- **Anything that has broken before** or is hard to reason about manually
+- **High blast-radius paths** — failures here affect many users or downstream systems
+
+## Skip or Deprioritize
+Do not write tests for:
+- Simple getters and setters with no logic
+- Framework or library boilerplate
+- One-line wrappers around well-tested libraries
+- Pure configuration files
+- UI layout and styling details
+
+Ask: *"If this breaks, would we catch it quickly another way?"*
+If yes — skip it. If no, or the blast radius is large — test it.
+
+## Test Quality Over Quantity
+- Tests must assert meaningful behavior, not just that code runs without throwing.
+- Avoid tests that only verify implementation details (internal method calls, exact call counts on mocks).
+- Prefer testing outcomes, contracts, and observable behavior.
+- One test that catches a real bug is worth ten that never would.
+
+## No Coverage Theatre
+- Never write tests solely to hit a coverage number.
+- If asked to increase coverage, focus new tests on untested critical paths — not trivial lines.
+- Coverage is a signal, not a goal.
+
+## Test Design
+- Tests should be readable and self-explanatory — treat them as living documentation.
+- Arrange / Act / Assert structure is preferred.
+- Test edge cases for critical logic: nulls, empty inputs, boundary values, permission boundaries.
+- For integration tests, test the contract (inputs/outputs/side effects), not the internals.
+
+## Tests Are Part of Done
+- A task is not complete until relevant tests are written and passing.
+- If a change is hard to test, that's a signal the design needs rethinking — not that tests should be skipped.
+- When modifying existing behavior, update or add tests to reflect the change.

@@ -1,0 +1,39 @@
+---
+description: Performance awareness and common anti-pattern prevention
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Performance Rules
+
+## Core Principle
+Performance issues are often invisible until they aren't.
+Flag potential performance problems at generation time — not after they hit production.
+
+## Database
+- **N+1 queries**: Flag any pattern where a query is made inside a loop over a result set. Use eager loading, joins, or batch queries instead.
+- **Missing indexes**: When filtering, sorting, or joining on a column, check if an index exists or is needed. Flag it if not.
+- **Unbounded fetches**: Never fetch an entire table or large dataset without a LIMIT or pagination. All list endpoints must be paginated.
+- **Select only what you need**: Avoid `SELECT *` in production code. Fetch only the fields required.
+- **Write performance**: Batch inserts/updates where possible instead of row-by-row operations in loops.
+
+## Application
+- **Synchronous blocking operations**: Flag operations that are slow (file I/O, external API calls, heavy computation) running synchronously in a request/response cycle. These should be async or offloaded to a background job.
+- **Unbounded loops**: Flag loops over large or unknown-size datasets without chunking or pagination.
+- **Memory allocation**: Flag patterns that hold large datasets in memory when streaming or chunking would work.
+- **Caching opportunities**: When a value is expensive to compute and changes infrequently, flag it as a caching candidate.
+
+## API & Network
+- **Response payload size**: Flag endpoints returning large payloads where filtering or field selection would reduce size.
+- **Chatty APIs**: Flag patterns where multiple round trips could be replaced with a single call.
+- **Missing compression**: Large response payloads should use gzip/brotli compression.
+
+## What to Flag
+When generating any code touching data access or external calls, confirm:
+1. No N+1 query patterns introduced
+2. All list/search operations are paginated or bounded
+3. Slow operations are not blocking the request thread unnecessarily
+4. If performance implications exist, state them explicitly before presenting the solution
+
+## NFR Reference
+Always check `docs/NFR.md` for specific latency, throughput, and scalability targets before finalizing any solution in a performance-sensitive area.
