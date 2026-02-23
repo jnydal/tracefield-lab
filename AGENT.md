@@ -26,17 +26,37 @@ curl -X POST http://localhost:8000/ingest \
   -F "file=@data/example.csv"
 ```
 
-**Create Entity Mapping Rules**:
+**Create Entity Mapping (manual, one mapping)**:
 ```bash
-curl -X POST http://localhost:8000/entities/map \
+curl -X POST http://localhost:8000/entity-mappings \
   -H "Content-Type: application/json" \
   -d '{
     "datasetId": "uuid-here",
-    "entityType": "person",
-    "joinKeys": ["id", "name"],
-    "fuzzyMatch": {"field": "name", "threshold": 0.92}
+    "entityId": "entity-uuid-here",
+    "sourceRecordId": "rec-001",
+    "method": "exact"
   }'
 ```
+
+**Create Resolution Job (automated, semantic matching with embeddings)**:
+```bash
+curl -X POST http://localhost:8000/resolution/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Resolve survey 2024",
+    "datasetId": "uuid-here",
+    "entityType": "person",
+    "config": {
+      "joinKeys": ["id"],
+      "semanticFields": ["name"],
+      "threshold": 0.85,
+      "createIfNoMatch": false,
+      "records": [{"source_record_id": "rec-1", "keys": {"id": "1", "name": "John Smith"}}]
+    }
+  }'
+```
+
+The resolver worker polls `resolution_jobs` and writes matches to `entity_map`. Use the Entity Mappings UI for manual mapping or automated resolution (toggle between modes).
 
 **Trigger Feature Extraction**:
 ```bash
@@ -51,7 +71,7 @@ curl -X POST http://localhost:8000/features/extract \
 
 **Run Analysis Job**:
 ```bash
-curl -X POST http://localhost:8000/analysis/jobs \
+curl -X POST http://localhost:8000/analysis-jobs \
   -H "Content-Type: application/json" \
   -d '{
     "leftFeatureSet": "traits",
@@ -61,19 +81,24 @@ curl -X POST http://localhost:8000/analysis/jobs \
   }'
 ```
 
-**Check Job Status**:
+**Check Analysis Job Status**:
 ```bash
-curl http://localhost:8000/jobs/{jobId}
+curl http://localhost:8000/analysis-jobs/{jobId}
+```
+
+**Check Resolution Job Status**:
+```bash
+curl http://localhost:8000/resolution/jobs/{jobId}
 ```
 
 ### 2. Worker Services
 
-Workers run continuously and process jobs from Kafka topics:
+Workers run continuously:
 
-- **worker-ingest**: Parses datasets from object storage
-- **feature workers**: Compute features (embeddings, custom modules)
-- **analysis worker**: Runs statistical tests and stores results
-- **resolver**: Optional entity resolver (e.g., QID lookups)
+- **worker-ingest**: Parses datasets from object storage (Kafka)
+- **resolver**: Polls `resolution_jobs`, runs semantic entity resolution (BGE embeddings + exact match), writes to `entity_map`
+- **feature workers**: Compute features (embeddings, custom modules) via Kafka
+- **analysis worker**: Polls `analysis_jobs`, runs statistical tests and stores results
 
 ## Service Configuration
 

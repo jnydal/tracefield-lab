@@ -13,7 +13,7 @@ This keeps your existing job-queue + worker + PostgreSQL architecture intact, ju
 Frontend you can add (configuration + exploration)
 A minimal UI can enable:
 Dataset upload/config (CSV/JSON, schema inference, column typing)
-Entity mapping (join keys, fuzzy matching rules, manual resolution)
+Entity mapping (manual, or automated semantic resolution with BGE embeddings — join keys, fuzzy/semantic matching, create-if-no-match)
 Feature selection (choose which variables to compare)
 Analysis builder (Pearson/Spearman/MI, regression, chi-square; confounders; multiple-testing correction)
 Results dashboard (correlation matrix, effect sizes, p-values, scatterplots)

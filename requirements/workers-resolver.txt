@@ -1,0 +1,4 @@
+# Resolver worker: workers + sentence-transformers for BGE embeddings
+-r workers.txt
+sentence-transformers>=2.2.0
+numpy>=1.24

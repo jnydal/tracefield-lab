@@ -115,6 +115,7 @@ services:
     env_file: ./.env
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/tracefield}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-BAAI/bge-small-en-v1.5}
     depends_on:
       db: { condition: service_healthy }
     healthcheck:

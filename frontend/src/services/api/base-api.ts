@@ -195,6 +195,7 @@ export const baseApi = createApi({
     'FeatureDefinitions',
     'AnalysisJobs',
     'AnalysisResults',
+    'ResolutionJobs',
     'Profile',
     'Messages',
     'Search',

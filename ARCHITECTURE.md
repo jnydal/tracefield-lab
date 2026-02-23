@@ -45,8 +45,9 @@ The Tracefield Lab is a generic, modular data pipeline for multi-dataset analysi
    ├─→ Produce feature vectors
    └─→ Write → PostgreSQL (features table)
 
-3. Entity Resolver (Optional)
-   ├─→ Maps rows across datasets (keys or fuzzy matches)
+3. Entity Resolver
+   ├─→ Polls resolution_jobs (queued)
+   ├─→ Exact match (join keys) + semantic match (BGE embeddings)
    └─→ Writes → PostgreSQL (entity_map)
 
 4. Analysis Worker
@@ -118,10 +119,14 @@ These services become modular feature providers in the generic system.
 ### 4. Resolver Service (`service/resolver`)
 
 **Responsibilities**:
-- Resolve entity identity across datasets
-- Support deterministic keys and fuzzy matching
+- Poll `resolution_jobs` for queued jobs (DB polling, same pattern as analysis worker)
+- Resolve entity identity: exact match (join keys) and semantic match (BGE embeddings)
+- Create entities if `createIfNoMatch` is enabled
+- Emit provenance events
 
-### 5. Analysis Worker (Planned)
+**Trigger**: API creates job via `POST /resolution/jobs`; resolver picks it up. No Kafka.
+
+### 5. Analysis Worker (`service/worker_analysis`)
 
 **Responsibilities**:
 - Compute correlations, regressions, and contingency tests
@@ -141,7 +146,8 @@ These services become modular feature providers in the generic system.
    API → Kafka → Worker-Ingest → PostgreSQL (raw/staging)
 
 4. Map entities
-   API → Resolver → PostgreSQL (entity_map)
+   API → resolution_jobs (queued) → Resolver polls → PostgreSQL (entity_map)
+   Or: API → entity-mappings (manual, direct write to entity_map)
 
 5. Extract features
    Kafka → Feature Workers → PostgreSQL (features)
@@ -156,7 +162,8 @@ These services become modular feature providers in the generic system.
 - `datasets` - Metadata, schema, source, license
 - `dataset_files` - Object storage references
 - `entities` - Canonical entities and types
-- `entity_map` - Cross-dataset mapping rules
+- `entity_map` - Cross-dataset mapping rules (manual or from resolution jobs)
+- `resolution_jobs` - Entity resolution job queue (status, config, result_summary)
 - `features` - `entity_id`, `feature_name`, `value`, `type`, `provenance`
 - `analysis_jobs` - Job config and status
 - `analysis_results` - Tests, effect sizes, p-values, corrections
@@ -197,6 +204,7 @@ These services become modular feature providers in the generic system.
 - `OBJECT_STORE_*` - Object storage configuration
 - `LLM_URL` - LLM service URL
 - `LLM_MODEL` - Model name for feature modules
+- `EMBEDDINGS_MODEL` - BGE model for resolver (e.g. BAAI/bge-small-en-v1.5)
 
 ## Scalability Considerations
 

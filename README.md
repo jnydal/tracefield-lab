@@ -16,7 +16,7 @@ The system:
 
 1. Registers datasets with schemas and licensing metadata.
 2. Ingests raw data into staging tables and object storage.
-3. Maps entities across datasets using deterministic or fuzzy matching.
+3. Maps entities across datasets using manual mapping or automated semantic resolution (exact keys + BGE embeddings).
 4. Extracts features via modular workers (embeddings, traits, domain-specific).
 5. Runs statistical analysis with effect sizes and correction.
 
@@ -46,8 +46,9 @@ Analysis worker → results
 |----------|-------------|
 | API (Kotlin/Ktor) | Dataset registry, job orchestration, results |
 | Worker-ingest | Parses datasets and normalizes raw data |
+| Resolver | Semantic entity resolution (BGE embeddings, exact + fuzzy matching) |
 | Feature workers | Embeddings, custom modules |
-| Analysis worker | Statistical tests and corrections (planned) |
+| Analysis worker | Statistical tests and corrections |
 | PostgreSQL + pgvector | Structured data and vector storage |
 | Kafka | Job queue |
 | MinIO | Raw dataset object storage |
@@ -72,7 +73,8 @@ Examples:
 - `datasets` — metadata, schema, source, license
 - `dataset_files` — object storage references
 - `entities` — canonical entities and types
-- `entity_map` — cross-dataset mapping rules
+- `entity_map` — cross-dataset mapping rules (manual or from resolution jobs)
+- `resolution_jobs` — entity resolution job queue and status
 - `features` — normalized feature values with provenance
 - `analysis_jobs` — analysis configurations and status
 - `analysis_results` — tests, effect sizes, p-values
@@ -139,7 +141,7 @@ curl http://localhost:8001/api/tags
 
 1. Register a dataset (name, schema, license)
 2. Upload raw data
-3. Configure entity mapping (keys or fuzzy rules)
+3. Map entities (manual via Entity Mappings UI, or automated via resolution jobs with embeddings)
 4. Trigger feature extraction
 5. Run analysis jobs and inspect results
 

@@ -84,17 +84,43 @@ watch -n 2 "curl -s http://localhost:8000/jobs/$JOB_ID | jq .status"
 3. Worker-ingest parses data into staging tables
 4. Downstream feature jobs are enqueued
 
-### Step 3: Configure Entity Mapping (Optional)
+### Step 3: Entity Mapping
 
+**Option A: Manual (UI)** — Use the Entity Mappings page: select "Manual" mode, enter dataset ID, entity ID, and method.
+
+**Option B: Manual (API)**:
 ```bash
-curl -X POST http://localhost:8000/entities/map \
+curl -X POST http://localhost:8000/entity-mappings \
   -H "Content-Type: application/json" \
   -d '{
     "datasetId": "uuid-here",
-    "entityType": "person",
-    "joinKeys": ["id", "name"],
-    "fuzzyMatch": {"field": "name", "threshold": 0.92}
+    "entityId": "entity-uuid-here",
+    "sourceRecordId": "rec-001",
+    "method": "exact"
   }'
+```
+
+**Option C: Automated semantic resolution** — Use the Entity Mappings page: select "Automated (embeddings)" mode, configure dataset, entity type, join keys, semantic fields, threshold, and records. Or via API:
+```bash
+curl -X POST http://localhost:8000/resolution/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Resolve dataset",
+    "datasetId": "uuid-here",
+    "entityType": "person",
+    "config": {
+      "joinKeys": ["id"],
+      "semanticFields": ["name"],
+      "threshold": 0.85,
+      "createIfNoMatch": false,
+      "records": [{"source_record_id": "rec-1", "keys": {"id": "1", "name": "Alice"}}]
+    }
+  }'
+```
+
+The resolver worker polls `resolution_jobs` and writes matches to `entity_map`. Monitor:
+```bash
+docker compose logs -f resolver
 ```
 
 ### Step 4: Extract Features
@@ -131,6 +157,8 @@ curl -X POST http://localhost:8000/analysis/jobs \
 SELECT
   COUNT(*) AS datasets,
   (SELECT COUNT(*) FROM dataset_files) AS files,
+  (SELECT COUNT(*) FROM entity_map) AS entity_mappings,
+  (SELECT COUNT(*) FROM resolution_jobs) AS resolution_jobs,
   (SELECT COUNT(*) FROM features) AS features,
   (SELECT COUNT(*) FROM analysis_jobs) AS analysis_jobs
 FROM datasets;
@@ -165,11 +193,14 @@ docker compose exec db pg_isready -U postgres
 
 ### Jobs Not Processing
 
-**Analysis jobs** (status `queued`) are processed by `worker-analysis`, which polls the DB every few seconds. Ensure it is running:
+**Analysis jobs** (status `queued`) are processed by `worker-analysis`, which polls the DB every few seconds. **Resolution jobs** are processed by `resolver`. Ensure they are running:
 
 ```bash
 docker compose ps worker-analysis
 docker compose logs -f worker-analysis
+
+docker compose ps resolver
+docker compose logs -f resolver
 ```
 
 **Ingest/feature jobs** (Kafka-based):

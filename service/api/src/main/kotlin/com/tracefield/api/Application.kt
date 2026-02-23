@@ -776,6 +776,89 @@ fun Application.module() {
             call.respond(results)
         }
 
+        route("/resolution/jobs") {
+            get {
+                val items = transaction(DatabaseManager.getDatabase()) {
+                    ResolutionJobs.selectAll().orderBy(ResolutionJobs.createdAt, SortOrder.DESC).map { row ->
+                        ResolutionJobResponse(
+                            id = row[ResolutionJobs.id].value.toString(),
+                            name = row[ResolutionJobs.name],
+                            status = row[ResolutionJobs.status],
+                            datasetId = row[ResolutionJobs.datasetId].toString(),
+                            entityType = row[ResolutionJobs.entityType],
+                            config = parseJsonElement(row[ResolutionJobs.configJson]) ?: jsonParser.parseToJsonElement("{}"),
+                            createdAt = row[ResolutionJobs.createdAt].toString(),
+                            startedAt = row[ResolutionJobs.startedAt]?.toString(),
+                            endedAt = row[ResolutionJobs.endedAt]?.toString(),
+                            resultSummary = parseJsonElement(row[ResolutionJobs.resultSummary]),
+                            excInfo = row[ResolutionJobs.excInfo]
+                        )
+                    }
+                }
+                call.respond(items)
+            }
+            post {
+                val req = call.receive<ResolutionJobRequest>()
+                val datasetId = parseUuid(req.datasetId) ?: run {
+                    call.respond(HttpStatusCode.BadRequest, "Invalid datasetId")
+                    return@post
+                }
+                val id = UUID.randomUUID()
+                val status = "queued"
+                val createdAt = Instant.now()
+                transaction(DatabaseManager.getDatabase()) {
+                    ResolutionJobs.insert {
+                        it[ResolutionJobs.id] = id
+                        it[ResolutionJobs.name] = req.name
+                        it[ResolutionJobs.status] = status
+                        it[ResolutionJobs.configJson] = req.config.toString()
+                        it[ResolutionJobs.datasetId] = datasetId
+                        it[ResolutionJobs.entityType] = req.entityType
+                        it[ResolutionJobs.createdAt] = createdAt
+                    }
+                }
+                call.respond(
+                    ResolutionJobResponse(
+                        id = id.toString(),
+                        name = req.name,
+                        status = status,
+                        datasetId = req.datasetId,
+                        entityType = req.entityType,
+                        config = req.config,
+                        createdAt = createdAt.toString()
+                    )
+                )
+            }
+            get("/{id}") {
+                val id = parseUuid(call.parameters["id"]) ?: run {
+                    call.respond(HttpStatusCode.BadRequest, "Invalid resolution job id")
+                    return@get
+                }
+                val job = transaction(DatabaseManager.getDatabase()) {
+                    ResolutionJobs.select { ResolutionJobs.id eq EntityID(id, ResolutionJobs) }.singleOrNull()?.let { row ->
+                        ResolutionJobResponse(
+                            id = row[ResolutionJobs.id].value.toString(),
+                            name = row[ResolutionJobs.name],
+                            status = row[ResolutionJobs.status],
+                            datasetId = row[ResolutionJobs.datasetId].toString(),
+                            entityType = row[ResolutionJobs.entityType],
+                            config = parseJsonElement(row[ResolutionJobs.configJson]) ?: jsonParser.parseToJsonElement("{}"),
+                            createdAt = row[ResolutionJobs.createdAt].toString(),
+                            startedAt = row[ResolutionJobs.startedAt]?.toString(),
+                            endedAt = row[ResolutionJobs.endedAt]?.toString(),
+                            resultSummary = parseJsonElement(row[ResolutionJobs.resultSummary]),
+                            excInfo = row[ResolutionJobs.excInfo]
+                        )
+                    }
+                }
+                if (job == null) {
+                    call.respond(HttpStatusCode.NotFound, "Resolution job not found")
+                    return@get
+                }
+                call.respond(job)
+            }
+        }
+
         get("/auth/loginstate") {
             val sessionId = parseUuid(call.request.cookies[settings.authCookieName])
             if (sessionId == null) {

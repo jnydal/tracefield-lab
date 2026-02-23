@@ -117,6 +117,29 @@ data class AnalysisJobResponse(
 )
 
 @Serializable
+data class ResolutionJobRequest(
+    val name: String,
+    val datasetId: String,
+    val entityType: String,
+    val config: JsonElement
+)
+
+@Serializable
+data class ResolutionJobResponse(
+    val id: String,
+    val name: String,
+    val status: String,
+    val datasetId: String,
+    val entityType: String,
+    val config: JsonElement,
+    val createdAt: String,
+    val startedAt: String? = null,
+    val endedAt: String? = null,
+    val resultSummary: JsonElement? = null,
+    val excInfo: String? = null
+)
+
+@Serializable
 data class AnalysisResultResponse(
     val id: String,
     val jobId: String,

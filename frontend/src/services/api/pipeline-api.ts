@@ -77,6 +77,27 @@ export type AnalysisJobRequest = {
   status?: string;
 };
 
+export type ResolutionJob = {
+  id: string;
+  name: string;
+  status: string;
+  datasetId: string;
+  entityType: string;
+  config: Record<string, unknown>;
+  createdAt: string;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  resultSummary?: Record<string, unknown> | null;
+  excInfo?: string | null;
+};
+
+export type ResolutionJobRequest = {
+  name: string;
+  datasetId: string;
+  entityType: string;
+  config: Record<string, unknown>;
+};
+
 export type AnalysisResult = {
   id: string;
   jobId: string;
@@ -151,6 +172,18 @@ export const pipelineApi = baseApi.injectEndpoints({
       }),
       providesTags: ['AnalysisResults'],
     }),
+    listResolutionJobs: builder.query<ResolutionJob[], void>({
+      query: () => ({ url: '/resolution/jobs', method: 'GET' }),
+      providesTags: ['ResolutionJobs'],
+    }),
+    createResolutionJob: builder.mutation<ResolutionJob, ResolutionJobRequest>({
+      query: (body) => ({ url: '/resolution/jobs', method: 'POST', body }),
+      invalidatesTags: ['ResolutionJobs'],
+    }),
+    getResolutionJob: builder.query<ResolutionJob, string>({
+      query: (id) => ({ url: `/resolution/jobs/${id}`, method: 'GET' }),
+      providesTags: ['ResolutionJobs'],
+    }),
   }),
 });
 
@@ -169,4 +202,7 @@ export const {
   useLazyGetAnalysisJobQuery,
   useListAnalysisResultsQuery,
   useLazyGetAnalysisResultsQuery,
+  useListResolutionJobsQuery,
+  useCreateResolutionJobMutation,
+  useLazyGetResolutionJobQuery,
 } = pipelineApi;

@@ -169,6 +169,20 @@ object AnalysisJobs : UUIDTable("analysis_jobs", columnName = "id") {
     val endedAt = timestamp("ended_at").nullable()
 }
 
+object ResolutionJobs : UUIDTable("resolution_jobs", columnName = "id") {
+    val name = text("name")
+    val status = text("status")
+    val configJson = jsonb("config_json")
+    val datasetId = uuid("dataset_id").references(Datasets.id, onDelete = ReferenceOption.CASCADE)
+    val entityType = text("entity_type")
+    val requestedBy = uuid("requested_by").references(Users.id, onDelete = ReferenceOption.SET_NULL).nullable()
+    val startedAt = timestamp("started_at").nullable()
+    val endedAt = timestamp("ended_at").nullable()
+    val resultSummary = jsonb("result_summary").nullable()
+    val excInfo = text("exc_info").nullable()
+    val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp())
+}
+
 object AnalysisResults : UUIDTable("analysis_results", columnName = "id") {
     val jobId = uuid("job_id").references(AnalysisJobs.id, onDelete = ReferenceOption.CASCADE)
     val featureXId = uuid("feature_x_id").references(FeatureDefinitions.id, onDelete = ReferenceOption.CASCADE)
