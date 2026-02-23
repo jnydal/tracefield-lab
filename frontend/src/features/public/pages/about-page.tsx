@@ -61,9 +61,10 @@ export function AboutPage() {
             </p>
             <h2 className="about-content-title">Why this project</h2>
             <p className="about-content-copy">
-              This is an upskilling initiative: a place to explore
-              full-stack pipeline tooling, from APIs and workers to a React front end,
-              while keeping the result usable for real research workflows.
+              Tracefield Lab exists to give researchers a practical way to do cross-dataset
+              analysis without rewriting pipelines for each domain. It was built as a
+              learning project, but with the constraint that the result had to be usable:
+              provenance, reproducibility, and research integrity built in from the start.
             </p>
           </div>
           <div className="about-content-back">
