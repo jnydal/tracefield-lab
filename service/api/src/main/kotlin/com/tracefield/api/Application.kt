@@ -335,6 +335,9 @@ fun Application.module() {
                 }
                 val dataset = transaction(DatabaseManager.getDatabase()) {
                     Datasets.select { Datasets.id eq EntityID(id, Datasets) }.singleOrNull()?.let { row ->
+                        val datasetId = row[Datasets.id].value
+                        val fileCount = DatasetFiles.select { DatasetFiles.datasetId eq datasetId }.count()
+                        val mappingsCount = EntityMap.select { EntityMap.datasetId eq datasetId }.count()
                         DatasetResponse(
                             id = row[Datasets.id].value.toString(),
                             name = row[Datasets.name],
@@ -344,7 +347,9 @@ fun Application.module() {
                             schema = parseJsonElement(row[Datasets.schemaJson]),
                             refreshSchedule = row[Datasets.refreshSchedule],
                             createdAt = row[Datasets.createdAt].toString(),
-                            updatedAt = row[Datasets.updatedAt].toString()
+                            updatedAt = row[Datasets.updatedAt].toString(),
+                            fileCount = fileCount,
+                            mappingsCount = mappingsCount
                         )
                     }
                 }

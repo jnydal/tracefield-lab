@@ -51,7 +51,9 @@ data class DatasetResponse(
     val schema: JsonElement? = null,
     val refreshSchedule: String? = null,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    val fileCount: Long? = null,
+    val mappingsCount: Long? = null
 )
 
 @Serializable

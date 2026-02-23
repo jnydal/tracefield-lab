@@ -442,48 +442,72 @@ export function EntityMappingsPage() {
             ) : resolutionJobs.length === 0 ? (
               <p className="text-sm text-slate-500">No resolution jobs yet.</p>
             ) : (
-              <ul className="divide-y divide-slate-200 rounded border border-slate-200">
-                {resolutionJobs.map((job) => (
-                  <li
-                    key={job.id}
-                    className="flex flex-wrap items-center justify-between gap-4 p-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{job.name}</p>
-                      <p className="text-sm text-slate-500">
-                        {formatDate(job.createdAt)}
-                        {job.datasetId && ` · Dataset ${job.datasetId.slice(0, 8)}…`}
-                      </p>
-                      {job.status === 'completed' &&
+              <div className="rounded border border-slate-200 overflow-hidden">
+                <table className="min-w-full">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                        Job name
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                        Dataset
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                        Summary
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white [&>tr+tr>td]:border-t [&>tr+tr>td]:border-slate-200">
+                    {resolutionJobs.map((job) => {
+                      const summary =
+                        job.status === 'completed' &&
                         job.resultSummary &&
-                        typeof job.resultSummary === 'object' && (
-                          <p className="text-xs text-slate-500 mt-1">
-                            exact: {String((job.resultSummary as Record<string, unknown>).exact ?? 0)}{' '}
-                            · semantic:{' '}
-                            {String((job.resultSummary as Record<string, unknown>).semantic ?? 0)}{' '}
-                            · created:{' '}
-                            {String((job.resultSummary as Record<string, unknown>).created ?? 0)}{' '}
-                            · unmatched:{' '}
-                            {String((job.resultSummary as Record<string, unknown>).unmatched ?? 0)}
-                          </p>
-                        )}
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        job.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : job.status === 'running'
-                            ? 'bg-blue-100 text-blue-800'
-                            : job.status === 'failed'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {job.status}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                        typeof job.resultSummary === 'object'
+                          ? (job.resultSummary as Record<string, unknown>)
+                          : null;
+                      return (
+                        <tr key={job.id}>
+                          <td className="px-4 py-2 text-sm font-medium truncate max-w-[12rem]">
+                            {job.name}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-slate-500">
+                            {formatDate(job.createdAt)}
+                          </td>
+                          <td className="px-4 py-2 text-sm font-mono text-slate-600 truncate max-w-[8rem]">
+                            {job.datasetId ? `${job.datasetId.slice(0, 8)}…` : '—'}
+                          </td>
+                          <td className="px-4 py-2">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                job.status === 'completed'
+                                  ? 'bg-green-100 text-green-800'
+                                  : job.status === 'running'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : job.status === 'failed'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {job.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-xs text-slate-500">
+                            {summary
+                              ? `exact: ${String(summary.exact ?? 0)} · semantic: ${String(summary.semantic ?? 0)} · created: ${String(summary.created ?? 0)} · unmatched: ${String(summary.unmatched ?? 0)}`
+                              : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </>
@@ -499,31 +523,56 @@ export function EntityMappingsPage() {
         ) : mappings.length === 0 ? (
           <p className="text-sm text-slate-500">No mappings yet.</p>
         ) : (
-          <ul className="divide-y divide-slate-200 rounded border border-slate-200">
-            {mappings.map((mapping) => (
-              <li
-                key={mapping.id}
-                className="flex items-center justify-between p-3"
-              >
-                <div>
-                  <p className="font-medium">
-                    {mapping.datasetName ?? mapping.datasetId} → {mapping.entityDisplayName ?? mapping.entityId}
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    {formatDate(mapping.createdAt)}
-                    {mapping.method && ` · ${mapping.method}`}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="text-sm text-red-600 hover:underline"
-                  onClick={() => deleteMapping(mapping.id)}
-                >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="rounded border border-slate-200 overflow-hidden">
+            <table className="min-w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Dataset
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Entity
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Method
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white [&>tr+tr>td]:border-t [&>tr+tr>td]:border-slate-200">
+                {mappings.map((mapping) => (
+                  <tr key={mapping.id}>
+                    <td className="px-4 py-2 text-sm font-medium truncate max-w-[12rem]">
+                      {mapping.datasetName ?? mapping.datasetId}
+                    </td>
+                    <td className="px-4 py-2 text-sm font-medium truncate max-w-[12rem]">
+                      {mapping.entityDisplayName ?? mapping.entityId}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-slate-500">
+                      {formatDate(mapping.createdAt)}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-slate-600">
+                      {mapping.method ?? '—'}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        type="button"
+                        className="text-sm text-red-600 hover:underline"
+                        onClick={() => deleteMapping(mapping.id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </section>

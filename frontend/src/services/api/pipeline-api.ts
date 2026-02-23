@@ -10,6 +10,32 @@ export type Dataset = {
   refreshSchedule?: string;
   createdAt: string;
   updatedAt: string;
+  fileCount?: number;
+  mappingsCount?: number;
+};
+
+export type FeatureExtractRequest = {
+  datasetId: string;
+  module?: string;
+  inputs: {
+    textColumn?: string;
+    textColumns?: string[];
+    idColumn?: string;
+  };
+};
+
+export type FeatureExtractResponse = {
+  jobId: string;
+};
+
+export type JobStatus = {
+  id: string;
+  status: string;
+  enqueuedAt?: string;
+  startedAt?: string;
+  endedAt?: string;
+  excInfo?: string;
+  result?: string;
 };
 
 export type DatasetRequest = {
@@ -126,6 +152,27 @@ export const pipelineApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/datasets/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Datasets'],
     }),
+    getDataset: builder.query<Dataset, string>({
+      query: (id) => ({ url: `/datasets/${id}`, method: 'GET' }),
+      providesTags: (result, _, id) =>
+        result ? [{ type: 'Datasets', id }] : ['Datasets'],
+    }),
+    triggerFeatureExtract: builder.mutation<
+      FeatureExtractResponse,
+      FeatureExtractRequest
+    >({
+      query: (body) => ({
+        url: '/features/extract',
+        method: 'POST',
+        body: {
+          ...body,
+          module: body.module ?? 'embeddings',
+        },
+      }),
+    }),
+    getJobStatus: builder.query<JobStatus, string>({
+      query: (jobId) => ({ url: `/jobs/${jobId}`, method: 'GET' }),
+    }),
     listEntityMappings: builder.query<EntityMapping[], void>({
       query: () => ({ url: '/entity-mappings', method: 'GET' }),
       providesTags: ['EntityMappings'],
@@ -193,6 +240,11 @@ export const {
   useListDatasetsQuery,
   useCreateDatasetMutation,
   useDeleteDatasetMutation,
+  useGetDatasetQuery,
+  useLazyGetDatasetQuery,
+  useTriggerFeatureExtractMutation,
+  useGetJobStatusQuery,
+  useLazyGetJobStatusQuery,
   useListEntityMappingsQuery,
   useCreateEntityMappingMutation,
   useDeleteEntityMappingMutation,

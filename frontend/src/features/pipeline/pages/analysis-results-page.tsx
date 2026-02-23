@@ -73,7 +73,7 @@ export function AnalysisResultsPage() {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200">
+                  <table className="min-w-full">
                     <thead className="bg-slate-50">
                       <tr>
                         <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
@@ -93,7 +93,7 @@ export function AnalysisResultsPage() {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-slate-200">
+                    <tbody className="bg-white [&>tr+tr>td]:border-t [&>tr+tr>td]:border-slate-200">
                       {results.map((r) => (
                         <tr key={r.id}>
                           <td className="px-4 py-2 text-sm font-mono">

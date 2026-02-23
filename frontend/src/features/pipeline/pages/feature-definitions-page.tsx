@@ -89,23 +89,50 @@ export function FeatureDefinitionsPage() {
         ) : data.length === 0 ? (
           <p className="text-sm text-slate-500">No definitions yet.</p>
         ) : (
-          <ul className="divide-y divide-slate-200 rounded border border-slate-200">
-            {data.map((definition) => (
-              <li key={definition.id} className="flex items-center justify-between p-3">
-                <div>
-                  <p className="font-medium">{definition.name}</p>
-                  <p className="text-sm text-slate-500">{definition.valueType}</p>
-                </div>
-                <button
-                  type="button"
-                  className="text-sm text-red-600 hover:underline"
-                  onClick={() => deleteDefinition(definition.id)}
-                >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="rounded border border-slate-200 overflow-hidden">
+            <table className="min-w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Value type
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Owner
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white [&>tr+tr>td]:border-t [&>tr+tr>td]:border-slate-200">
+                {data.map((definition) => (
+                  <tr key={definition.id}>
+                    <td className="px-4 py-2 text-sm font-medium">
+                      {definition.name}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-slate-600">
+                      {definition.valueType}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-slate-500">
+                      {definition.owner ?? '—'}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        type="button"
+                        className="text-sm text-red-600 hover:underline"
+                        onClick={() => deleteDefinition(definition.id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </section>
