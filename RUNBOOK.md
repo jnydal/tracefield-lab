@@ -165,6 +165,15 @@ docker compose exec db pg_isready -U postgres
 
 ### Jobs Not Processing
 
+**Analysis jobs** (status `queued`) are processed by `worker-analysis`, which polls the DB every few seconds. Ensure it is running:
+
+```bash
+docker compose ps worker-analysis
+docker compose logs -f worker-analysis
+```
+
+**Ingest/feature jobs** (Kafka-based):
+
 ```bash
 # Check Kafka connection
 docker compose exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh \

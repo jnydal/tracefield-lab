@@ -1,0 +1,16 @@
+FROM python:3.11-slim
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates && rm -rf /var/lib/apt/lists/*
+
+COPY requirements/base.txt requirements/workers.txt requirements/workers-analysis.txt ./
+RUN pip install --upgrade pip && pip install -r workers-analysis.txt
+
+COPY service/ /app/service/
+WORKDIR /app/service/worker_analysis
+ENV PYTHONPATH=/app
+
+EXPOSE 8000
+CMD ["python", "main.py"]

@@ -1,0 +1,3 @@
+# Analysis worker: workers + scipy for statistical tests
+-r workers.txt
+scipy>=1.11
