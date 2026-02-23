@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("resolver.embedding")
 
-_EMBEDDINGS_MODEL = os.environ.get("EMBEDDINGS_MODEL", "BAAI/bge-small-en-v1.5")
+_EMBEDDINGS_MODEL = os.environ.get("EMBEDDINGS_MODEL", "BAAI/bge-large-en-v1.5")
 _model: "SentenceTransformer | None" = None
 
 

@@ -16,8 +16,9 @@ export function LandingPage() {
               Build, analyze, and share research pipelines with secure traceability.
             </h1>
             <p className="landing-hero-copy">
-              Collect data, map entities, and run analysis jobs in a unified workspace
-              for research teams that need both speed and control.
+              Ingest datasets, map entities manually or via semantic resolution, run feature
+              extraction and analysis jobs in a unified workspace for research teams that
+              need both speed and control.
             </p>
           </div>
 

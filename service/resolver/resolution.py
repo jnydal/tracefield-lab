@@ -238,7 +238,7 @@ def run_resolution(conn, job: dict) -> dict:
 
     entities = load_entities(conn, entity_type)
     existing = load_existing_mappings(conn, dataset_id)
-    model_name = os.environ.get("EMBEDDINGS_MODEL", "BAAI/bge-small-en-v1.5")
+    model_name = os.environ.get("EMBEDDINGS_MODEL", "BAAI/bge-large-en-v1.5")
 
     counts = {"exact": 0, "semantic": 0, "created": 0, "unmatched": 0}
 
