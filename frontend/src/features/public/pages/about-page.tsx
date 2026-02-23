@@ -42,7 +42,9 @@ export function AboutPage() {
             <p className="about-content-copy">
               Tracefield Lab lets research teams register datasets, harmonize entities across
               sources, run embedding and trait workers, and execute analysis jobs with
-              effect sizes and correction. Provenance and licensing metadata are tracked
+              effect sizes and correction. Entity resolution uses semantic embeddings (BGE)
+              to match entities across datasets; an optional LLM can assist with schema
+              inference from samples. Provenance and licensing metadata are tracked
               so workflows stay reproducible and auditable.
             </p>
             <h2 className="about-content-title">What makes it different</h2>
