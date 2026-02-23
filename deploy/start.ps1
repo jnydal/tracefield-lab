@@ -29,9 +29,10 @@ if ($IsWindows -ne $false) {
     $composeFiles += " -f deploy/docker-compose.windows.yml"
 }
 
-"Running docker compose up..." | Out-File -FilePath $log -Append
+"Running docker compose up (pull always)..." | Out-File -FilePath $log -Append
 # Use cmd /c to avoid PowerShell treating docker stderr (progress messages) as errors
-cmd /c "docker compose $composeFiles up -d --remove-orphans 2>&1" | Out-File -FilePath $log -Append
+# --pull always: fetch latest images on each run (replaces Watchtower when using scheduled start.ps1)
+cmd /c "docker compose $composeFiles up -d --pull always --remove-orphans 2>&1" | Out-File -FilePath $log -Append
 "--- docker ps ---" | Out-File -Append $log
 cmd /c "docker ps --format ""table {{.Names}}`t{{.Status}}"" 2>&1" | Out-File -FilePath $log -Append
 "Done." | Out-File -FilePath $log -Append
