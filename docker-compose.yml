@@ -84,9 +84,15 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/tracefield}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-BAAI/bge-large-en-v1.5}
+      OBJECT_STORE_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      OBJECT_STORE_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio}
+      OBJECT_STORE_SECRET_KEY: ${MINIO_SECRET_KEY:-minio123}
+      OBJECT_STORE_BUCKET_RAW: ${MINIO_BUCKET_RAW:-tracefield-raw}
     depends_on:
       db: { condition: service_healthy }
       kafka: { condition: service_started }
+      minio: { condition: service_healthy }
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/healthz || exit 1"]
       interval: 10s

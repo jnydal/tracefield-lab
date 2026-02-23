@@ -79,6 +79,25 @@ data class EntityMappingResponse(
 )
 
 @Serializable
+data class FeatureExtractRequest(
+    val datasetId: String,
+    val module: String = "embeddings",
+    val inputs: FeatureExtractInputs
+)
+
+@Serializable
+data class FeatureExtractInputs(
+    val textColumn: String? = null,
+    val textColumns: List<String>? = null,
+    val idColumn: String? = null
+)
+
+@Serializable
+data class FeatureExtractResponse(
+    val jobId: String
+)
+
+@Serializable
 data class FeatureDefinitionRequest(
     val name: String,
     val description: String? = null,

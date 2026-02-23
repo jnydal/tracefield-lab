@@ -58,26 +58,50 @@ curl -X POST http://localhost:8000/resolution/jobs \
 
 The resolver worker polls `resolution_jobs` and writes matches to `entity_map`. Use the Entity Mappings UI for manual mapping or automated resolution (toggle between modes).
 
-**Trigger Feature Extraction**:
+**Trigger Feature Extraction** (text-to-embedding):
 ```bash
 curl -X POST http://localhost:8000/features/extract \
   -H "Content-Type: application/json" \
   -d '{
     "datasetId": "uuid-here",
     "module": "embeddings",
-    "inputs": {"textColumn": "text"}
+    "inputs": {
+      "textColumn": "description",
+      "idColumn": "id"
+    }
   }'
 ```
+Check job status: `GET /jobs/{jobId}`
 
-**Run Analysis Job**:
+**Run Analysis Job** (embedding component vs scalar):
 ```bash
 curl -X POST http://localhost:8000/analysis-jobs \
   -H "Content-Type: application/json" \
   -d '{
-    "leftFeatureSet": "traits",
-    "rightFeatureSet": "feature_b",
-    "test": "spearman",
-    "correction": "benjamini-hochberg"
+    "name": "Embedding dim 0 vs score",
+    "config": {
+      "leftFeatureSet": "embeddings.bge_large",
+      "leftDimension": 0,
+      "rightFeatureSet": "score",
+      "test": "spearman",
+      "correction": "benjamini-hochberg"
+    }
+  }'
+```
+
+**Run Analysis Job** (embedding clustering):
+```bash
+curl -X POST http://localhost:8000/analysis-jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Clusters vs outcome",
+    "config": {
+      "test": "embedding_clustering",
+      "embeddingDef": "embeddings.bge_large",
+      "nClusters": 3,
+      "outcomeFeature": "score",
+      "correction": "benjamini-hochberg"
+    }
   }'
 ```
 

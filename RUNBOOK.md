@@ -125,21 +125,34 @@ docker compose logs -f resolver
 
 ### Step 4: Extract Features
 
-Feature workers process jobs automatically:
-- Embeddings or custom modules
-- Write standardized features with provenance
+**Text-to-embedding** (worker-embeddings): Requires dataset files in object storage and entity mappings.
+
+```bash
+curl -X POST http://localhost:8000/features/extract \
+  -H "Content-Type: application/json" \
+  -d '{
+    "datasetId": "<dataset-uuid>",
+    "module": "embeddings",
+    "inputs": {"textColumn": "description", "idColumn": "id"}
+  }'
+```
+
+Check job status: `GET /jobs/{jobId}`
+
+Feature workers process jobs from Kafka `features` topic:
+- **worker-embeddings**: Reads raw text from object storage, embeds with BGE (1024-dim), writes to `embeddings_1024`
+- Other modules write scalar features to `features` table
 
 **Monitor**:
 ```bash
-docker compose logs -f embeddings
-docker compose logs -f traits
+docker compose logs -f worker-embeddings
 docker compose logs -f api
 ```
 
 ### Step 5: Run Analysis Jobs
 
 ```bash
-curl -X POST http://localhost:8000/analysis/jobs \
+curl -X POST http://localhost:8000/analysis-jobs \
   -H "Content-Type: application/json" \
   -d '{
     "leftFeatureSet": "traits",

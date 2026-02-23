@@ -567,6 +567,45 @@ fun Application.module() {
             }
         }
 
+        post("/features/extract") {
+            val req = call.receive<FeatureExtractRequest>()
+            val datasetId = parseUuid(req.datasetId) ?: run {
+                call.respond(HttpStatusCode.BadRequest, "Invalid datasetId")
+                return@post
+            }
+            if (req.module != "embeddings") {
+                call.respond(HttpStatusCode.BadRequest, "Only module 'embeddings' is supported")
+                return@post
+            }
+            val textColumn = req.inputs.textColumn
+            val textColumns = req.inputs.textColumns
+            if (textColumn == null && textColumns.isNullOrEmpty()) {
+                call.respond(HttpStatusCode.BadRequest, "inputs.textColumn or inputs.textColumns required")
+                return@post
+            }
+            val datasetExists = transaction(DatabaseManager.getDatabase()) {
+                Datasets.select { Datasets.id eq EntityID(datasetId, Datasets) }.count() > 0
+            }
+            if (!datasetExists) {
+                call.respond(HttpStatusCode.NotFound, "Dataset not found")
+                return@post
+            }
+            val hasFiles = transaction(DatabaseManager.getDatabase()) {
+                DatasetFiles.select { DatasetFiles.datasetId eq datasetId }.count() > 0
+            }
+            if (!hasFiles) {
+                call.respond(HttpStatusCode.BadRequest, "Dataset has no files; upload data first")
+                return@post
+            }
+            val job = jobQueue.enqueueFeatureExtract(
+                datasetId = req.datasetId,
+                textColumn = textColumn,
+                textColumns = textColumns,
+                idColumn = req.inputs.idColumn
+            )
+            call.respond(FeatureExtractResponse(jobId = job.id))
+        }
+
         route("/features/definitions") {
             get {
                 val items = transaction(DatabaseManager.getDatabase()) {

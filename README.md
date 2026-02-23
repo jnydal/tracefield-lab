@@ -17,7 +17,7 @@ The system:
 1. Registers datasets with schemas and licensing metadata.
 2. Ingests raw data into staging tables and object storage.
 3. Maps entities across datasets using manual mapping or automated semantic resolution (exact keys + BGE embeddings).
-4. Extracts features via modular workers (embeddings, traits, domain-specific).
+4. Extracts features via modular workers: **text-to-embedding** (BGE 1024-dim) and domain-specific scalar features.
 5. Runs statistical analysis with effect sizes and correction.
 
 ---

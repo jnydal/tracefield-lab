@@ -1,0 +1,5 @@
+# Embeddings worker: workers + sentence-transformers for BGE
+-r workers.txt
+sentence-transformers>=2.2.0
+numpy>=1.24
+boto3>=1.28

@@ -13,7 +13,9 @@ from typing import Any
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import numpy as np
 from scipy import stats
+from scipy.cluster.vq import kmeans2
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,6 +27,11 @@ DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://postgres:postgres@db:5432/tracefield"
 )
 POLL_INTERVAL_SEC = int(os.environ.get("ANALYSIS_POLL_INTERVAL_SEC", "5"))
+EMBEDDINGS_MODEL = os.environ.get("EMBEDDINGS_MODEL", "BAAI/bge-large-en-v1.5")
+
+# Model name as stored in embeddings_1024 (slashes/dots replaced)
+def _embedding_model_name() -> str:
+    return EMBEDDINGS_MODEL.replace("/", "_").replace(".", "_")
 
 
 @contextmanager
@@ -70,27 +77,99 @@ def get_feature_def_id_by_name(conn, name: str) -> uuid.UUID | None:
     return row["id"] if row else None
 
 
+def _is_embedding_feature(name: str) -> bool:
+    return (name or "").startswith("embeddings.")
+
+
 def load_features_for_definitions(
-    conn, left_id: uuid.UUID, right_id: uuid.UUID
+    conn,
+    left_id: uuid.UUID,
+    right_id: uuid.UUID,
+    left_name: str,
+    right_name: str,
+    config: dict,
 ) -> list[dict]:
-    """Load entity_id, left value, right value for entities that have both features."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT
-                l.entity_id,
-                l.value_num AS left_num,
-                l.value_text AS left_text,
-                r.value_num AS right_num,
-                r.value_text AS right_text
-            FROM features l
-            JOIN features r ON l.entity_id = r.entity_id
-                AND r.feature_definition_id = %s
-            WHERE l.feature_definition_id = %s
-            """,
-            (right_id, left_id),
-        )
-        rows = cur.fetchall()
+    """Load entity_id, left value, right value for entities that have both features.
+    Supports embedding definitions (embeddings.bge_large) via leftDimension/rightDimension in config.
+    """
+    left_emb = _is_embedding_feature(left_name)
+    right_emb = _is_embedding_feature(right_name)
+    left_dim = int(config.get("leftDimension", config.get("left_dimension", 0)))
+    right_dim = int(config.get("rightDimension", config.get("right_dimension", 0)))
+    model_name = _embedding_model_name()
+
+    if left_emb and right_emb:
+        # Both from embeddings_1024, different dimensions
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    entity_id,
+                    (vector[%s])::float AS left_num,
+                    NULL::text AS left_text,
+                    (vector[%s])::float AS right_num,
+                    NULL::text AS right_text
+                FROM embeddings_1024
+                WHERE model_name = %s
+                """,
+                (left_dim + 1, right_dim + 1, model_name),
+            )
+            rows = cur.fetchall()
+    elif left_emb:
+        # Left from embeddings, right from features
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    e.entity_id,
+                    (e.vector[%s])::float AS left_num,
+                    NULL::text AS left_text,
+                    f.value_num AS right_num,
+                    f.value_text AS right_text
+                FROM embeddings_1024 e
+                JOIN features f ON e.entity_id = f.entity_id AND f.feature_definition_id = %s
+                WHERE e.model_name = %s
+                """,
+                (left_dim + 1, right_id, model_name),
+            )
+            rows = cur.fetchall()
+    elif right_emb:
+        # Left from features, right from embeddings
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    f.entity_id,
+                    f.value_num AS left_num,
+                    f.value_text AS left_text,
+                    (e.vector[%s])::float AS right_num,
+                    NULL::text AS right_text
+                FROM features f
+                JOIN embeddings_1024 e ON f.entity_id = e.entity_id AND e.model_name = %s
+                WHERE f.feature_definition_id = %s
+                """,
+                (right_dim + 1, model_name, left_id),
+            )
+            rows = cur.fetchall()
+    else:
+        # Both from features (original logic)
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    l.entity_id,
+                    l.value_num AS left_num,
+                    l.value_text AS left_text,
+                    r.value_num AS right_num,
+                    r.value_text AS right_text
+                FROM features l
+                JOIN features r ON l.entity_id = r.entity_id
+                    AND r.feature_definition_id = %s
+                WHERE l.feature_definition_id = %s
+                """,
+                (right_id, left_id),
+            )
+            rows = cur.fetchall()
     return [dict(r) for r in rows]
 
 
@@ -137,6 +216,91 @@ def run_spearman(x: list[float], y: list[float]) -> dict:
         "correlation": float(r),
         "p_value": float(p),
         "n": len(valid),
+    }
+
+
+def run_embedding_clustering(
+    conn,
+    config: dict,
+    embedding_def_id: uuid.UUID,
+    outcome_def_id: uuid.UUID,
+) -> dict:
+    """Cluster entities by embedding, then ANOVA of outcome by cluster."""
+    n_clusters = int(config.get("nClusters", config.get("n_clusters", 3)))
+    model_name = _embedding_model_name()
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT entity_id, vector
+            FROM embeddings_1024
+            WHERE model_name = %s
+            """,
+            (model_name,),
+        )
+        emb_rows = cur.fetchall()
+
+    if not emb_rows:
+        raise ValueError(f"No embeddings found for model {model_name}")
+
+    entity_ids = [r["entity_id"] for r in emb_rows]
+    vec_data = []
+    for r in emb_rows:
+        v = r["vector"]
+        if isinstance(v, str):
+            vec_data.append([float(x) for x in v.strip("[]").split(",")])
+        else:
+            vec_data.append(list(v))
+    vectors = np.array(vec_data, dtype=np.float64)
+
+    if len(vectors) < n_clusters:
+        raise ValueError(
+            f"Need at least {n_clusters} entities for clustering, got {len(vectors)}"
+        )
+
+    _, labels = kmeans2(vectors, n_clusters, minit="++", seed=42)
+    entity_to_cluster = {eid: int(l) for eid, l in zip(entity_ids, labels)}
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT entity_id, value_num
+            FROM features
+            WHERE feature_definition_id = %s AND value_num IS NOT NULL
+            """,
+            (outcome_def_id,),
+        )
+        outcome_rows = cur.fetchall()
+
+    entity_to_outcome = {r["entity_id"]: float(r["value_num"]) for r in outcome_rows}
+
+    cluster_labels: dict[str, list[float]] = {}
+    for eid, cluster in entity_to_cluster.items():
+        outcome = entity_to_outcome.get(eid)
+        if outcome is not None:
+            cluster_labels.setdefault(str(cluster), []).append(outcome)
+
+    group_values = list(cluster_labels.values())
+    if len(group_values) < 2:
+        return {
+            "test": "embedding_clustering",
+            "n_clusters": n_clusters,
+            "n_entities": len(emb_rows),
+            "f_statistic": float("nan"),
+            "p_value": float("nan"),
+            "n_groups": len(group_values),
+            "n_total": sum(len(g) for g in group_values),
+        }
+
+    f_stat, p_val = stats.f_oneway(*group_values)
+    return {
+        "test": "embedding_clustering",
+        "n_clusters": n_clusters,
+        "n_entities": len(emb_rows),
+        "f_statistic": float(f_stat),
+        "p_value": float(p_val),
+        "n_groups": len(group_values),
+        "n_total": sum(len(g) for g in group_values),
     }
 
 
@@ -210,6 +374,39 @@ def process_job(conn, job: dict) -> None:
     if isinstance(config, str):
         config = json.loads(config)
 
+    test_type = (config.get("test") or "anova").lower()
+    if test_type == "embedding_clustering":
+        embedding_def = config.get("embeddingDef") or config.get("embedding_def")
+        outcome_feature = config.get("outcomeFeature") or config.get("outcome_feature")
+        if not embedding_def or not outcome_feature:
+            raise ValueError(
+                "embedding_clustering requires embeddingDef and outcomeFeature in config"
+            )
+        emb_id = get_feature_def_id_by_name(conn, embedding_def)
+        outcome_id = get_feature_def_id_by_name(conn, outcome_feature)
+        if not emb_id:
+            raise ValueError(f"Feature definition not found: {embedding_def}")
+        if not outcome_id:
+            raise ValueError(f"Feature definition not found: {outcome_feature}")
+        stats_dict = run_embedding_clustering(conn, config, emb_id, outcome_id)
+        p_value = stats_dict.get("p_value", float("nan"))
+        if p_value != p_value:
+            p_value = None
+        effect_size = stats_dict.get("effect_size")
+        insert_result(
+            conn,
+            job_id,
+            outcome_id,
+            emb_id,
+            stats_dict,
+            p_value,
+            effect_size,
+            config.get("correction"),
+        )
+        complete_job(conn, job_id)
+        log.info("Completed job %s (%s)", job_id, name)
+        return
+
     left_name = config.get("leftFeatureSet") or config.get("featureSetA")
     right_name = config.get("rightFeatureSet") or config.get("featureSetB")
     # Accept arrays (take first element) or single string
@@ -230,7 +427,9 @@ def process_job(conn, job: dict) -> None:
     if not right_id:
         raise ValueError(f"Feature definition not found: {right_name}")
 
-    rows = load_features_for_definitions(conn, left_id, right_id)
+    rows = load_features_for_definitions(
+        conn, left_id, right_id, left_name or "", right_name or "", config
+    )
     if not rows:
         raise ValueError("No overlapping entity-feature data for left and right feature sets")
 

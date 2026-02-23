@@ -41,9 +41,10 @@ The Tracefield Lab is a generic, modular data pipeline for multi-dataset analysi
    └─→ Enqueues feature extraction jobs
 
 2. Feature Workers (Python/Kotlin)
-  ├─→ Embeddings / domain modules
-   ├─→ Produce feature vectors
-   └─→ Write → PostgreSQL (features table)
+  ├─→ Embeddings (worker-embeddings): reads raw text from object storage, embeds with BGE (1024-dim)
+  ├─→ Writes vectors → embeddings_1024
+  ├─→ Domain modules write scalar features → features table
+  └─→ Consume jobs from Kafka `features` topic
 
 3. Entity Resolver
    ├─→ Polls resolution_jobs (queued)
@@ -126,10 +127,22 @@ These services become modular feature providers in the generic system.
 
 **Trigger**: API creates job via `POST /resolution/jobs`; resolver picks it up. No Kafka.
 
-### 5. Analysis Worker (`service/worker_analysis`)
+### 5. Worker-Embeddings (`service/worker_embeddings`)
 
 **Responsibilities**:
-- Compute correlations, regressions, and contingency tests
+- Consume feature extraction jobs from Kafka `features` topic
+- Read raw text from object storage (dataset_files.object_uri), join to entity_map
+- Embed with BGE (BAAI/bge-large-en-v1.5, 1024-dim)
+- Upsert into `embeddings_1024` (idempotent)
+- Emit provenance events
+
+**Trigger**: API `POST /features/extract` with `module: "embeddings"` enqueues to Kafka.
+
+### 6. Analysis Worker (`service/worker_analysis`)
+
+**Responsibilities**:
+- Compute correlations (Spearman), ANOVA, embedding component vs scalar
+- `embedding_clustering`: k-means on embeddings, ANOVA of outcome by cluster
 - Apply multiple-testing correction
 - Store results with effect sizes and confidence intervals
 
@@ -160,6 +173,7 @@ These services become modular feature providers in the generic system.
 
 **Core Tables**:
 - `datasets` - Metadata, schema, source, license
+- `embeddings_1024` - BGE 1024-dim vectors (entity_id, model_name, vector)
 - `dataset_files` - Object storage references
 - `entities` - Canonical entities and types
 - `entity_map` - Cross-dataset mapping rules (manual or from resolution jobs)
