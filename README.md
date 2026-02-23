@@ -20,6 +20,17 @@ The system:
 4. Extracts features via modular workers: **text-to-embedding** (BGE 1024-dim) and domain-specific scalar features.
 5. Runs statistical analysis with effect sizes and correction.
 
+### What makes it different
+
+Most research tools work within a single dataset or domain. Tracefield Lab is built for
+**correlation discovery across heterogeneous sources**—different labs, disciplines, and
+formats that rarely get compared. Entity resolution (exact keys plus semantic matching
+with embeddings) lets you map "the same thing" across datasets. The feature store and
+analysis layer then surface correlations that emerge only when you can cross-reference.
+That makes it a tool for cracking open hermeticized science: bringing siloed knowledge
+into one auditable, reproducible system so you can find the patterns that live at the
+boundaries.
+
 ---
 
 ## Technical Overview
