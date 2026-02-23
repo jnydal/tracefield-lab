@@ -149,7 +149,72 @@ docker compose logs -f worker-embeddings
 docker compose logs -f api
 ```
 
-### Step 5: Run Analysis Jobs
+### Step 5: Similarity Search
+
+Once embeddings exist, find semantically similar entities:
+
+```bash
+curl "http://localhost:8000/entities/{entityId}/similar?limit=10"
+```
+
+**If 404 "No embedding found"**: The entity has no embedding in `embeddings_1024`. Run feature extraction with module `embeddings` (Step 4) for the dataset(s) that entity is mapped from. Ensure `EMBEDDINGS_MODEL` matches the model used by worker-embeddings (default `BAAI/bge-large-en-v1.5`).
+
+#### Practical example: "Entities like this one"
+
+**Scenario**: You have two datasets — a product catalog and a support-ticket log. Both are mapped to entities. After extracting embeddings from product descriptions and ticket text, you want to find support tickets semantically similar to a given product (e.g. to discover which issues relate to similar products).
+
+**1. Ensure embeddings exist** for the entities you care about (Step 4):
+
+```bash
+curl -X POST http://localhost:8000/features/extract \
+  -H "Content-Type: application/json" \
+  -d '{
+    "datasetId": "<your-dataset-uuid>",
+    "module": "embeddings",
+    "inputs": {"textColumn": "description", "idColumn": "id"}
+  }'
+# Wait for job to finish (check GET /jobs/{jobId})
+```
+
+**2. Pick an entity ID** (e.g. from Entity Mappings UI or `SELECT entity_id FROM entity_map LIMIT 1`).
+
+**3. Find similar entities**:
+
+```bash
+# Top 5 most similar entities
+ENTITY_ID="33333333-3333-3333-3333-333333333301"  # e.g. Alice
+curl -s "http://localhost:8000/entities/${ENTITY_ID}/similar?limit=5" | jq
+```
+
+**Example response**:
+
+```json
+{
+  "queryEntityId": "33333333-3333-3333-3333-333333333301",
+  "model": "BAAI_bge_large_en_v1_5",
+  "results": [
+    {
+      "entityId": "33333333-3333-3333-3333-333333333302",
+      "datasetId": "22222222-2222-2222-2222-222222222222",
+      "datasetName": "test-survey-2024",
+      "sourceRecordId": "rec-002",
+      "entityDisplayName": "Bob",
+      "similarity": 0.89,
+      "rank": 1
+    }
+  ]
+}
+```
+
+**4. (Optional) Restrict to specific datasets** — e.g. only show similar entities from the support-ticket dataset:
+
+```bash
+curl -s "http://localhost:8000/entities/${ENTITY_ID}/similar?limit=10&datasetIds=22222222-2222-2222-2222-222222222222" | jq
+```
+
+**UI**: On the Entity Mappings page, use the "Find similar" button next to any mapping to run the search and view results in a modal.
+
+### Step 6: Run Analysis Jobs
 
 ```bash
 curl -X POST http://localhost:8000/analysis-jobs \

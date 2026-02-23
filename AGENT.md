@@ -115,6 +115,13 @@ curl http://localhost:8000/analysis-jobs/{jobId}
 curl http://localhost:8000/resolution/jobs/{jobId}
 ```
 
+**Similarity Search** (find entities semantically similar to a given entity):
+```bash
+curl "http://localhost:8000/entities/{entityId}/similar?limit=10"
+# Optional: filter by datasets
+curl "http://localhost:8000/entities/{entityId}/similar?limit=10&datasetIds=uuid1,uuid2"
+```
+
 ### 2. Worker Services
 
 Workers run continuously:

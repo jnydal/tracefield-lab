@@ -417,6 +417,152 @@ fun Application.module() {
             }
         }
 
+        route("/entities") {
+            get("/{entityId}/similar") {
+                val entityIdParam = call.parameters["entityId"] ?: run {
+                    call.respond(HttpStatusCode.BadRequest, "Missing entityId")
+                    return@get
+                }
+                val entityId = parseUuid(entityIdParam) ?: run {
+                    call.respond(HttpStatusCode.BadRequest, "Invalid entityId")
+                    return@get
+                }
+                val limitParam = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10
+                val limit = limitParam.coerceIn(1, 100)
+                val datasetIdsParam = call.request.queryParameters["datasetIds"]
+                val datasetIds: List<UUID>? = if (datasetIdsParam.isNullOrBlank()) null
+                else datasetIdsParam.split(",").mapNotNull { parseUuid(it.trim()) }.takeIf { it.isNotEmpty() }
+                val modelParam = call.request.queryParameters["model"]
+                val modelName = modelParam?.replace("/", "_")?.replace(".", "_")
+                    ?: Config.settings.embeddingsModel.replace("/", "_").replace(".", "_")
+
+                val startMs = System.currentTimeMillis()
+                var response: SimilaritySearchResponse? = null
+                DatabaseManager.getConnection().use { conn ->
+                    val hasQueryVector = conn.prepareStatement(
+                        """
+                        SELECT 1 FROM embeddings_1024
+                        WHERE entity_id = ?::uuid AND model_name = ?
+                        """.trimIndent()
+                    ).use { stmt ->
+                        stmt.setObject(1, entityId, java.sql.Types.OTHER)
+                        stmt.setString(2, modelName)
+                        stmt.executeQuery().use { rs -> rs.next() }
+                    }
+                    if (!hasQueryVector) {
+                        call.respond(HttpStatusCode.NotFound, "No embedding found for entity $entityIdParam")
+                        return@get
+                    }
+
+                    val sql = if (datasetIds == null) {
+                        """
+                        WITH query_vec AS (
+                            SELECT vector FROM embeddings_1024
+                            WHERE entity_id = ?::uuid AND model_name = ?
+                        ),
+                        ranked AS (
+                            SELECT
+                                e.entity_id,
+                                (1.0 - (e.vector <=> (SELECT vector FROM query_vec)))::double precision AS similarity,
+                                ROW_NUMBER() OVER (ORDER BY e.vector <=> (SELECT vector FROM query_vec)) AS rn
+                            FROM embeddings_1024 e
+                            WHERE e.model_name = ? AND e.entity_id != ?::uuid
+                        ),
+                        top_ranked AS (SELECT * FROM ranked WHERE rn <= ?)
+                        SELECT
+                            tr.entity_id::text,
+                            tr.similarity,
+                            tr.rn::int AS rank,
+                            em.dataset_id::text,
+                            d.name AS dataset_name,
+                            em.source_record_id,
+                            ent.display_name AS entity_display_name
+                        FROM top_ranked tr
+                        JOIN entity_map em ON em.entity_id = tr.entity_id
+                        JOIN datasets d ON d.id = em.dataset_id
+                        JOIN entities ent ON ent.id = tr.entity_id
+                        ORDER BY tr.rn, d.name
+                        """.trimIndent()
+                    } else {
+                        """
+                        WITH query_vec AS (
+                            SELECT vector FROM embeddings_1024
+                            WHERE entity_id = ?::uuid AND model_name = ?
+                        ),
+                        ranked AS (
+                            SELECT
+                                e.entity_id,
+                                (1.0 - (e.vector <=> (SELECT vector FROM query_vec)))::double precision AS similarity,
+                                ROW_NUMBER() OVER (ORDER BY e.vector <=> (SELECT vector FROM query_vec)) AS rn
+                            FROM embeddings_1024 e
+                            WHERE e.model_name = ? AND e.entity_id != ?::uuid
+                                AND e.entity_id IN (SELECT entity_id FROM entity_map WHERE dataset_id = ANY(?))
+                        ),
+                        top_ranked AS (SELECT * FROM ranked WHERE rn <= ?)
+                        SELECT
+                            tr.entity_id::text,
+                            tr.similarity,
+                            tr.rn::int AS rank,
+                            em.dataset_id::text,
+                            d.name AS dataset_name,
+                            em.source_record_id,
+                            ent.display_name AS entity_display_name
+                        FROM top_ranked tr
+                        JOIN entity_map em ON em.entity_id = tr.entity_id AND em.dataset_id = ANY(?)
+                        JOIN datasets d ON d.id = em.dataset_id
+                        JOIN entities ent ON ent.id = tr.entity_id
+                        ORDER BY tr.rn, d.name
+                        """.trimIndent()
+                    }
+
+                    response = conn.prepareStatement(sql).use { stmt ->
+                        var idx = 1
+                        stmt.setObject(idx++, entityId, java.sql.Types.OTHER)
+                        stmt.setString(idx++, modelName)
+                        stmt.setString(idx++, modelName)
+                        stmt.setObject(idx++, entityId, java.sql.Types.OTHER)
+                        if (datasetIds != null) {
+                            stmt.setArray(idx++, conn.createArrayOf("uuid", datasetIds.map { it.toString() }.toTypedArray()))
+                        }
+                        stmt.setInt(idx++, limit)
+                        if (datasetIds != null) {
+                            val uuidArray = conn.createArrayOf("uuid", datasetIds.map { it.toString() }.toTypedArray())
+                            stmt.setArray(idx++, uuidArray)
+                        }
+                        stmt.executeQuery().use { rs ->
+                            val results = mutableListOf<SimilarEntityResult>()
+                            while (rs.next()) {
+                                results.add(
+                                    SimilarEntityResult(
+                                        entityId = rs.getString("entity_id"),
+                                        datasetId = rs.getString("dataset_id"),
+                                        datasetName = rs.getString("dataset_name"),
+                                        sourceRecordId = rs.getString("source_record_id"),
+                                        entityDisplayName = rs.getString("entity_display_name"),
+                                        similarity = rs.getDouble("similarity"),
+                                        rank = rs.getInt("rank")
+                                    )
+                                )
+                            }
+                            SimilaritySearchResponse(
+                                queryEntityId = entityId.toString(),
+                                model = modelName,
+                                results = results
+                            )
+                        }
+                    }
+                }
+
+                val resp = response!!
+                val durationMs = System.currentTimeMillis() - startMs
+                org.slf4j.LoggerFactory.getLogger("com.tracefield.api").info(
+                    "similarity_search entity_id={} limit={} result_count={} duration_ms={}",
+                    entityIdParam, limit, resp.results.size, durationMs
+                )
+                call.respond(resp)
+            }
+        }
+
         route("/entity-mappings") {
             get {
                 val items = transaction(DatabaseManager.getDatabase()) {

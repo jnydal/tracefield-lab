@@ -200,3 +200,21 @@ data class LoginStateResponse(
     val authenticated: Boolean,
     val user: UserResponse? = null
 )
+
+@Serializable
+data class SimilarEntityResult(
+    val entityId: String,
+    val datasetId: String,
+    val datasetName: String,
+    val sourceRecordId: String? = null,
+    val entityDisplayName: String? = null,
+    val similarity: Double,
+    val rank: Int
+)
+
+@Serializable
+data class SimilaritySearchResponse(
+    val queryEntityId: String,
+    val model: String,
+    val results: List<SimilarEntityResult>
+)

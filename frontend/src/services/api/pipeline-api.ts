@@ -138,6 +138,28 @@ export type AnalysisResult = {
   createdAt: string;
 };
 
+export type SimilarEntityResult = {
+  entityId: string;
+  datasetId: string;
+  datasetName: string;
+  sourceRecordId?: string;
+  entityDisplayName?: string;
+  similarity: number;
+  rank: number;
+};
+
+export type SimilaritySearchResponse = {
+  queryEntityId: string;
+  model: string;
+  results: SimilarEntityResult[];
+};
+
+export type SimilaritySearchParams = {
+  entityId: string;
+  limit?: number;
+  datasetIds?: string[];
+};
+
 export const pipelineApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     listDatasets: builder.query<Dataset[], void>({
@@ -233,6 +255,16 @@ export const pipelineApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/resolution/jobs/${id}`, method: 'GET' }),
       providesTags: ['ResolutionJobs'],
     }),
+    similaritySearch: builder.query<SimilaritySearchResponse, SimilaritySearchParams>({
+      query: ({ entityId, limit = 10, datasetIds }) => ({
+        url: `/entities/${entityId}/similar`,
+        method: 'GET',
+        params: {
+          ...(limit != null && { limit }),
+          ...(datasetIds?.length && { datasetIds: datasetIds.join(',') }),
+        },
+      }),
+    }),
   }),
 });
 
@@ -259,4 +291,5 @@ export const {
   useListResolutionJobsQuery,
   useCreateResolutionJobMutation,
   useLazyGetResolutionJobQuery,
+  useLazySimilaritySearchQuery,
 } = pipelineApi;

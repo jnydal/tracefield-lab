@@ -6,6 +6,7 @@ import {
   useListDatasetsQuery,
   useListResolutionJobsQuery,
   useCreateResolutionJobMutation,
+  useLazySimilaritySearchQuery,
 } from '../../../services/api/pipeline-api';
 
 type ResolutionRecord = {
@@ -61,6 +62,14 @@ export function EntityMappingsPage() {
     { source_record_id: 'rec-1', keys: { id: '1', name: 'Example' } },
   ]);
   const [configError, setConfigError] = useState<string | null>(null);
+  const [similarModalEntityId, setSimilarModalEntityId] = useState<string | null>(null);
+  const [similaritySearch, { data: similarData, isLoading: isSimilarLoading, error: similarError }] =
+    useLazySimilaritySearchQuery();
+
+  const handleFindSimilar = (entityId: string) => {
+    setSimilarModalEntityId(entityId);
+    similaritySearch({ entityId, limit: 10 });
+  };
 
   const handleCreateMapping = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -559,7 +568,14 @@ export function EntityMappingsPage() {
                     <td className="px-4 py-2 text-sm text-slate-600">
                       {mapping.method ?? '—'}
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-4 py-2 text-right space-x-2">
+                      <button
+                        type="button"
+                        className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
+                        onClick={() => handleFindSimilar(mapping.entityId)}
+                      >
+                        Find similar
+                      </button>
                       <button
                         type="button"
                         className="text-sm text-red-600 hover:underline"
@@ -575,6 +591,95 @@ export function EntityMappingsPage() {
           </div>
         )}
       </div>
+
+      {similarModalEntityId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setSimilarModalEntityId(null)}
+          onKeyDown={(e) => e.key === 'Escape' && setSimilarModalEntityId(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="similar-modal-title"
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+              <h2 id="similar-modal-title" className="text-lg font-semibold">
+                Similar entities
+              </h2>
+              <button
+                type="button"
+                className="text-slate-500 hover:text-slate-700 text-xl leading-none"
+                onClick={() => setSimilarModalEntityId(null)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 overflow-auto flex-1">
+              {isSimilarLoading ? (
+                <p className="text-sm text-slate-500">Searching…</p>
+              ) : similarError ? (
+                <p className="text-sm text-red-600">
+                  {typeof (similarError as { data?: unknown })?.data === 'string'
+                    ? (similarError as { data: string }).data
+                    : (similarError as { data?: { message?: string } })?.data?.message ??
+                      'No embedding found for this entity. Extract embeddings first.'}
+                </p>
+              ) : similarData ? (
+                similarData.results.length === 0 ? (
+                  <p className="text-sm text-slate-500">No similar entities found.</p>
+                ) : (
+                  <div className="rounded border border-slate-200 overflow-hidden">
+                    <table className="min-w-full">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">
+                            Rank
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">
+                            Similarity
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">
+                            Entity
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">
+                            Dataset
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">
+                            Source record
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white [&>tr+tr>td]:border-t [&>tr+tr>td]:border-slate-200">
+                        {similarData.results.map((r) => (
+                          <tr key={`${r.entityId}-${r.datasetId}`}>
+                            <td className="px-4 py-2 text-sm">{r.rank}</td>
+                            <td className="px-4 py-2 text-sm font-mono">
+                              {(r.similarity * 100).toFixed(1)}%
+                            </td>
+                            <td className="px-4 py-2 text-sm truncate max-w-[10rem]">
+                              {r.entityDisplayName ?? r.entityId}
+                            </td>
+                            <td className="px-4 py-2 text-sm truncate max-w-[10rem]">
+                              {r.datasetName}
+                            </td>
+                            <td className="px-4 py-2 text-sm font-mono text-slate-500">
+                              {r.sourceRecordId ?? '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -98,6 +98,7 @@ The Tracefield Lab is a generic, modular data pipeline for multi-dataset analysi
 - Entity mapping configuration
 - Feature extraction job orchestration
 - Analysis job submission and result access
+- **Similarity search**: `GET /entities/{entityId}/similar` — vector search across entities using embeddings (pgvector cosine distance)
 
 **Dependencies**: Database, Kafka, Object Storage
 
