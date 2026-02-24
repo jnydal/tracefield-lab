@@ -4,6 +4,8 @@ Tracefield Lab is a modular pipeline for multi-dataset analysis. It abstracts in
 entity mapping, feature extraction, and statistical analysis into configurable modules,
 so researchers can compare heterogeneous datasets without rewriting the pipeline.
 
+**Demo / MVP:** [https://tracefieldlab.thor-nydal.no](https://tracefieldlab.thor-nydal.no)
+
 ---
 
 ## Abstract
