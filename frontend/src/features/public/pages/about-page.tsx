@@ -74,7 +74,7 @@ export function AboutPage() {
               >
                 The infrastructure science forgot
               </a>
-              — a longer essay on why research keeps contradicting itself and how cross-dataset infrastructure helps.
+              : a longer essay on why research keeps contradicting itself and how cross-dataset infrastructure helps.
             </p>
           </div>
           <div className="about-content-back">
