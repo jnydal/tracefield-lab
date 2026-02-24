@@ -51,13 +51,17 @@ export function AboutPage() {
             <p className="about-content-copy">
               Most research tools work within a single dataset or domain. Tracefield Lab
               is built for correlation discovery across heterogeneous sources: different
-              labs, disciplines, and formats that rarely get compared. Entity resolution
-              (exact keys plus semantic matching with embeddings) lets you map “the same
-              thing” across datasets. The feature store and analysis layer then surface
-              correlations that emerge only when you can cross-reference. That makes it
-              a tool for cracking open hermeticized science: bringing siloed knowledge
-              into one auditable, reproducible system so you can find the patterns that
-              live at the boundaries.
+              labs, disciplines, and formats that rarely get compared. Fixed ontologies
+              — predefined taxonomies and vocabularies — are what create those silos and
+              make cross-domain science hard: every community speaks its own schema.
+              Tracefield goes beyond ontologies by using embeddings: semantic vectors
+              let you match and relate entities by meaning, not by agreeing on a single
+              vocabulary first. Entity resolution (exact keys plus semantic matching)
+              then lets you map “the same thing” across datasets. The feature store and
+              analysis layer surface correlations that emerge only when you can
+              cross-reference. That makes it a tool for cracking open hermeticized
+              science: bringing siloed knowledge into one auditable, reproducible system
+              so you can find the patterns that live at the boundaries.
             </p>
             <h2 className="about-content-title">Why this project</h2>
             <p className="about-content-copy">
