@@ -52,7 +52,7 @@ export function AboutPage() {
               Most research tools work within a single dataset or domain. Tracefield Lab
               is built for correlation discovery across heterogeneous sources: different
               labs, disciplines, and formats that rarely get compared. Fixed ontologies
-              — predefined taxonomies and vocabularies — are what create those silos and
+              (predefined taxonomies and vocabularies) are what create those silos and
               make cross-domain science hard: every community speaks its own schema.
               Tracefield goes beyond ontologies by using embeddings: semantic vectors
               let you match and relate entities by meaning, not by agreeing on a single
