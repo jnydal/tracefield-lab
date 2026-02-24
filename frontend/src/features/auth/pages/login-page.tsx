@@ -110,11 +110,11 @@ export function LoginPage() {
 
       const message =
         status === 401
-          ? 'E-post/brukernavn eller passord er feil. Vennligst prøv igjen.'
+          ? 'Email/username or password is incorrect. Please try again.'
           : (error && typeof error === 'object' && 'message' in error
               ? (error as { message?: string }).message
-              : 'Noe gikk galt ved innlogging. Vennligst prøv igjen senere.') || 
-            'Noe gikk galt ved innlogging. Vennligst prøv igjen senere.';
+              : 'Something went wrong signing in. Please try again later.') ||
+            'Something went wrong signing in. Please try again later.';
 
       setError('root', {
         type: 'server',
@@ -137,7 +137,7 @@ export function LoginPage() {
         <div className="login-card">
           <div className="login-card-inner">
             <h1 className="login-title">Tracefield Lab</h1>
-            <h2 className="login-subtitle">Logg inn</h2>
+            <h2 className="login-subtitle">Log in</h2>
 
             <div className="login-sso">
               <button
@@ -169,10 +169,10 @@ export function LoginPage() {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                Fortsett med Google
+                Continue with Google
               </button>
-              <div className="login-divider" role="separator" aria-label="Eller">
-                <span>eller</span>
+              <div className="login-divider" role="separator" aria-label="Or">
+                <span>or</span>
               </div>
             </div>
 
@@ -194,7 +194,7 @@ export function LoginPage() {
                 <FloatingLabel
                   variant="outlined"
                   id="identifier"
-                  label="E-post eller brukernavn"
+                  label="Email or username"
                   type="text"
                   autoComplete="username"
                   {...register('identifier')}
@@ -214,7 +214,7 @@ export function LoginPage() {
                 <FloatingLabel
                   variant="outlined"
                   id="password"
-                  label="Passord"
+                  label="Password"
                   type="password"
                   autoComplete="current-password"
                   {...register('password')}
@@ -234,10 +234,10 @@ export function LoginPage() {
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Spinner size="sm" />
-                    Logger inn...
+                    Signing in...
                   </span>
                 ) : (
-                  'Logg inn'
+                  'Log in'
                 )}
               </Button>
             </form>
@@ -248,12 +248,12 @@ export function LoginPage() {
                   to="/forgot-password"
                   className="login-link"
                 >
-                  Glemt passord?
+                  Forgot password?
                 </Link>
               </div>
               <div>
                 <Link to="/register" className="login-link">
-                  Ny bruker? Opprett gratis profil
+                  New user? Create free account
                 </Link>
               </div>
             </div>

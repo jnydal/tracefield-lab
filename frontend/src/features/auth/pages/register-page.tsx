@@ -82,11 +82,11 @@ export function RegisterPage() {
           : 0;
       const message =
         status === 409
-          ? 'E-post er allerede i bruk. Vennligst velg en annen.'
+          ? 'Email is already in use. Please choose another.'
           : (error && typeof error === 'object' && 'message' in error
               ? (error as { message?: string }).message
-              : 'Noe gikk galt ved registrering. Vennligst prøv igjen senere.') ||
-            'Noe gikk galt ved registrering. Vennligst prøv igjen senere.';
+              : 'Something went wrong during registration. Please try again later.') ||
+            'Something went wrong during registration. Please try again later.';
 
       setError('root', {
         type: 'server',
@@ -101,7 +101,7 @@ export function RegisterPage() {
         <div className="register-card">
           <div className="register-card-inner">
             <h1 className="register-title">Tracefield Lab</h1>
-            <h2 className="register-subtitle">Opprett konto</h2>
+            <h2 className="register-subtitle">Create account</h2>
 
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="register-form">
               {errors.root && (
@@ -121,7 +121,7 @@ export function RegisterPage() {
                 <FloatingLabel
                   variant="outlined"
                   id="email"
-                  label="E-post"
+                  label="Email"
                   type="email"
                   autoComplete="email"
                   {...register('email')}
@@ -141,7 +141,7 @@ export function RegisterPage() {
                 <FloatingLabel
                   variant="outlined"
                   id="password"
-                  label="Passord"
+                  label="Password"
                   type="password"
                   autoComplete="new-password"
                   {...register('password')}
@@ -161,10 +161,10 @@ export function RegisterPage() {
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Spinner size="sm" />
-                    Oppretter konto...
+                    Creating account...
                   </span>
                 ) : (
-                  'Opprett konto'
+                  'Create account'
                 )}
               </Button>
             </form>
@@ -172,7 +172,7 @@ export function RegisterPage() {
             <div className="register-links">
               <div>
                 <Link to="/login" className="register-link">
-                  Har du allerede en konto? Logg inn
+                  Already have an account? Log in
                 </Link>
               </div>
             </div>

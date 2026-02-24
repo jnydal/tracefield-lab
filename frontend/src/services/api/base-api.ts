@@ -30,28 +30,28 @@ export function setAuthClearHandler(handler: () => void) {
 function defaultMessageForStatus(status: number): string {
   switch (status) {
     case 0:
-      return 'Nettverksfeil. Sjekk tilkoblingen og prøv igjen.';
+      return 'Network error. Check your connection and try again.';
     case 400:
-      return 'Ugyldig forespørsel. Sjekk at alle felt er fylt ut riktig.';
+      return 'Invalid request. Please check that all fields are filled correctly.';
     case 409:
-      return 'E-post er allerede i bruk. Vennligst velg en annen.';
+      return 'Email is already in use. Please choose another.';
     case 401:
-      return 'Du må logge inn på nytt.';
+      return 'You need to sign in again.';
     case 403:
-      return 'Du har ikke tilgang.';
+      return 'You do not have access.';
     case 404:
-      return 'Fant ikke forespurt ressurs.';
+      return 'Requested resource not found.';
     case 422:
-      return 'Data kunne ikke valideres. Sjekk at informasjonen er riktig.';
+      return 'Data could not be validated. Please check the information.';
     case 500:
     case 502:
     case 503:
     case 504:
-      return 'Serverfeil. Vennligst prøv igjen senere.';
+      return 'Server error. Please try again later.';
     default:
       return status >= 500
-        ? 'Serverfeil. Vennligst prøv igjen senere.'
-        : 'Noe gikk galt. Vennligst prøv igjen.';
+        ? 'Server error. Please try again later.'
+        : 'Something went wrong. Please try again.';
   }
 }
 

@@ -50,7 +50,7 @@ export function ForgotPasswordPage() {
       const message =
         error && typeof error === 'object' && 'message' in error
           ? (error as { message?: string }).message
-          : 'Noe gikk galt. Vennligst prøv igjen senere.';
+          : 'Something went wrong. Please try again later.';
       setError('root', { type: 'server', message });
     }
   };
@@ -62,17 +62,17 @@ export function ForgotPasswordPage() {
           <div className="forgot-password-card">
             <div className="forgot-password-card-inner">
               <h1 className="forgot-password-title">Tracefield Lab</h1>
-              <h2 className="forgot-password-subtitle">Sjekk e-posten din</h2>
+              <h2 className="forgot-password-subtitle">Check your email</h2>
               <p className="forgot-password-success-text">
-                Hvis det finnes en konto med den e-postadressen du oppga, har vi sendt deg en lenke
-                for å tilbakestille passordet.
+                If an account exists with the email you entered, we have sent you a link to reset
+                your password.
               </p>
               <p className="forgot-password-success-note">
-                Sjekk søppelpost-mappen hvis du ikke finner e-posten.
+                Check your spam folder if you don&apos;t see the email.
               </p>
               <div className="forgot-password-links">
                 <Link to="/login" className="forgot-password-link">
-                  Tilbake til innlogging
+                  Back to sign in
                 </Link>
               </div>
             </div>
@@ -88,9 +88,9 @@ export function ForgotPasswordPage() {
         <div className="forgot-password-card">
           <div className="forgot-password-card-inner">
             <h1 className="forgot-password-title">Tracefield Lab</h1>
-            <h2 className="forgot-password-subtitle">Glemt passord</h2>
+            <h2 className="forgot-password-subtitle">Forgot password</h2>
             <p className="forgot-password-intro">
-              Skriv inn e-postadressen din, så sender vi deg en lenke for å tilbakestille passordet.
+              Enter your email address and we&apos;ll send you a link to reset your password.
             </p>
 
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="forgot-password-form">
@@ -111,7 +111,7 @@ export function ForgotPasswordPage() {
                 <FloatingLabel
                   variant="outlined"
                   id="email"
-                  label="E-post"
+                  label="Email"
                   type="email"
                   autoComplete="email"
                   {...register('email')}
@@ -131,17 +131,17 @@ export function ForgotPasswordPage() {
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Spinner size="sm" />
-                    Sender...
+                    Sending...
                   </span>
                 ) : (
-                  'Send tilbakestillingslenke'
+                  'Send reset link'
                 )}
               </Button>
             </form>
 
             <div className="forgot-password-links">
               <Link to="/login" className="forgot-password-link">
-                Tilbake til innlogging
+                Back to sign in
               </Link>
             </div>
           </div>
