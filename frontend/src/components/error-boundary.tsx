@@ -53,13 +53,13 @@ export class ErrorBoundary extends Component<
             <Alert color="failure" className="mb-4">
               <div>
                 <h3 className="text-lg font-semibold mb-2">
-                  Noe gikk galt
+                  Something went wrong
                 </h3>
                 <p className="mb-4">
-                  Det oppstod en uventet feil. Vennligst prøv igjen.
+                  An unexpected error occurred. Please try again.
                 </p>
                 <Button onClick={this.handleReset} color="failure">
-                  Prøv igjen
+                  Try again
                 </Button>
               </div>
             </Alert>

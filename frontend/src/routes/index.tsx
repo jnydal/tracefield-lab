@@ -64,9 +64,9 @@ function NotFoundPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-lg mb-4">Siden du leter etter ble ikke funnet.</p>
+        <p className="text-lg mb-4">The page you are looking for was not found.</p>
         <Link to="/" className="text-violet-600 hover:underline">
-          Gå til forsiden
+          Back to home
         </Link>
       </div>
     </div>

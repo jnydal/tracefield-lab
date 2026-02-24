@@ -343,6 +343,10 @@
     @apply text-slate-600 text-sm sm:text-base;
   }
 
+  .about-content-copy a {
+    @apply font-medium text-violet-600 underline decoration-violet-300 underline-offset-2 hover:text-violet-800 hover:decoration-violet-600;
+  }
+
   .about-content-back {
     @apply pt-2;
   }
