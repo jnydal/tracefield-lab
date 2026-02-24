@@ -66,6 +66,16 @@ export function AboutPage() {
               learning project, but with the constraint that the result had to be usable:
               provenance, reproducibility, and research integrity built in from the start.
             </p>
+            <p className="about-content-copy">
+              <a
+                href="https://www.thor-nydal.no/2026/02/the-infrastructure-science-forgot-why.html"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                The infrastructure science forgot
+              </a>
+              — a longer essay on why research keeps contradicting itself and how cross-dataset infrastructure helps.
+            </p>
           </div>
           <div className="about-content-back">
             <Link to="/" className="about-content-back-link">
