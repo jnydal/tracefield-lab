@@ -46,8 +46,8 @@ Use this flow to run the **production** environment (registry images).
 1. **Configure deploy env**: copy `deploy/deploy.env.example` to `deploy/deploy.env` and set your registry images (e.g. `TRACEFIELD_API_IMAGE=ghcr.io/<owner>/<repo>/api:main`).
 2. **Log in to GHCR** (use a PAT with `read:packages`):  
    `echo "$GHCR_TOKEN" | docker login ghcr.io -u "<user>" --password-stdin`
-3. **Start the production stack**: run `deploy/start.ps1` (Windows) or `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always`.  
-   **Image updates**: `deploy/start.ps1` uses `--pull always`, so each run fetches the latest images. Schedule it (e.g. Task Scheduler on Windows, cron on Linux) to get updates automatically.
+3. **Start the production stack**: run `deploy/start.ps1` (Windows) or `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`.  
+   **Image updates**: `docker-compose.prod.yml` sets `pull_policy: always` for api, frontend, workers, and resolver. Schedule `deploy/start.ps1` (e.g. Task Scheduler on Windows, cron on Linux) to get updates automatically.
 
 ## Data Pipeline Workflow (Target)
 
@@ -319,7 +319,7 @@ docker compose exec local-llm ollama pull qwen2.5:7b-instruct-q4_K_M
 
 **API shows "unhealthy"**: Ensure the API image includes `curl` for the healthcheck. The Dockerfile installs it; rebuild and push the API image if you see persistent unhealthy status.
 
-**Getting latest images**: `deploy/start.ps1` uses `--pull always`. Run it via Task Scheduler (e.g. at boot or on a schedule) to always start with the latest registry images.
+**Getting latest images**: `docker-compose.prod.yml` uses `pull_policy: always` for api, frontend, workers, and resolver. Run `deploy/start.ps1` via Task Scheduler (e.g. at boot or on a schedule) to start with the latest registry images.
 
 ## Development Workflow
 

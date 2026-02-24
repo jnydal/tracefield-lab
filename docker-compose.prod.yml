@@ -1,12 +1,16 @@
+# pull_policy: always = always pull (fresh images); missing = use cache unless not present
 services:
   api:
     image: ${TRACEFIELD_API_IMAGE}
+    pull_policy: always
   frontend:
     image: ${TRACEFIELD_FRONTEND_IMAGE}
+    pull_policy: always
     volumes: []
     command: ["nginx", "-g", "daemon off;"]
   worker-ingest:
     image: ${TRACEFIELD_WORKER_INGEST_IMAGE}
+    pull_policy: always
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/healthz || exit 1"]
       interval: 10s
@@ -15,6 +19,7 @@ services:
     restart: unless-stopped
   worker-embeddings:
     image: ${TRACEFIELD_WORKER_EMBEDDINGS_IMAGE}
+    pull_policy: missing
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/healthz || exit 1"]
       interval: 10s
@@ -23,6 +28,7 @@ services:
     restart: unless-stopped
   resolver:
     image: ${TRACEFIELD_RESOLVER_IMAGE}
+    pull_policy: always
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/healthz || exit 1"]
       interval: 10s

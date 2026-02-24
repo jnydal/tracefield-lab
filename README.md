@@ -112,7 +112,7 @@ docker compose up -d --build
 
 ```bash
 # One-time: copy and edit deploy/deploy.env (see deploy/deploy.env.example)
-# Start production stack (start.ps1 uses --pull always for latest images; schedule it for automatic updates).
+# Start production stack (start.ps1; api, frontend, workers, resolver use pull_policy: always; schedule it for automatic updates).
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 

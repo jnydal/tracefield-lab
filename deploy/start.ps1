@@ -25,10 +25,10 @@ Set-Location 'C:\workspace\tracefield-lab'
 
 $composeFiles = "-f docker-compose.yml -f docker-compose.prod.yml"
 
-"Running docker compose up (pull always)..." | Out-File -FilePath $log -Append
+"Running docker compose up (pull policy per service)..." | Out-File -FilePath $log -Append
 # Use cmd /c to avoid PowerShell treating docker stderr (progress messages) as errors
-# --pull always: fetch latest images on each run
-cmd /c "docker compose $composeFiles up -d --pull always --remove-orphans 2>&1" | Out-File -FilePath $log -Append
+# Pull policy is per-service in docker-compose.prod.yml: api, frontend, workers, resolver=always
+cmd /c "docker compose $composeFiles up -d --remove-orphans 2>&1" | Out-File -FilePath $log -Append
 "--- docker ps ---" | Out-File -Append $log
 cmd /c "docker ps --format ""table {{.Names}}`t{{.Status}}"" 2>&1" | Out-File -FilePath $log -Append
 "Done." | Out-File -FilePath $log -Append
