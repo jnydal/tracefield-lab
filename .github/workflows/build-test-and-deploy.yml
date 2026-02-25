@@ -106,6 +106,8 @@ jobs:
           context: .
           file: ./frontend/Dockerfile
           push: true
+          build-args: |
+            VITE_BUILD_ID=${{ github.run_number }}
           tags: |
             ghcr.io/${{ github.repository }}/frontend:main
             ghcr.io/${{ github.repository }}/frontend:latest

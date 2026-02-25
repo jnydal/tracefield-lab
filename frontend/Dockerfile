@@ -6,10 +6,12 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
-# Copy source and build (VITE_API_BASE_URL baked in at build time)
+# Copy source and build (VITE_* baked in at build time)
 COPY frontend/ ./
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ARG VITE_BUILD_ID=dev
+ENV VITE_BUILD_ID=${VITE_BUILD_ID}
 RUN npm run build
 
 # Serve stage
