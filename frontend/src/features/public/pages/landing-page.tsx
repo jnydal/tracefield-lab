@@ -1,6 +1,5 @@
 import { Button } from 'flowbite-react';
 import { useNavigate } from 'react-router-dom';
-import { PublicFooter } from '../../../components/public-footer';
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -49,8 +48,6 @@ export function LandingPage() {
             </Button>
           </div>
         </div>
-
-        <PublicFooter />
       </div>
     </section>
   );

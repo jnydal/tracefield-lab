@@ -7,6 +7,7 @@ import { authRoutes } from '../features/auth/routes';
 import { ProtectedRoute } from './protected-route';
 import { ErrorBoundary } from '../components/error-boundary';
 import { AppLayout } from '../layouts/app-layout';
+import { PublicLayout } from '../layouts/public-layout';
 
 // Export ProtectedRoute for use in feature routes
 export { ProtectedRoute };
@@ -84,28 +85,33 @@ const routes: RouteObject[] = [
     ),
     children: [
       {
-        index: true,
-        element: (
-          <Suspense fallback={
-            <div className="flex min-h-screen items-center justify-center">
-              <Spinner size="xl" />
-            </div>
-          }>
-            <HomePage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'about',
-        element: (
-          <Suspense fallback={
-            <div className="flex min-h-screen items-center justify-center">
-              <Spinner size="xl" />
-            </div>
-          }>
-            <AboutPage />
-          </Suspense>
-        ),
+        element: <PublicLayout />,
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={
+                <div className="flex min-h-screen items-center justify-center">
+                  <Spinner size="xl" />
+                </div>
+              }>
+                <HomePage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'about',
+            element: (
+              <Suspense fallback={
+                <div className="flex min-h-screen items-center justify-center">
+                  <Spinner size="xl" />
+                </div>
+              }>
+                <AboutPage />
+              </Suspense>
+            ),
+          },
+        ],
       },
       {
         element: (

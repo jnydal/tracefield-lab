@@ -13,7 +13,7 @@ export function PublicFooter() {
   return (
     <footer className="mt-12 flex flex-col items-center gap-2 text-center text-sm text-slate-500">
       <p>
-        <span aria-hidden="true">©</span> {COPYRIGHT_YEAR} {AUTHOR_NAME}. Built as a learning initiative.
+        <span aria-hidden="true">©</span> {COPYRIGHT_YEAR} {AUTHOR_NAME}.
       </p>
       <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
         {isAbout ? (

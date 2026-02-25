@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { PublicFooter } from '../../../components/public-footer';
 
 export function AboutPage() {
   return (
@@ -76,8 +75,6 @@ export function AboutPage() {
             </Link>
           </div>
         </div>
-
-        <PublicFooter />
       </div>
     </section>
   );
