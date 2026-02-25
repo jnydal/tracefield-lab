@@ -51,6 +51,8 @@ Use this flow to run the **production** environment (registry images).
 3. **Start the production stack**: run `deploy/start.ps1` (Windows) or `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`.  
    **Image updates**: `docker-compose.prod.yml` sets `pull_policy: always` for api, frontend, workers, and resolver. Schedule `deploy/start.ps1` (e.g. Task Scheduler on Windows, cron on Linux) to get updates automatically.
 
+   **Docker Desktop and large image pulls (Windows):** Some images (e.g. worker-embeddings) are large (~4GB+). Pulling them can cause Docker Desktop to restart or drop the daemon connection (`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`). The start script now waits for Docker to come back and retries `docker compose up` once. If it still fails, ensure Docker Desktop has enough memory (Settings → Resources) and disk; then run `deploy/start.ps1` again (pulls resume from where they left off).
+
 ## Data Pipeline Workflow (Target)
 
 ### Step 1: Register Dataset
