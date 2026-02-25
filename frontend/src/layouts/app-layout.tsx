@@ -86,6 +86,12 @@ export function AppLayout() {
                   >
                     {isLoggingOut ? 'Signing out…' : 'Sign out'}
                   </button>
+                  <div
+                    className="border-t border-slate-100 px-3 py-2 text-slate-400"
+                    aria-hidden
+                  >
+                    Build {import.meta.env.VITE_BUILD_ID ?? 'dev'}
+                  </div>
                 </div>
               )}
             </div>

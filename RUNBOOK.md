@@ -39,6 +39,8 @@ The GitHub Actions workflow publishes a container image to GHCR:
 
 It also uploads a `deploy/manifest.json` artifact for auditing.
 
+**Frontend build identifier:** The logged-in user dropdown shows a build line at the bottom (e.g. "Build 123" or "Build dev"). Set `VITE_BUILD_ID` at frontend build time (e.g. in CI: `VITE_BUILD_ID=${{ github.run_number }}` or commit SHA) so deployed builds display a unique identifier. If unset, the UI shows "Build dev".
+
 ### Production server setup
 
 Use this flow to run the **production** environment (registry images).
