@@ -382,4 +382,22 @@
   .app-main-content textarea {
     @apply bg-white/90;
   }
+
+  /* ----- App form sections (semantic structure for pipeline pages) ----- */
+  .app-form-section-title {
+    @apply text-lg font-semibold text-slate-900;
+  }
+
+  .app-form-fieldset {
+    border: 0;
+    margin: 0;
+    min-width: 0;
+    padding: 0;
+  }
+
+  .app-form-legend {
+    display: table;
+    padding: 0;
+    @apply text-lg font-semibold text-slate-900;
+  }
 }

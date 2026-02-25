@@ -107,8 +107,10 @@ export function AnalysisJobsPage() {
         </p>
       </header>
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Job status</h2>
+      <section aria-labelledby="job-status-heading" className="space-y-3">
+        <h2 id="job-status-heading" className="app-form-section-title">
+          Job status
+        </h2>
         {isLoadingJobs ? (
           <p className="text-sm text-slate-500">Loading…</p>
         ) : jobs.length === 0 ? (
@@ -165,13 +167,13 @@ export function AnalysisJobsPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
-      <form
-        onSubmit={handleCreate}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 max-w-3xl"
-      >
-        <h2 className="text-lg font-semibold sm:col-span-2">Create new job</h2>
+      <form onSubmit={handleCreate} className="max-w-3xl">
+        <fieldset className="app-form-fieldset grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+          <legend className="app-form-legend sm:col-span-2">
+            Create new job
+          </legend>
 
         <div className="space-y-1">
           <label className="text-sm font-medium" htmlFor="analysis-name">
@@ -396,6 +398,7 @@ export function AnalysisJobsPage() {
         >
           {isCreating ? 'Submitting…' : 'Create analysis job'}
         </button>
+        </fieldset>
       </form>
     </section>
   );
