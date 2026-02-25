@@ -12,6 +12,11 @@ for($i=0;$i -lt 60;$i++){
     Start-Sleep 5
 }
 
+# Prune unused Docker data to avoid disk filling up (runs automatically, no prompt)
+"Running docker system prune..." | Out-File -FilePath $log -Append
+docker system prune -f 2>&1 | Out-File -FilePath $log -Append
+"Prune done." | Out-File -FilePath $log -Append
+
 $registry = "ghcr.io/jnydal/tracefield-lab"
 
 $env:TRACEFIELD_API_IMAGE              = "$registry/api:latest"
