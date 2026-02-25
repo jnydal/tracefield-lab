@@ -167,8 +167,12 @@ export function AnalysisJobsPage() {
         )}
       </div>
 
-      <form onSubmit={handleCreate} className="space-y-3 max-w-2xl">
-        <h2 className="text-lg font-semibold">Create new job</h2>
+      <form
+        onSubmit={handleCreate}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 max-w-3xl"
+      >
+        <h2 className="text-lg font-semibold sm:col-span-2">Create new job</h2>
+
         <div className="space-y-1">
           <label className="text-sm font-medium" htmlFor="analysis-name">
             Job name
@@ -242,7 +246,7 @@ export function AnalysisJobsPage() {
                 onChange={(e) => setNClusters(Number(e.target.value) || 3)}
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 sm:col-span-2">
               <label
                 className="text-sm font-medium"
                 htmlFor="outcome-feature"
@@ -287,27 +291,6 @@ export function AnalysisJobsPage() {
                 ))}
               </select>
             </div>
-            {isEmbeddingFeature(leftFeature) && (
-              <div className="space-y-1">
-                <label
-                  className="text-sm font-medium"
-                  htmlFor="left-dimension"
-                >
-                  Left dimension (0–1023)
-                </label>
-                <input
-                  id="left-dimension"
-                  type="number"
-                  min={0}
-                  max={1023}
-                  className="w-full rounded border border-slate-300 px-3 py-2"
-                  value={leftDimension}
-                  onChange={(e) =>
-                    setLeftDimension(Math.max(0, Math.min(1023, Number(e.target.value) || 0)))
-                  }
-                />
-              </div>
-            )}
             <div className="space-y-1">
               <label
                 className="text-sm font-medium"
@@ -329,6 +312,27 @@ export function AnalysisJobsPage() {
                 ))}
               </select>
             </div>
+            {isEmbeddingFeature(leftFeature) && (
+              <div className="space-y-1">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="left-dimension"
+                >
+                  Left dimension (0–1023)
+                </label>
+                <input
+                  id="left-dimension"
+                  type="number"
+                  min={0}
+                  max={1023}
+                  className="w-full rounded border border-slate-300 px-3 py-2"
+                  value={leftDimension}
+                  onChange={(e) =>
+                    setLeftDimension(Math.max(0, Math.min(1023, Number(e.target.value) || 0)))
+                  }
+                />
+              </div>
+            )}
             {isEmbeddingFeature(rightFeature) && (
               <div className="space-y-1">
                 <label
@@ -353,13 +357,13 @@ export function AnalysisJobsPage() {
           </>
         )}
 
-        <div className="space-y-1">
+        <div className="flex flex-col gap-1 sm:col-span-2">
           <label className="text-sm font-medium" htmlFor="correction">
             Correction (optional)
           </label>
           <input
             id="correction"
-            className="w-full rounded border border-slate-300 px-3 py-2"
+            className="w-full max-w-xs rounded border border-slate-300 px-3 py-2"
             value={correction}
             onChange={(e) => setCorrection(e.target.value)}
             placeholder="benjamini-hochberg"
@@ -367,7 +371,7 @@ export function AnalysisJobsPage() {
         </div>
 
         {showAdvanced && (
-          <div className="space-y-1">
+          <div className="space-y-1 sm:col-span-2">
             <label className="text-sm font-medium">Config (JSON)</label>
             <pre className="rounded border border-slate-200 bg-slate-50 p-3 text-xs font-mono overflow-x-auto">
               {JSON.stringify(buildConfig(), null, 2)}
@@ -376,16 +380,18 @@ export function AnalysisJobsPage() {
         )}
         <button
           type="button"
-          className="text-sm text-slate-600 hover:underline"
+          className="justify-self-start text-left text-sm text-slate-600 hover:underline sm:col-span-2"
           onClick={() => setShowAdvanced((s) => !s)}
         >
           {showAdvanced ? 'Hide' : 'Show'} advanced (raw JSON)
         </button>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-600 sm:col-span-2">{error}</p>
+        )}
         <button
           type="submit"
-          className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+          className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50 sm:col-span-2 w-fit"
           disabled={isCreating || isLoadingDefs}
         >
           {isCreating ? 'Submitting…' : 'Create analysis job'}

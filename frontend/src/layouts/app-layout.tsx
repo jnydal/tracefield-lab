@@ -134,7 +134,7 @@ export function AppLayout() {
         )}
       </header>
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
-        <div className="rounded-3xl border border-white/60 bg-white/85 p-6 shadow-lg backdrop-blur-sm sm:p-8">
+        <div className="app-main-content rounded-3xl border border-white/60 bg-white/85 p-6 shadow-lg backdrop-blur-sm sm:p-8">
           <Outlet />
         </div>
       </main>

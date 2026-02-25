@@ -375,4 +375,11 @@
   .app-nav-link-mobile.active {
     @apply font-medium text-violet-700 border-l-2 border-violet-600 pl-2 -ml-0.5;
   }
+
+  /* ----- App main content: inputs match header (bg-white/90) ----- */
+  .app-main-content input:not([type="file"]):not([type="checkbox"]),
+  .app-main-content select,
+  .app-main-content textarea {
+    @apply bg-white/90;
+  }
 }
