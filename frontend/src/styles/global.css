@@ -322,7 +322,7 @@
     @apply overflow-hidden;
   }
 
-  .about-hero-card-visual svg {
+  .about-hero-card-visual img {
     width: 100%;
     height: auto;
   }
