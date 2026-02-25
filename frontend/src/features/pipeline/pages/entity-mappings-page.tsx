@@ -205,7 +205,7 @@ export function EntityMappingsPage() {
       {mode === 'manual' && (
         <form
           onSubmit={handleCreateMapping}
-          className="space-y-3 max-w-xl"
+          className="space-y-4 max-w-xl rounded-lg bg-slate-50 border border-slate-200 p-5"
         >
           <h2 className="text-lg font-semibold">Create mapping manually</h2>
           <div className="space-y-1">
