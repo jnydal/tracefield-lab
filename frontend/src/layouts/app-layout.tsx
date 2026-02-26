@@ -75,19 +75,17 @@ export function AppLayout() {
               </button>
               {userMenuOpen && (
                 <div
-                  className="app-user-menu isolate absolute right-0 mt-2 w-40 rounded border border-slate-200 bg-white py-2 text-sm shadow"
-                  style={{ backdropFilter: 'none' }}
+                  role="menu"
+                  className="absolute right-0 mt-2 w-40 rounded border border-slate-200 bg-white py-2 text-sm shadow"
                 >
-                  <div role="menu">
-                    <button
-                      type="button"
-                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      onClick={handleSignOut}
-                      disabled={isLoggingOut}
-                    >
-                      {isLoggingOut ? 'Signing out…' : 'Sign out'}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleSignOut}
+                    disabled={isLoggingOut}
+                  >
+                    {isLoggingOut ? 'Signing out…' : 'Sign out'}
+                  </button>
                 </div>
               )}
             </div>
