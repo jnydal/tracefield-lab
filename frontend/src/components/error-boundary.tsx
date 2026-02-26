@@ -52,10 +52,10 @@ export class ErrorBoundary extends Component<
           <div className="w-full max-w-md">
             <Alert color="failure" className="mb-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">
+                <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">
                   Something went wrong
                 </h3>
-                <p className="mb-4">
+                <p className="mb-4 text-slate-600 dark:text-slate-400">
                   An unexpected error occurred. Please try again.
                 </p>
                 <Button onClick={this.handleReset} color="failure">

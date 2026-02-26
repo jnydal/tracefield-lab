@@ -42,13 +42,13 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-slate-200/70 bg-white/90 backdrop-blur-sm">
+      <header className="border-b border-slate-200/70 bg-white/90 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <Link to="/" className="text-lg font-semibold text-slate-900">
+            <Link to="/" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               Tracefield Lab
             </Link>
-            <nav className="hidden md:flex items-center gap-4 text-sm text-slate-600">
+            <nav className="hidden md:flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
               {navItems.map((item) => (
                 <NavLink key={item.to} to={item.to} className="app-nav-link">
                   {item.label}
@@ -66,21 +66,21 @@ export function AppLayout() {
                 aria-haspopup="menu"
               >
                 <span>
-                  <p className="text-sm font-medium text-slate-900">{label}</p>
-                  <p className="text-xs text-slate-500">Signed in</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{label}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Signed in</p>
                 </span>
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white dark:bg-slate-700">
                   {initials}
                 </span>
               </button>
               {userMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 mt-2 w-40 rounded border border-slate-200 bg-white py-2 text-sm shadow"
+                  className="absolute right-0 mt-2 w-40 rounded border border-slate-200 bg-white py-2 text-sm shadow dark:border-slate-600 dark:bg-slate-800"
                 >
                   <button
                     type="button"
-                    className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-200 dark:hover:bg-slate-700"
                     onClick={handleSignOut}
                     disabled={isLoggingOut}
                   >
@@ -89,12 +89,12 @@ export function AppLayout() {
                 </div>
               )}
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white sm:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white dark:bg-slate-700 sm:hidden">
               {initials}
             </div>
             <button
               type="button"
-              className="md:hidden rounded border border-slate-200 px-3 py-2 text-xs text-slate-600"
+              className="md:hidden rounded border border-slate-200 px-3 py-2 text-xs text-slate-600 dark:border-slate-600 dark:text-slate-300"
               onClick={() => setMenuOpen((prev) => !prev)}
               aria-expanded={menuOpen}
               aria-controls="mobile-nav"
@@ -104,7 +104,7 @@ export function AppLayout() {
           </div>
         </div>
         {menuOpen && (
-          <div id="mobile-nav" className="border-t border-slate-100 bg-white md:hidden">
+          <div id="mobile-nav" className="border-t border-slate-100 bg-white dark:border-slate-700 dark:bg-slate-900 md:hidden">
             <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-sm">
               {navItems.map((item) => (
                 <NavLink
@@ -117,7 +117,7 @@ export function AppLayout() {
               ))}
               <button
                 type="button"
-                className="text-left text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="text-left text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-200"
                 onClick={handleSignOut}
                 disabled={isLoggingOut}
               >
@@ -129,13 +129,13 @@ export function AppLayout() {
       </header>
       <main className="flex-1 px-4 py-6 sm:px-6">
         <div className="mx-auto max-w-6xl">
-          <div className="app-main-content rounded-3xl border border-white/60 bg-white/85 p-6 shadow-lg backdrop-blur-sm sm:p-8">
+          <div className="app-main-content rounded-3xl border border-white/60 bg-white/85 p-6 shadow-lg backdrop-blur-sm dark:border-slate-600 dark:bg-slate-800/90 sm:p-8">
             <Outlet />
           </div>
         </div>
       </main>
       <footer className="px-4 py-3 sm:px-6">
-        <div className="mx-auto flex max-w-6xl items-center justify-center text-sm text-slate-500">
+        <div className="mx-auto flex max-w-6xl items-center justify-center text-sm text-slate-500 dark:text-slate-400">
           Build {import.meta.env.VITE_BUILD_ID ? `#${import.meta.env.VITE_BUILD_ID}` : 'dev'}
         </div>
       </footer>

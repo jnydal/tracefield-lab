@@ -5,6 +5,8 @@ Operational commands, troubleshooting, and step-by-step procedures live in `RUNB
 
 ## Interaction Patterns (Proposed)
 
+The web UI (frontend) supports light and dark themes driven by system preference (`prefers-color-scheme`); an optional override is stored in `localStorage` under `color-theme` (`'light'` or `'dark'`). See RUNBOOK for deployment notes.
+
 ### 1. API Service (Port 8000)
 
 **Infer schema from sample** (proposes column types and mapping suggestions):

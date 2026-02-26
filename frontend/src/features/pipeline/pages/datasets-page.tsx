@@ -209,32 +209,32 @@ export function DatasetsPage() {
   return (
     <section className="p-6 space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold">Datasets</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Datasets</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Register data sources and manage dataset metadata.
         </p>
       </header>
 
       <form onSubmit={handleCreate} className="space-y-3 max-w-xl">
         <div className="space-y-1">
-          <label className="text-sm font-medium" htmlFor="dataset-name">
+          <label className="text-sm font-medium text-slate-900 dark:text-slate-200" htmlFor="dataset-name">
             Dataset name
           </label>
           <input
             id="dataset-name"
-            className="w-full rounded border border-slate-300 !bg-white px-3 py-2 text-slate-900"
+            className="w-full rounded border border-slate-300 px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="e.g. Census 2024"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium" htmlFor="dataset-description">
+          <label className="text-sm font-medium text-slate-900 dark:text-slate-200" htmlFor="dataset-description">
             Description
           </label>
           <textarea
             id="dataset-description"
-            className="w-full rounded border border-slate-300 !bg-white px-3 py-2 text-slate-900"
+            className="w-full rounded border border-slate-300 px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
             rows={3}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
@@ -242,7 +242,7 @@ export function DatasetsPage() {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium" htmlFor="dataset-file">
+          <label className="text-sm font-medium text-slate-900 dark:text-slate-200" htmlFor="dataset-file">
             Data file
           </label>
           <div className="flex items-center gap-2">
@@ -250,7 +250,7 @@ export function DatasetsPage() {
               id="dataset-file"
               type="file"
               accept=".csv,.json,text/csv,application/json"
-              className="w-full text-sm text-slate-600 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium"
+              className="w-full text-sm text-slate-600 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium dark:text-slate-300 dark:file:bg-slate-700 dark:file:text-slate-200"
               onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
             />
             {selectedFile && (
@@ -264,21 +264,21 @@ export function DatasetsPage() {
             )}
           </div>
           {selectedFile && (
-            <p className="text-xs text-slate-500">{selectedFile.name}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{selectedFile.name}</p>
           )}
         </div>
         {createError && (
-          <p className="text-sm text-red-600">{createError}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
         )}
         {inferredSchema && inferredSchema.columns.length > 0 && (
-          <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-            <p className="font-medium text-slate-700">Inferred schema ({inferredSchema.columns.length} columns)</p>
-            <p className="text-slate-500 mt-1">
+          <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-600 dark:bg-slate-700">
+            <p className="font-medium text-slate-700 dark:text-slate-200">Inferred schema ({inferredSchema.columns.length} columns)</p>
+            <p className="text-slate-500 mt-1 dark:text-slate-400">
               {inferredSchema.columns.map((c) => `${c.name}: ${c.type}`).join(', ')}
             </p>
             <button
               type="button"
-              className="mt-2 text-xs text-slate-600 hover:underline"
+              className="mt-2 text-xs text-slate-600 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
               onClick={() => setInferredSchema(null)}
             >
               Clear
@@ -288,14 +288,14 @@ export function DatasetsPage() {
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            className="rounded bg-slate-900 px-4 py-2 text-sm text-white"
+            className="rounded bg-slate-900 px-4 py-2 text-sm text-white dark:bg-violet-600 dark:hover:bg-violet-700"
             disabled={isCreating}
           >
             {isCreating ? 'Creating…' : 'Create dataset'}
           </button>
           <button
             type="button"
-            className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
+            className="text-sm text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-slate-100"
             onClick={() => openInferModal('create')}
           >
             Infer schema from sample
@@ -304,41 +304,41 @@ export function DatasetsPage() {
       </form>
 
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold">Registered datasets</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Registered datasets</h2>
         {isLoading ? (
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         ) : data.length === 0 ? (
-          <p className="text-sm text-slate-500">No datasets yet.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">No datasets yet.</p>
         ) : (
-          <div className="rounded border border-slate-200 overflow-hidden">
+          <div className="rounded border border-slate-200 overflow-hidden dark:border-slate-600">
             <table className="min-w-full">
-              <thead className="bg-slate-50">
+              <thead className="bg-slate-50 dark:bg-slate-700">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider dark:text-slate-300">
                     Name
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase tracking-wider dark:text-slate-300">
                     Description
                   </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase tracking-wider dark:text-slate-300">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white [&>tr+tr>td]:border-t [&>tr+tr>td]:border-slate-200">
+              <tbody className="bg-white dark:bg-slate-800 [&>tr+tr>td]:border-t [&>tr+tr>td]:border-slate-200 dark:[&>tr+tr>td]:border-slate-600">
                 {data.map((dataset) => (
                   <tr key={dataset.id}>
-                    <td className="px-4 py-2 text-sm font-medium">
+                    <td className="px-4 py-2 text-sm font-medium text-slate-900 dark:text-slate-100">
                       {dataset.name}
                     </td>
-                    <td className="px-4 py-2 text-sm text-slate-500">
+                    <td className="px-4 py-2 text-sm text-slate-500 dark:text-slate-400">
                       {dataset.description ?? '—'}
                     </td>
                     <td className="px-4 py-2 text-right">
                       {Number(dataset.fileCount ?? 0) === 0 ? (
                         <button
                           type="button"
-                          className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
+                          className="text-sm text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-slate-100"
                           onClick={() => {
                             setUploadDatasetId(dataset.id);
                             setUploadFile(null);
@@ -350,16 +350,16 @@ export function DatasetsPage() {
                       ) : (
                         <button
                           type="button"
-                          className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
+                          className="text-sm text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-slate-100"
                           onClick={() => openExtractModal(dataset.id)}
                         >
                           Extract embeddings
                         </button>
                       )}
-                      <span className="mx-2 text-slate-300">·</span>
+                      <span className="mx-2 text-slate-300 dark:text-slate-500">·</span>
                       <button
                         type="button"
-                        className="text-sm text-red-600 hover:underline"
+                        className="text-sm text-red-600 hover:underline dark:text-red-400"
                         onClick={() => deleteDataset(dataset.id)}
                       >
                         Delete
@@ -381,7 +381,7 @@ export function DatasetsPage() {
         <ModalHeader>
           Extract embeddings
           {extractDataset && (
-            <span className="ml-2 text-sm font-normal text-slate-500">
+            <span className="ml-2 text-sm font-normal text-slate-500 dark:text-slate-400">
               {extractDataset.name}
             </span>
           )}
@@ -389,12 +389,12 @@ export function DatasetsPage() {
         <form onSubmit={handleExtract}>
           <ModalBody className="space-y-3">
             {extractDataset && (
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Files: {fileCount} · Mappings: {mappingsCount}
               </p>
             )}
             {extractDataset && !canExtract && (
-              <p className="text-sm text-amber-600">
+              <p className="text-sm text-amber-600 dark:text-amber-400">
                 Upload data and add entity mappings first.
               </p>
             )}
@@ -408,7 +408,7 @@ export function DatasetsPage() {
                 </label>
                 <button
                   type="button"
-                  className="text-xs text-slate-600 hover:underline"
+                  className="text-xs text-slate-600 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
                   onClick={() => openInferModal('extract')}
                 >
                   Suggest from sample
@@ -416,7 +416,7 @@ export function DatasetsPage() {
               </div>
               <input
                 id="extract-text-column"
-                className="w-full rounded border border-slate-300 px-3 py-2"
+                className="w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                 value={textColumn}
                 onChange={(e) => setTextColumn(e.target.value)}
                 placeholder={schemaColumns[0] ?? 'e.g. description'}
@@ -436,19 +436,19 @@ export function DatasetsPage() {
               </label>
               <input
                 id="extract-id-column"
-                className="w-full rounded border border-slate-300 px-3 py-2"
+                className="w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                 value={idColumn}
                 onChange={(e) => setIdColumn(e.target.value)}
                 placeholder="id"
               />
             </div>
             {extractJobId && jobStatus && (
-              <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
+              <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-600 dark:bg-slate-700">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium">Job {extractJobId.slice(0, 8)}…</p>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">Job {extractJobId.slice(0, 8)}…</p>
                   <button
                     type="button"
-                    className="text-xs text-slate-500 hover:text-slate-700 hover:underline"
+                    className="text-xs text-slate-500 hover:text-slate-700 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
                     onClick={() =>
                       navigator.clipboard.writeText(extractJobId)
                     }
@@ -459,18 +459,18 @@ export function DatasetsPage() {
                 <span
                   className={`inline-block mt-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                     jobStatus.status.toLowerCase() === 'finished'
-                      ? 'bg-green-100 text-green-800'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
                       : jobStatus.status.toLowerCase() === 'failed'
-                        ? 'bg-red-100 text-red-800'
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
                         : jobStatus.status.toLowerCase() === 'started'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-slate-100 text-slate-700'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-600 dark:text-slate-200'
                   }`}
                 >
                   {jobStatus.status}
                 </span>
                 {jobStatus.excInfo && (
-                  <p className="mt-2 text-red-600">{jobStatus.excInfo}</p>
+                  <p className="mt-2 text-red-600 dark:text-red-400">{jobStatus.excInfo}</p>
                 )}
               </div>
             )}
@@ -478,14 +478,14 @@ export function DatasetsPage() {
           <ModalFooter>
             <button
               type="submit"
-              className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+              className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-violet-600 dark:hover:bg-violet-700"
               disabled={!canExtract || !textColumn.trim() || isExtracting}
             >
               {isExtracting ? 'Starting…' : 'Start extraction'}
             </button>
             <button
               type="button"
-              className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
               onClick={closeExtractModal}
             >
               Close
@@ -498,7 +498,7 @@ export function DatasetsPage() {
         <ModalHeader>Upload file</ModalHeader>
         <form onSubmit={handleUploadFile}>
           <ModalBody className="space-y-3">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               Select a CSV or JSON file to ingest into this dataset.
             </p>
             <div className="space-y-1">
@@ -509,28 +509,28 @@ export function DatasetsPage() {
                 id="upload-file"
                 type="file"
                 accept=".csv,.json,text/csv,application/json"
-                className="w-full text-sm text-slate-600 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium"
+                className="w-full text-sm text-slate-600 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium dark:text-slate-300 dark:file:bg-slate-700 dark:file:text-slate-200"
                 onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
               />
               {uploadFile && (
-                <p className="text-xs text-slate-500">{uploadFile.name}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{uploadFile.name}</p>
               )}
             </div>
             {uploadError && (
-              <p className="text-sm text-red-600">{uploadError}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{uploadError}</p>
             )}
           </ModalBody>
           <ModalFooter>
             <button
               type="submit"
-              className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+              className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-violet-600 dark:hover:bg-violet-700"
               disabled={!uploadFile || isUploading}
             >
               {isUploading ? 'Uploading…' : 'Upload'}
             </button>
             <button
               type="button"
-              className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
               onClick={closeUploadModal}
             >
               Cancel
@@ -548,43 +548,43 @@ export function DatasetsPage() {
         theme={{
           root: {
             show: {
-              on: 'flex bg-slate-900/50',
+              on: 'flex bg-slate-900/50 dark:bg-black/60',
               off: 'hidden',
             },
           },
           content: {
             inner:
-              'relative flex max-h-[90dvh] flex-col rounded-2xl border border-white/60 bg-white/85 shadow-lg backdrop-blur-sm dark:border-white/60 dark:bg-white/85',
+              'relative flex max-h-[90dvh] flex-col rounded-2xl border border-white/60 bg-white/85 shadow-lg backdrop-blur-sm dark:border-slate-600 dark:bg-slate-800',
           },
           header: {
-            base: 'flex items-start justify-between rounded-t border-b border-slate-200 p-5 dark:border-slate-200',
-            title: 'text-xl font-medium text-slate-900 dark:text-slate-900',
+            base: 'flex items-start justify-between rounded-t border-b border-slate-200 p-5 dark:border-slate-600',
+            title: 'text-xl font-medium text-slate-900 dark:text-slate-100',
           },
           footer: {
-            base: 'flex items-center gap-2 rounded-b border-slate-200 p-6 dark:border-slate-200',
+            base: 'flex items-center gap-2 rounded-b border-slate-200 p-6 dark:border-slate-600',
           },
         }}
       >
-        <div className="infer-schema-modal flex min-h-0 flex-1 flex-col text-slate-900 dark:text-slate-900">
-          <ModalHeader id="infer-schema-title" className="border-slate-200 text-slate-900 dark:border-slate-200 dark:text-slate-900">
+        <div className="infer-schema-modal flex min-h-0 flex-1 flex-col text-slate-900 dark:text-slate-100">
+          <ModalHeader id="infer-schema-title" className="border-slate-200 text-slate-900 dark:border-slate-600 dark:text-slate-100">
             {inferMode === 'create' ? 'Infer schema from sample' : 'Suggest columns from sample'}
           </ModalHeader>
           <form onSubmit={handleInferSchema} className="flex min-h-0 flex-1 flex-col">
             <ModalBody className="space-y-3">
-              <p id="infer-schema-desc" className="text-sm text-slate-600 dark:text-slate-600">
+              <p id="infer-schema-desc" className="text-sm text-slate-600 dark:text-slate-400">
                 Paste a few rows of CSV or JSON data. Column types and mapping suggestions will be inferred. Press{' '}
-                <kbd className="rounded border border-slate-300 bg-slate-50 px-1.5 py-0.5 font-mono text-xs text-slate-900 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900">
+                <kbd className="rounded border border-slate-300 bg-slate-50 px-1.5 py-0.5 font-mono text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200">
                   Ctrl+Enter
                 </kbd>
                 {' '}to infer.
               </p>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-900 dark:text-slate-900" htmlFor="sample-format">
+                <label className="text-sm font-medium text-slate-900 dark:text-slate-200" htmlFor="sample-format">
                   Format
                 </label>
                 <select
                   id="sample-format"
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-slate-900"
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                   value={sampleFormat}
                   onChange={(e) => setSampleFormat(e.target.value as 'csv' | 'json')}
                 >
@@ -594,13 +594,13 @@ export function DatasetsPage() {
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-900 dark:text-slate-900" htmlFor="sample-content">
+                  <label className="text-sm font-medium text-slate-900 dark:text-slate-200" htmlFor="sample-content">
                     Sample content
                   </label>
                   {sampleContent.trim() && (
                     <button
                       type="button"
-                      className="text-xs text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-600 dark:hover:text-slate-900"
+                      className="text-xs text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-slate-100"
                       onClick={() => {
                         setSampleContent('');
                         setInferError(null);
@@ -614,7 +614,7 @@ export function DatasetsPage() {
                 <textarea
                   ref={sampleContentRef}
                   id="sample-content"
-                  className="w-full rounded border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900"
+                  className="w-full rounded border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500"
                   rows={8}
                   value={sampleContent}
                   onChange={(e) => setSampleContent(e.target.value)}
@@ -633,22 +633,22 @@ export function DatasetsPage() {
                 />
               </div>
               {inferError && (
-                <p className="text-sm text-red-600 dark:text-red-600" role="alert">
+                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
                   {inferError}
                 </p>
               )}
             </ModalBody>
-            <ModalFooter className="gap-2 border-t border-slate-200 pt-4 dark:border-slate-200">
+            <ModalFooter className="gap-2 border-t border-slate-200 pt-4 dark:border-slate-600">
               <button
                 type="submit"
-                className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+                className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-violet-600 dark:hover:bg-violet-700"
                 disabled={!sampleContent.trim() || isInferring}
               >
                 {isInferring ? 'Inferring…' : 'Infer schema'}
               </button>
               <button
                 type="button"
-                className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-300 dark:text-slate-900 dark:hover:bg-slate-100"
+                className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
                 onClick={() => setInferModalOpen(false)}
               >
                 Cancel

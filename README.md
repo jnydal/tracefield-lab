@@ -120,6 +120,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 Ensure `TRACEFIELD_API_IMAGE` (and other image vars) are set in `deploy/deploy.env` or `.env`, e.g. `ghcr.io/<owner>/<repo>/api:main`. See [RUNBOOK.md](RUNBOOK.md) production deployment section.
 
+The web frontend follows the system light/dark preference. Users with a dark OS theme see an inverted (dark) theme. You can override it by setting `localStorage.setItem('color-theme', 'light')` or `'dark'` in the browser.
+
 ### Kafka topics (required)
 
 The pipeline expects `ingest`, `features`, and `analysis` topics (adjust per config):

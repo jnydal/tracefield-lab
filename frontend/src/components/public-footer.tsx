@@ -8,10 +8,10 @@ export function PublicFooter() {
   const { pathname } = useLocation();
   const isAbout = pathname === '/about';
 
-  const linkClass = 'text-violet-600 hover:text-violet-800 hover:underline';
+  const linkClass = 'text-violet-600 hover:text-violet-800 hover:underline dark:text-violet-400 dark:hover:text-violet-300';
 
   return (
-    <footer className="mt-6 flex flex-col items-center gap-2 text-center text-sm text-slate-500">
+    <footer className="mt-6 flex flex-col items-center gap-2 text-center text-sm text-slate-500 dark:text-slate-400">
       <p>
         <span aria-hidden="true">©</span> {COPYRIGHT_YEAR} {AUTHOR_NAME}.
       </p>

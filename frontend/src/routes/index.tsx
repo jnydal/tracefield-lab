@@ -64,9 +64,9 @@ function NotFoundPage() {
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-lg mb-4">The page you are looking for was not found.</p>
-        <Link to="/" className="text-violet-600 hover:underline">
+        <h1 className="text-4xl font-bold mb-4 text-slate-900 dark:text-slate-100">404</h1>
+        <p className="text-lg mb-4 text-slate-600 dark:text-slate-400">The page you are looking for was not found.</p>
+        <Link to="/" className="text-violet-600 hover:underline dark:text-violet-400 dark:hover:text-violet-300">
           Back to home
         </Link>
       </div>
