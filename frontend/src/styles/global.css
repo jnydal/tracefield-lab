@@ -4,6 +4,12 @@
 @tailwind utilities;
 
 @layer base {
+  /* Reserve space for scrollbar so content doesn't shift when navigating between
+     short pages (no scrollbar) and long pages (scrollbar visible). */
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     position: relative;
     min-height: 100vh;
