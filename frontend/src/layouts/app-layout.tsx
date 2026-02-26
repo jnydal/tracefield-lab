@@ -41,7 +41,7 @@ export function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <header className="border-b border-slate-200/70 bg-white/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
@@ -75,22 +75,18 @@ export function AppLayout() {
               </button>
               {userMenuOpen && (
                 <div
-                  role="menu"
-                  className="absolute right-0 mt-2 w-40 rounded border border-slate-200 bg-white py-2 text-sm shadow"
+                  className="app-user-menu isolate absolute right-0 mt-2 w-40 rounded border border-slate-200 bg-white py-2 text-sm shadow"
+                  style={{ backdropFilter: 'none' }}
                 >
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={handleSignOut}
-                    disabled={isLoggingOut}
-                  >
-                    {isLoggingOut ? 'Signing out…' : 'Sign out'}
-                  </button>
-                  <div
-                    className="border-t border-slate-100 px-3 py-2 text-slate-400"
-                    aria-hidden
-                  >
-                    Build {import.meta.env.VITE_BUILD_ID ?? 'dev'}
+                  <div role="menu">
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={handleSignOut}
+                      disabled={isLoggingOut}
+                    >
+                      {isLoggingOut ? 'Signing out…' : 'Sign out'}
+                    </button>
                   </div>
                 </div>
               )}
@@ -133,11 +129,18 @@ export function AppLayout() {
           </div>
         )}
       </header>
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
-        <div className="app-main-content rounded-3xl border border-white/60 bg-white/85 p-6 shadow-lg backdrop-blur-sm sm:p-8">
-          <Outlet />
+      <main className="flex-1 px-4 py-6 sm:px-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="app-main-content rounded-3xl border border-white/60 bg-white/85 p-6 shadow-lg backdrop-blur-sm sm:p-8">
+            <Outlet />
+          </div>
         </div>
       </main>
+      <footer className="px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-6xl items-center justify-center text-sm text-slate-500">
+          Build {import.meta.env.VITE_BUILD_ID ?? 'dev'}
+        </div>
+      </footer>
     </div>
   );
 }
