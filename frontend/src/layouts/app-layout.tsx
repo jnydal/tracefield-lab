@@ -136,7 +136,7 @@ export function AppLayout() {
       </main>
       <footer className="px-4 py-3 sm:px-6">
         <div className="mx-auto flex max-w-6xl items-center justify-center text-sm text-slate-500">
-          Build {import.meta.env.VITE_BUILD_ID ?? 'dev'}
+          Build {import.meta.env.VITE_BUILD_ID ? `#${import.meta.env.VITE_BUILD_ID}` : 'dev'}
         </div>
       </footer>
     </div>
