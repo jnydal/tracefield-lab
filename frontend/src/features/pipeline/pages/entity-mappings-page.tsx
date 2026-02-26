@@ -387,11 +387,11 @@ export function EntityMappingsPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Each record needs a source_record_id and keys (e.g. id: 1, name: John).
               </p>
-              <div className="space-y-2 rounded border border-slate-200 p-3 bg-white dark:border-slate-600 dark:bg-slate-700">
+              <div className="space-y-2">
                 {records.map((rec, index) => (
                   <div
                     key={index}
-                    className="flex flex-wrap gap-3 items-start p-3 rounded bg-slate-50 border border-slate-100 dark:bg-slate-600 dark:border-slate-500"
+                    className="flex flex-wrap gap-3 items-start p-3 rounded bg-slate-50 dark:bg-slate-600"
                   >
                     <div className="flex-1 min-w-[120px] space-y-1">
                       <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
