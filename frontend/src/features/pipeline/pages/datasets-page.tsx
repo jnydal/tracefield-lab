@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   useCreateDatasetMutation,
   useDeleteDatasetMutation,
@@ -33,6 +33,7 @@ export function DatasetsPage() {
   const [sampleContent, setSampleContent] = useState('');
   const [sampleFormat, setSampleFormat] = useState<'csv' | 'json'>('csv');
   const [inferError, setInferError] = useState<string | null>(null);
+  const sampleContentRef = useRef<HTMLTextAreaElement>(null);
 
   const [extractDatasetId, setExtractDatasetId] = useState<string | null>(null);
   const [textColumn, setTextColumn] = useState('');
@@ -51,6 +52,12 @@ export function DatasetsPage() {
     status: string;
     excInfo?: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (!inferModalOpen) return;
+    const timer = setTimeout(() => sampleContentRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
+  }, [inferModalOpen]);
 
   useEffect(() => {
     if (!extractJobId) return;
@@ -215,7 +222,7 @@ export function DatasetsPage() {
           </label>
           <input
             id="dataset-name"
-            className="w-full rounded border border-slate-300 px-3 py-2"
+            className="w-full rounded border border-slate-300 !bg-white px-3 py-2 text-slate-900"
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="e.g. Census 2024"
@@ -227,7 +234,7 @@ export function DatasetsPage() {
           </label>
           <textarea
             id="dataset-description"
-            className="w-full rounded border border-slate-300 px-3 py-2"
+            className="w-full rounded border border-slate-300 !bg-white px-3 py-2 text-slate-900"
             rows={3}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
@@ -536,51 +543,104 @@ export function DatasetsPage() {
         show={inferModalOpen}
         onClose={() => setInferModalOpen(false)}
         size="md"
+        aria-labelledby="infer-schema-title"
+        aria-describedby="infer-schema-desc"
+        theme={{
+          root: {
+            show: {
+              on: 'flex bg-slate-900/50',
+              off: 'hidden',
+            },
+          },
+          content: {
+            inner:
+              'relative flex max-h-[90dvh] flex-col rounded-2xl border border-white/60 bg-white/85 shadow-lg backdrop-blur-sm dark:border-white/60 dark:bg-white/85',
+          },
+          header: {
+            base: 'flex items-start justify-between rounded-t border-b border-slate-200 p-5 dark:border-slate-200',
+            title: 'text-xl font-medium text-slate-900 dark:text-slate-900',
+          },
+          footer: {
+            base: 'flex items-center gap-2 rounded-b border-slate-200 p-6 dark:border-slate-200',
+          },
+        }}
       >
-        <ModalHeader>
-          {inferMode === 'create' ? 'Infer schema from sample' : 'Suggest columns from sample'}
-        </ModalHeader>
-        <form onSubmit={handleInferSchema}>
-          <ModalBody className="space-y-3">
-            <p className="text-sm text-slate-600">
-              Paste a few rows of CSV or JSON data. Column types and mapping suggestions will be inferred.
-            </p>
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="sample-format">
-                Format
-              </label>
-              <select
-                id="sample-format"
-                className="w-full rounded border border-slate-300 px-3 py-2"
-                value={sampleFormat}
-                onChange={(e) => setSampleFormat(e.target.value as 'csv' | 'json')}
-              >
-                <option value="csv">CSV</option>
-                <option value="json">JSON</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="sample-content">
-                Sample content
-              </label>
-              <textarea
-                id="sample-content"
-                className="w-full rounded border border-slate-300 px-3 py-2 font-mono text-sm"
-                rows={8}
-                value={sampleContent}
-                onChange={(e) => setSampleContent(e.target.value)}
-                placeholder={
-                  sampleFormat === 'csv'
-                    ? 'id,name,description\n1,Alice,Researcher\n2,Bob,Engineer'
-                    : '[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]'
-                }
-              />
-            </div>
-            {inferError && (
-              <p className="text-sm text-red-600">{inferError}</p>
-            )}
-          </ModalBody>
-          <ModalFooter>
+        <div className="infer-schema-modal flex min-h-0 flex-1 flex-col rounded-2xl border border-white/60 bg-white/85 text-slate-900 shadow-lg backdrop-blur-sm dark:border-white/60 dark:bg-white/85 dark:text-slate-900">
+          <ModalHeader id="infer-schema-title" className="border-slate-200 text-slate-900 dark:border-slate-200 dark:text-slate-900">
+            {inferMode === 'create' ? 'Infer schema from sample' : 'Suggest columns from sample'}
+          </ModalHeader>
+          <form onSubmit={handleInferSchema} className="flex min-h-0 flex-1 flex-col">
+            <ModalBody className="space-y-3">
+              <p id="infer-schema-desc" className="text-sm text-slate-600 dark:text-slate-600">
+                Paste a few rows of CSV or JSON data. Column types and mapping suggestions will be inferred. Press{' '}
+                <kbd className="rounded border border-slate-300 bg-slate-50 px-1.5 py-0.5 font-mono text-xs text-slate-900 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900">
+                  Ctrl+Enter
+                </kbd>
+                {' '}to infer.
+              </p>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-900 dark:text-slate-900" htmlFor="sample-format">
+                  Format
+                </label>
+                <select
+                  id="sample-format"
+                  className="w-full rounded border border-slate-300 !bg-white px-3 py-2 text-slate-900 dark:!bg-white dark:text-slate-900"
+                  style={{ backgroundColor: '#ffffff' }}
+                  value={sampleFormat}
+                  onChange={(e) => setSampleFormat(e.target.value as 'csv' | 'json')}
+                >
+                  <option value="csv">CSV</option>
+                  <option value="json">JSON</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-slate-900 dark:text-slate-900" htmlFor="sample-content">
+                    Sample content
+                  </label>
+                  {sampleContent.trim() && (
+                    <button
+                      type="button"
+                      className="text-xs text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-600 dark:hover:text-slate-900"
+                      onClick={() => {
+                        setSampleContent('');
+                        setInferError(null);
+                        sampleContentRef.current?.focus();
+                      }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  ref={sampleContentRef}
+                  id="sample-content"
+                  className="w-full rounded border border-slate-300 !bg-white px-3 py-2 font-mono text-sm text-slate-900 dark:!bg-white dark:text-slate-900"
+                  style={{ backgroundColor: '#ffffff' }}
+                  rows={8}
+                  value={sampleContent}
+                  onChange={(e) => setSampleContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      handleInferSchema({ preventDefault: () => {} } as React.FormEvent);
+                    }
+                  }}
+                  placeholder={
+                    sampleFormat === 'csv'
+                      ? 'id,name,description\n1,Alice,Researcher\n2,Bob,Engineer'
+                      : '[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]'
+                  }
+                  aria-describedby="infer-schema-desc"
+                />
+              </div>
+              {inferError && (
+                <p className="text-sm text-red-600 dark:text-red-600" role="alert">
+                  {inferError}
+                </p>
+              )}
+            </ModalBody>
+            <ModalFooter className="gap-2 border-t border-slate-200 pt-4 dark:border-slate-200">
             <button
               type="submit"
               className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
@@ -588,15 +648,16 @@ export function DatasetsPage() {
             >
               {isInferring ? 'Inferring…' : 'Infer schema'}
             </button>
-            <button
-              type="button"
-              className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-              onClick={() => setInferModalOpen(false)}
-            >
-              Cancel
-            </button>
-          </ModalFooter>
-        </form>
+              <button
+                type="button"
+                className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-300 dark:text-slate-900 dark:hover:bg-slate-100"
+                onClick={() => setInferModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </ModalFooter>
+          </form>
+        </div>
       </Modal>
     </section>
   );
