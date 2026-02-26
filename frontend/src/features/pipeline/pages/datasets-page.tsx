@@ -565,7 +565,7 @@ export function DatasetsPage() {
           },
         }}
       >
-        <div className="infer-schema-modal flex min-h-0 flex-1 flex-col rounded-2xl border border-white/60 bg-white/85 text-slate-900 shadow-lg backdrop-blur-sm dark:border-white/60 dark:bg-white/85 dark:text-slate-900">
+        <div className="infer-schema-modal flex min-h-0 flex-1 flex-col text-slate-900 dark:text-slate-900">
           <ModalHeader id="infer-schema-title" className="border-slate-200 text-slate-900 dark:border-slate-200 dark:text-slate-900">
             {inferMode === 'create' ? 'Infer schema from sample' : 'Suggest columns from sample'}
           </ModalHeader>
@@ -584,8 +584,7 @@ export function DatasetsPage() {
                 </label>
                 <select
                   id="sample-format"
-                  className="w-full rounded border border-slate-300 !bg-white px-3 py-2 text-slate-900 dark:!bg-white dark:text-slate-900"
-                  style={{ backgroundColor: '#ffffff' }}
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-slate-900"
                   value={sampleFormat}
                   onChange={(e) => setSampleFormat(e.target.value as 'csv' | 'json')}
                 >
@@ -615,8 +614,7 @@ export function DatasetsPage() {
                 <textarea
                   ref={sampleContentRef}
                   id="sample-content"
-                  className="w-full rounded border border-slate-300 !bg-white px-3 py-2 font-mono text-sm text-slate-900 dark:!bg-white dark:text-slate-900"
-                  style={{ backgroundColor: '#ffffff' }}
+                  className="w-full rounded border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900"
                   rows={8}
                   value={sampleContent}
                   onChange={(e) => setSampleContent(e.target.value)}
@@ -641,13 +639,13 @@ export function DatasetsPage() {
               )}
             </ModalBody>
             <ModalFooter className="gap-2 border-t border-slate-200 pt-4 dark:border-slate-200">
-            <button
-              type="submit"
-              className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-              disabled={!sampleContent.trim() || isInferring}
-            >
-              {isInferring ? 'Inferring…' : 'Infer schema'}
-            </button>
+              <button
+                type="submit"
+                className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+                disabled={!sampleContent.trim() || isInferring}
+              >
+                {isInferring ? 'Inferring…' : 'Infer schema'}
+              </button>
               <button
                 type="button"
                 className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-300 dark:text-slate-900 dark:hover:bg-slate-100"
