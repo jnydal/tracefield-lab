@@ -100,7 +100,7 @@ Examples:
 ### Requirements
 - Docker + Docker Compose
 - ~12 GB disk space
-- CPU-only support (GPU optional for faster inference)
+- CPU-only support (Gpu optional for faster inference)
 
 ### Start services
 
