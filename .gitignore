@@ -48,3 +48,9 @@ ENV/
 
 #frontend
 frontend/node_modules/
+
+# Certificates and keys
+*.crt
+*.key
+*.pem
+certs/
