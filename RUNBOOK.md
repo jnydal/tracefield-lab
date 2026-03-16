@@ -352,6 +352,18 @@ pytest test/invariants/ -v
 python -m test.invariants.checks
 ```
 
+**Integration tests** (full workflow: seed → analysis job → results and provenance):
+
+```bash
+# Convenient: script starts DB if needed and runs tests in Docker
+./scripts/run-integration-tests.ps1   # Windows
+./scripts/run-integration-tests.sh    # Linux/macOS
+
+# Or manually: ensure DB is up, then run the test container
+docker compose up -d db
+docker compose --profile integration-test run --rm test-integration
+```
+
 ### Local Development
 
 ```bash

@@ -17,6 +17,7 @@ worker_analysis dependencies (numpy, scipy) are unavailable.
 """
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -55,6 +56,11 @@ def _seed_minimal(conn) -> None:
     """Insert minimal data for one analysis run: user, dataset, entities, entity_map, feature_definitions, features, one queued analysis_job."""
     cur = conn.cursor()
     try:
+        # Clean any leftover test data so seed is idempotent (re-runs after failed runs or manual re-execution)
+        cur.execute("DELETE FROM analysis_results WHERE job_id = %s::uuid", (ANALYSIS_JOB_ID,))
+        cur.execute("DELETE FROM analysis_jobs WHERE id = %s::uuid", (ANALYSIS_JOB_ID,))
+        cur.execute("DELETE FROM features WHERE dataset_id = %s::uuid", (DATASET_ID,))
+        cur.execute("DELETE FROM entity_map WHERE dataset_id = %s::uuid", (DATASET_ID,))
         # User (no PII: placeholder email)
         cur.execute(
             """
@@ -82,13 +88,14 @@ def _seed_minimal(conn) -> None:
         )
         # Entities
         for eid, name in zip(ENTITY_IDS, ["Alice", "Bob", "Carol"]):
+            external_ids = json.dumps({"source_id": f"rec-{eid[-1]}"})
             cur.execute(
                 """
                 INSERT INTO entities (id, entity_type, display_name, external_ids, created_at, updated_at)
-                VALUES (%s::uuid, 'person', %s, '{"source_id":"rec-%s"}'::jsonb, NOW(), NOW())
+                VALUES (%s::uuid, 'person', %s, %s::jsonb, NOW(), NOW())
                 ON CONFLICT (id) DO NOTHING
                 """,
-                (eid, name, eid[-1]),
+                (eid, name, external_ids),
             )
         # Entity mappings
         for i, eid in enumerate(ENTITY_IDS):

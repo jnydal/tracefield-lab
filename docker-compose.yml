@@ -265,6 +265,23 @@ services:
       mc mb -p local/tracefield-reports || true
       echo "Bootstrap complete."
 
+  # Integration tests (run with: docker compose run --rm test-integration)
+  test-integration:
+    build:
+      context: .
+      dockerfile: docker/test.Dockerfile
+    image: astro-test:ci
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-tracefield}
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: ["python", "-m", "pytest", "test/test_full_workflow_integration.py", "-v"]
+    depends_on:
+      db: { condition: service_healthy }
+    profiles:
+      - integration-test
+
 volumes:
   db_data:
   minio_data:

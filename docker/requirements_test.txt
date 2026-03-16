@@ -17,3 +17,4 @@ flake8>=7.1
 # Optional utilities
 python-dotenv>=1.0    # to load .env test configs
 numpy>=1.26
+scipy>=1.11   # for full-workflow integration test (worker_analysis)
