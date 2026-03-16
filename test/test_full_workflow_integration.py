@@ -396,7 +396,13 @@ def test_full_research_workflow_from_seed_to_analysis(seeded_conn):
     results = cur.fetchall()
     assert len(results) >= 1, "Expected at least one analysis result"
     one = results[0]
-    assert one[4] is not None, "stats_json must be set"
+    stats_json = one[4]
+    assert stats_json is not None, "stats_json must be set"
+    if isinstance(stats_json, str):
+        stats_json = json.loads(stats_json)
+    assert stats_json.get("test") == "anova", "Expected ANOVA result"
+    assert "f_statistic" in stats_json and "p_value" in stats_json, "stats_json should have f_statistic and p_value"
+    assert one[5] is not None or stats_json.get("p_value") is not None, "p_value should be set in result or stats_json"
     assert one[7] is not None, "correction should be set for this config"
 
     # Assert at least one provenance event for analysis stage
@@ -467,10 +473,13 @@ def test_ice_cream_crime_spurious_correlation_cross_dataset(seeded_ice_cream_con
     assert stats_json is not None, "stats_json must be set"
     if isinstance(stats_json, str):
         stats_json = json.loads(stats_json)
-    # Spurious correlation by design; controlling for temperature/season would remove it (future feature).
+    assert stats_json.get("test") == "spearman", "Expected Spearman result"
+    assert stats_json.get("n") == 12, "Expected n=12 (12 months)"
+    # Worker stores Spearman r in "correlation"; effect_size column is also set from it.
     rho = stats_json.get("correlation") or stats_json.get("rho") or effect_size
     assert rho is not None, "Spearman result should include correlation/rho or effect_size"
-    if isinstance(rho, (int, float)):
+    # Spurious correlation by design; controlling for temperature/season would remove it (future feature).
+    if isinstance(rho, (int, float)) and rho == rho:  # exclude NaN
         assert rho > 0.7, f"Expected strong positive correlation (rho > 0.7), got {rho}"
     assert p_value is not None, "p_value should be set"
     assert p_value < 0.05, f"Expected significant p-value for built-in correlation, got {p_value}"
