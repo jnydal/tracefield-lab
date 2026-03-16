@@ -73,14 +73,14 @@ def _seed_minimal(conn) -> None:
         cur.execute("DELETE FROM analysis_jobs WHERE id = %s::uuid", (ANALYSIS_JOB_ID,))
         cur.execute("DELETE FROM features WHERE dataset_id = %s::uuid", (DATASET_ID,))
         cur.execute("DELETE FROM entity_map WHERE dataset_id = %s::uuid", (DATASET_ID,))
-        # User (no PII: placeholder email)
+        # User (no PII: placeholder email). Use gen_random_uuid() so we never conflict with init seed (e.g. 099_seed_test_data.sql) which may already insert a user with id 11111111...
         cur.execute(
             """
             INSERT INTO users (id, email, display_name, created_at, updated_at)
-            VALUES (%s::uuid, %s, %s, NOW(), NOW())
+            VALUES (gen_random_uuid(), %s, %s, NOW(), NOW())
             ON CONFLICT (email) DO NOTHING
             """,
-            (USER_ID, "test@example.com", "Test User"),
+            ("test@example.com", "Test User"),
         )
         # Dataset
         cur.execute(
@@ -193,14 +193,14 @@ def _seed_ice_cream_crime(conn) -> None:
         )
         cur.execute("DELETE FROM datasets WHERE id IN (%s::uuid, %s::uuid)", (DATASET_ID_RETAIL, DATASET_ID_CRIME))
 
-        # Ensure test user exists (reuse from survey test)
+        # Ensure test user exists. Use gen_random_uuid() so we never conflict with init seed which may already use id 11111111...
         cur.execute(
             """
             INSERT INTO users (id, email, display_name, created_at, updated_at)
-            VALUES (%s::uuid, %s, %s, NOW(), NOW())
+            VALUES (gen_random_uuid(), %s, %s, NOW(), NOW())
             ON CONFLICT (email) DO NOTHING
             """,
-            (USER_ID, "test@example.com", "Test User"),
+            ("test@example.com", "Test User"),
         )
 
         # Two datasets: cross-dataset correlation
