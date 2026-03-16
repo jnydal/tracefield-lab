@@ -6,6 +6,8 @@ import com.tracefield.api.storage.createS3Storage
 import com.tracefield.api.jobs.ApiJobQueue
 import com.tracefield.core.Config
 import com.tracefield.core.DatabaseManager
+import com.tracefield.core.invariants.InvariantChecks
+import com.tracefield.core.invariants.InvariantCheckResult
 import com.tracefield.core.schema.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -24,6 +26,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -92,6 +96,26 @@ private fun decodeState(secret: String, state: String): String? {
     val signature = parts[3]
     if (hmacSha256(secret, payload) != signature) return null
     return sanitizeReturnTo(parts[0])
+}
+
+private fun toInvariantCheckItemResponse(r: InvariantCheckResult): InvariantCheckItemResponse {
+    val details: JsonElement? = r.details?.let { map ->
+        buildJsonObject {
+            map.forEach { (k, v) ->
+                put(k, when (v) {
+                    is Number -> JsonPrimitive(v.toLong())
+                    is String -> JsonPrimitive(v)
+                    else -> JsonPrimitive(v.toString())
+                })
+            }
+        }
+    }
+    return InvariantCheckItemResponse(
+        name = r.name,
+        passed = r.passed,
+        message = r.message,
+        details = details,
+    )
 }
 
 private fun parseUuid(value: String?): UUID? {
@@ -256,6 +280,18 @@ fun Application.module() {
         
         get("/version") {
             call.respond(VersionInfo())
+        }
+
+        get("/invariants") {
+            val results = InvariantChecks.runAllChecks()
+            val allPass = results.all { it.passed }
+            val checks = results.map { toInvariantCheckItemResponse(it) }
+            val body = InvariantsResponse(allPass = allPass, checks = checks)
+            if (allPass) {
+                call.respond(HttpStatusCode.OK, body)
+            } else {
+                call.respond(HttpStatusCode.ServiceUnavailable, body)
+            }
         }
 
         post("/schema/infer") {

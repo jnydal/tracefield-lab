@@ -32,6 +32,20 @@ data class HealthResponse(
 )
 
 @Serializable
+data class InvariantCheckItemResponse(
+    val name: String,
+    val passed: Boolean,
+    val message: String,
+    val details: JsonElement? = null,
+)
+
+@Serializable
+data class InvariantsResponse(
+    val allPass: Boolean,
+    val checks: List<InvariantCheckItemResponse>,
+)
+
+@Serializable
 data class DatasetRequest(
     val name: String,
     val description: String? = null,

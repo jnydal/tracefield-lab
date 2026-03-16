@@ -65,6 +65,10 @@ The Tracefield Lab is a generic, modular data pipeline for multi-dataset analysi
 - **Analysis Jobs**: Configurable statistical tests over feature sets.
 - **Provenance**: Full pipeline audit trail (inputs, config, module versions).
 
+## Invariants
+
+Core assumptions that protect the pipeline from silent derailing are documented and checkable. See **[docs/INVARIANTS.md](docs/INVARIANTS.md)** for the full list (provenance on output, job status lifecycle, feature contract, analysis result shape, no orphan features). Invariant checks run in CI via the test suite (`pytest test/invariants/`) and **live** via the API endpoint `GET /invariants` (returns 200 when all pass, 503 when any fail). New pipeline stages must preserve these invariants.
+
 ## Technology Stack
 
 ### Kotlin Services

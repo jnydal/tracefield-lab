@@ -342,6 +342,16 @@ docker compose exec local-llm ollama pull qwen2.5:7b-instruct-q4_K_M
 ./gradlew test
 ```
 
+**Invariant checks** (guardrails for pipeline integrity; see [docs/INVARIANTS.md](docs/INVARIANTS.md)):
+
+```bash
+# With DATABASE_URL set (e.g. from .env or docker compose)
+pytest test/invariants/ -v
+
+# Or run the check script directly
+python -m test.invariants.checks
+```
+
 ### Local Development
 
 ```bash
@@ -421,6 +431,21 @@ val response = client.post("http://localhost:8000/ingest") {
 
 All services expose health endpoints:
 - API: `GET http://localhost:8000/healthz`
+
+### Invariant checks (live)
+
+The API exposes **`GET http://localhost:8000/invariants`** to run the same invariant checks that run in CI. Use this for production or staging monitoring so you can alert when the pipeline drifts.
+
+- **All pass:** Status **200**, body e.g. `{"allPass":true,"checks":[...]}`.
+- **Any fail:** Status **503**, same body with `"allPass":false` and failed checks listed in `checks` (each has `name`, `passed`, `message`, and optional `details`).
+
+Example (interpret 503 for on-call):
+
+```bash
+curl -s http://localhost:8000/invariants | jq .
+```
+
+If you get 503, inspect the `checks` array for entries with `"passed": false`; the `message` and `details` fields explain what is wrong (e.g. feature rows missing provenance, disallowed job status values). See [docs/INVARIANTS.md](docs/INVARIANTS.md) for the list of invariants.
 
 ### Database Health
 

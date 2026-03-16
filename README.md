@@ -69,6 +69,10 @@ Analysis worker → results
 
 ---
 
+## Invariants and Guardrails
+
+Core pipeline assumptions (provenance, job status lifecycle, feature contract) are documented in [docs/INVARIANTS.md](docs/INVARIANTS.md) and checked in CI. A full-workflow integration test (`test/test_full_workflow_integration.py`) validates the path from seed data to analysis results and provenance.
+
 ## Feature Modules
 
 Feature modules follow a common contract and write to the feature store with provenance.

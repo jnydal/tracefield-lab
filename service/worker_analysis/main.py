@@ -350,6 +350,31 @@ def insert_result(
         )
 
 
+def emit_analysis_provenance(
+    conn, job_id: uuid.UUID, config: dict, result_summary: dict
+) -> None:
+    """Emit provenance_event for analysis job (reproducibility)."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO provenance_event (job_id, stage, detail, created_at)
+            VALUES (%s::uuid, 'analysis', %s::jsonb, NOW())
+            """,
+            (
+                str(job_id),
+                json.dumps(
+                    {
+                        "test": config.get("test", "anova"),
+                        "correction": config.get("correction"),
+                        "leftFeatureSet": config.get("leftFeatureSet"),
+                        "rightFeatureSet": config.get("rightFeatureSet"),
+                        **result_summary,
+                    }
+                ),
+            ),
+        )
+
+
 def complete_job(conn, job_id: uuid.UUID):
     with conn.cursor() as cur:
         cur.execute(
@@ -403,6 +428,12 @@ def process_job(conn, job: dict) -> None:
             effect_size,
             config.get("correction"),
         )
+        emit_analysis_provenance(
+            conn,
+            job_id,
+            config,
+            {"p_value": p_value, "effect_size": effect_size, "n": stats_dict.get("n_total")},
+        )
         complete_job(conn, job_id)
         log.info("Completed job %s (%s)", job_id, name)
         return
@@ -452,6 +483,16 @@ def process_job(conn, job: dict) -> None:
         p_value if p_value is not None else None,
         effect_size,
         correction,
+    )
+    emit_analysis_provenance(
+        conn,
+        job_id,
+        config,
+        {
+            "p_value": p_value,
+            "effect_size": effect_size,
+            "n_total": stats_dict.get("n_total") or len(rows),
+        },
     )
     complete_job(conn, job_id)
     log.info("Completed job %s (%s)", job_id, name)

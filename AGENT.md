@@ -192,6 +192,10 @@ Example output:
 }
 ```
 
+## Invariants and Tests
+
+Pipeline **invariants** are documented in [docs/INVARIANTS.md](docs/INVARIANTS.md). New pipeline stages must preserve them (provenance on output, job status lifecycle, feature contract, etc.). The **full-workflow integration test** (`test/test_full_workflow_integration.py`) encodes the expected end-to-end behaviour: seed data → analysis job run → results and provenance present, invariant checks pass. Run it with `pytest test/test_full_workflow_integration.py -v` (requires `DATABASE_URL` and DB schema). Invariant checks alone: `pytest test/invariants/ -v`.
+
 ## Integration Points
 
 ### Adding a New Feature Module
