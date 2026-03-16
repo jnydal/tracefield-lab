@@ -9,7 +9,14 @@ export default defineConfig({
     port: 5173,
     allowedHosts: ['tracefieldlab.thor-nydal.no'],
     strictPort: true,
-    // Use polling to make file watching reliable on Windows/network drives.
+    // Proxy /api to the backend so VITE_API_BASE_URL=/api works in local dev.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
     watch: {
       usePolling: true,
     },

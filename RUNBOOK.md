@@ -309,12 +309,27 @@ docker compose exec api env | grep PG_DSN
 
 Schema inference (`POST /schema/infer`) infers column types and mapping suggestions from pasted CSV/JSON samples. It always uses heuristic inference (no LLM required). To enable LLM-enhanced inference, set `OLLAMA_URL` or `LLM_URL` (e.g. `http://local-llm:11434`) in the API environment. See AGENT.md for curl examples.
 
-**404 on `/schema/infer`**: The frontend calls the API at `VITE_API_BASE_URL` (e.g. `http://localhost:8000` when running locally). A 404 means the process on that port does not expose this route. Only the **Kotlin API** (service `api` in docker-compose) implements `/schema/infer`. Ensure that:
+**404 on `/schema/infer`**: The frontend calls the API at `VITE_API_BASE_URL` (e.g. `http://localhost:8000` or `/api` with the Vite proxy). A 404 means the process on port 8000 does not expose this route. Only the **Kotlin API** (service `api` in docker-compose) implements `/schema/infer`. Fix:
 
-- When using docker-compose, the **api** service is running and is what you reach on port 8000 (e.g. `docker compose up api` or full stack).
-- When running the frontend with `npm run dev`, set `VITE_API_BASE_URL=http://localhost:8000` and start the Kotlin API on 8000 (e.g. from `service/api`: run the API, or use docker to run only the api container).
+1. **Rebuild the API** so the image has the latest routes (required after pulling code that adds endpoints):
+   ```bash
+   docker compose build api
+   ```
+2. **Start the API** (and its dependencies) on port 8000:
+   ```bash
+   docker compose up -d db kafka minio
+   docker compose up api
+   ```
+3. **Verify** — run in a second terminal:
+   - `curl -s http://localhost:8000/healthz` must return `{"status":"ok"}` (not `{}` or 404).
+   - `curl -s -X POST http://localhost:8000/schema/infer -H "Content-Type: application/json" -d "{\"sampleContent\":\"a,b\n1,2\",\"format\":\"csv\"}"` must return JSON with `columns` and `suggestions`, not 404.
 
-Quick check: `curl -s http://localhost:8000/healthz` should return JSON; `curl -s -X POST http://localhost:8000/schema/infer -H "Content-Type: application/json" -d "{\"sampleContent\":\"a,b\n1,2\",\"format\":\"csv\"}"` should return a schema JSON, not 404.
+If `healthz` returns `{}` or something else, a **different process** is on 8000 — the Tracefield API returns `{"status":"ok","service":"tracefield-api"}`. Stop whatever is on 8000, then start the `api` service:
+
+- **Linux/WSL:** `ss -tlnp | grep 8000` or `lsof -i :8000` to see the process; kill it (or close the terminal that started it). Then from repo root: `docker compose up -d db kafka minio` and `docker compose up api`.
+- **Windows (PowerShell):** `Get-NetTCPConnection -LocalPort 8000 | Select-Object OwningProcess` then `Get-Process -Id <pid>` to see the process; stop that app or container. Then start the API (e.g. `docker compose up api` from repo root).
+
+For local frontend dev you can set `VITE_API_BASE_URL=/api` in `frontend/.env`; the Vite dev server proxies `/api` to `http://localhost:8000`.
 
 ### LLM Not Responding
 

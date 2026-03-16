@@ -244,6 +244,7 @@ fun Application.module() {
             prettyPrint = true
             isLenient = true
             ignoreUnknownKeys = true
+            encodeDefaults = true  // so HealthResponse() and other default-valued models serialize (e.g. healthz)
         })
     }
 

@@ -28,7 +28,8 @@ data class JobStatusResponse(
 
 @Serializable
 data class HealthResponse(
-    val status: String = "ok"
+    val status: String = "ok",
+    val service: String = "tracefield-api"
 )
 
 @Serializable
