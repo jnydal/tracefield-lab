@@ -129,8 +129,12 @@ export function DatasetsPage() {
         if (result.suggestions.idColumn) setIdColumn(result.suggestions.idColumn);
         setInferModalOpen(false);
       }
-    } catch {
-      setInferError('Schema inference failed. Check the sample format and try again.');
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'message' in e && typeof (e as { message: unknown }).message === 'string'
+          ? (e as { message: string }).message
+          : 'Schema inference failed. Check the sample format and try again.';
+      setInferError(msg);
     }
   };
 

@@ -34,10 +34,15 @@ fun inferSchema(sampleContent: String, format: String): SchemaInferResponse {
     val columns = inferColumnTypes(parsed)
     val heuristicSuggestions = inferHeuristicSuggestions(columns)
 
-    val llmClient = createLlmClient()
-    val llmResult = if (llmClient != null) {
-        runBlocking { llmClient.invokeSchemaInfer(sampleContent, format) }
-    } else null
+    var llmResult: String? = null
+    try {
+        val llmClient = createLlmClient()
+        if (llmClient != null) {
+            llmResult = runBlocking { llmClient.invokeSchemaInfer(sampleContent, format) }
+        }
+    } catch (e: Exception) {
+        log.warn("schema_infer llm fallback: {}", e.message)
+    }
 
     val (finalColumns, finalSuggestions) = if (llmResult != null) {
         parseLlmResponse(llmResult)?.let { (cols, sugg) ->

@@ -301,8 +301,12 @@ fun Application.module() {
                 return@post
             }
             val format = req.format.takeIf { it.lowercase() in listOf("csv", "json") } ?: "csv"
-            val result = inferSchema(req.sampleContent, format)
-            call.respond(result)
+            try {
+                val result = inferSchema(req.sampleContent, format)
+                call.respond(result)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Schema inference failed")))
+            }
         }
 
         post("/ingest") {

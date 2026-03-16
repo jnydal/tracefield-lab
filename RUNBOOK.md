@@ -309,6 +309,13 @@ docker compose exec api env | grep PG_DSN
 
 Schema inference (`POST /schema/infer`) infers column types and mapping suggestions from pasted CSV/JSON samples. It always uses heuristic inference (no LLM required). To enable LLM-enhanced inference, set `OLLAMA_URL` or `LLM_URL` (e.g. `http://local-llm:11434`) in the API environment. See AGENT.md for curl examples.
 
+**404 on `/schema/infer`**: The frontend calls the API at `VITE_API_BASE_URL` (e.g. `http://localhost:8000` when running locally). A 404 means the process on that port does not expose this route. Only the **Kotlin API** (service `api` in docker-compose) implements `/schema/infer`. Ensure that:
+
+- When using docker-compose, the **api** service is running and is what you reach on port 8000 (e.g. `docker compose up api` or full stack).
+- When running the frontend with `npm run dev`, set `VITE_API_BASE_URL=http://localhost:8000` and start the Kotlin API on 8000 (e.g. from `service/api`: run the API, or use docker to run only the api container).
+
+Quick check: `curl -s http://localhost:8000/healthz` should return JSON; `curl -s -X POST http://localhost:8000/schema/infer -H "Content-Type: application/json" -d "{\"sampleContent\":\"a,b\n1,2\",\"format\":\"csv\"}"` should return a schema JSON, not 404.
+
 ### LLM Not Responding
 
 ```bash
