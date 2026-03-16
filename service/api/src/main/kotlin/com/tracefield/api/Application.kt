@@ -426,35 +426,48 @@ fun Application.module() {
                 call.respond(items)
             }
             post {
-                val req = call.receive<DatasetRequest>()
-                val id = UUID.randomUUID()
-                val now = Instant.now()
-                transaction(DatabaseManager.getDatabase()) {
-                    Datasets.insert {
-                        it[Datasets.id] = id
-                        it[Datasets.name] = req.name
-                        it[Datasets.description] = req.description
-                        it[Datasets.sourceText] = req.source
-                        it[Datasets.license] = req.license
-                        it[Datasets.schemaJson] = req.schema?.toString()
-                        it[Datasets.refreshSchedule] = req.refreshSchedule
-                        it[Datasets.createdAt] = now
-                        it[Datasets.updatedAt] = now
+                try {
+                    val req = call.receive<DatasetRequest>()
+                    if (req.name.isBlank()) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "name is required"))
+                        return@post
                     }
-                }
-                call.respond(
-                    DatasetResponse(
-                        id = id.toString(),
-                        name = req.name,
-                        description = req.description,
-                        source = req.source,
-                        license = req.license,
-                        schema = req.schema,
-                        refreshSchedule = req.refreshSchedule,
-                        createdAt = now.toString(),
-                        updatedAt = now.toString()
+                    val id = UUID.randomUUID()
+                    val now = Instant.now()
+                    val schemaJsonStr = req.schema?.toString()
+                    transaction(DatabaseManager.getDatabase()) {
+                        Datasets.insert {
+                            it[Datasets.id] = id
+                            it[Datasets.name] = req.name.trim()
+                            it[Datasets.description] = req.description?.takeIf { it.isNotBlank() }
+                            it[Datasets.sourceText] = req.source?.takeIf { it.isNotBlank() }
+                            it[Datasets.license] = req.license?.takeIf { it.isNotBlank() }
+                            it[Datasets.schemaJson] = schemaJsonStr?.takeIf { it.isNotBlank() }
+                            it[Datasets.refreshSchedule] = req.refreshSchedule?.takeIf { it.isNotBlank() }
+                            it[Datasets.createdAt] = now
+                            it[Datasets.updatedAt] = now
+                        }
+                    }
+                    call.respond(
+                        DatasetResponse(
+                            id = id.toString(),
+                            name = req.name.trim(),
+                            description = req.description?.takeIf { it.isNotBlank() },
+                            source = req.source?.takeIf { it.isNotBlank() },
+                            license = req.license?.takeIf { it.isNotBlank() },
+                            schema = req.schema,
+                            refreshSchedule = req.refreshSchedule?.takeIf { it.isNotBlank() },
+                            createdAt = now.toString(),
+                            updatedAt = now.toString()
+                        )
                     )
-                )
+                } catch (e: Exception) {
+                    call.application.log.error("Create dataset failed", e)
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to (e.message ?: "Failed to create dataset"))
+                    )
+                }
             }
             get("/{id}") {
                 val id = parseUuid(call.parameters["id"]) ?: run {
