@@ -28,6 +28,20 @@ export type FeatureExtractResponse = {
   jobId: string;
 };
 
+export type ScalarExtractColumnRequest = {
+  column: string;
+  featureDefinitionName?: string;
+};
+
+export type ScalarExtractRequest = {
+  idColumn: string;
+  columns: ScalarExtractColumnRequest[];
+};
+
+export type ScalarExtractResponse = {
+  jobId: string;
+};
+
 export type JobStatus = {
   id: string;
   status: string;
@@ -97,6 +111,7 @@ export type AnalysisJob = {
   createdAt: string;
   startedAt?: string | null;
   endedAt?: string | null;
+  excInfo?: string | null;
 };
 
 export type AnalysisJobRequest = {
@@ -228,6 +243,17 @@ export const pipelineApi = baseApi.injectEndpoints({
     getJobStatus: builder.query<JobStatus, string>({
       query: (jobId) => ({ url: `/jobs/${jobId}`, method: 'GET' }),
     }),
+    triggerScalarExtract: builder.mutation<
+      ScalarExtractResponse,
+      { datasetId: string; body: ScalarExtractRequest }
+    >({
+      query: ({ datasetId, body }) => ({
+        url: `/datasets/${datasetId}/extract-scalar`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FeatureDefinitions'],
+    }),
     listEntityMappings: builder.query<EntityMapping[], void>({
       query: () => ({ url: '/entity-mappings', method: 'GET' }),
       providesTags: ['EntityMappings'],
@@ -329,6 +355,7 @@ export const {
   useLazyGetDatasetQuery,
   useGetDatasetPreviewRowsQuery,
   useTriggerFeatureExtractMutation,
+  useTriggerScalarExtractMutation,
   useGetJobStatusQuery,
   useLazyGetJobStatusQuery,
   useListEntityMappingsQuery,

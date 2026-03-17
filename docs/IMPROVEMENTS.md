@@ -39,5 +39,5 @@ Result: The exact “satisfaction vs training hours” analysis works in the GUI
 
 Summary
 
-Proper fix: Worker (or API job) that reads uploaded dataset files and writes selected scalar columns into the feature store + UI “Extract scalar features” (or “Import columns as features”) so the demo and any future CSV work without seed.
-Quick fix: Seed data for the two-dataset demo (entities, mappings, feature defs, features) so the walkthrough’s analysis runs as-is; add the pipeline fix later for real CSV-driven scalars.
+**Proper fix (implemented):** API `POST /datasets/{id}/extract-scalar` plus UI **Extract scalar features** on the Datasets page; user picks ID column and columns to import, backend reads dataset file(s), resolves entities via `entity_map`, upserts into `features`; job status is polled like embedding extraction. See Heat/Crime walkthrough Step 4b.
+Quick fix: Seed data or the SQL script in docs/demo/seed_heatcrime_scalar_features.sql for automation; the GUI is the preferred path.

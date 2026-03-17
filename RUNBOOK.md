@@ -512,6 +512,18 @@ docker compose exec -T db psql -U postgres -d tracefield < infra/sql/099_seed_te
 
 This creates: user, dataset `test-survey-2024`, 3 entities (Alice, Bob, Carol), entity mappings, 2 feature definitions, 6 feature values, and 1 analysis job. Safe to re-run (idempotent).
 
+### Heat/Crime demo scalar features
+
+After completing resolution and feature definitions for the Heat/Crime walkthrough, load scalar feature values so the Phase 1 analysis job can run. **Preferred:** use the GUI — **Datasets** → open each dataset → **Extract scalar features** (ID column + columns to import). See `docs/DEMO_WALKTHROUGH_HEATCRIME.md` Step 4b. For automation or CI, a SQL seed script is available at `docs/demo/seed_heatcrime_scalar_features.sql`.
+
+### Apply schema migrations
+
+To add new schema (e.g. `analysis_jobs.exc_info` for failure reasons):
+
+```bash
+docker compose exec -T db psql -U postgres -d tracefield -f infra/sql/016_analysis_jobs_exc_info.sql
+```
+
 ### Reset Pipeline for New Dataset
 
 ```sql

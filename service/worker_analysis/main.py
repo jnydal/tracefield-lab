@@ -386,8 +386,8 @@ def complete_job(conn, job_id: uuid.UUID):
 def fail_job(conn, job_id: uuid.UUID, exc_info: str):
     with conn.cursor() as cur:
         cur.execute(
-            "UPDATE analysis_jobs SET status = 'failed', ended_at = NOW() WHERE id = %s::uuid",
-            (str(job_id),),
+            "UPDATE analysis_jobs SET status = 'failed', ended_at = NOW(), exc_info = %s WHERE id = %s::uuid",
+            (exc_info[:4096] if exc_info else None, str(job_id)),
         )
     log.error("Job %s failed: %s", job_id, exc_info)
 

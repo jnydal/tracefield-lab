@@ -115,6 +115,23 @@ data class FeatureExtractResponse(
 )
 
 @Serializable
+data class ScalarExtractColumnRequest(
+    val column: String,
+    val featureDefinitionName: String? = null
+)
+
+@Serializable
+data class ScalarExtractRequest(
+    val idColumn: String,
+    val columns: List<ScalarExtractColumnRequest>
+)
+
+@Serializable
+data class ScalarExtractResponse(
+    val jobId: String
+)
+
+@Serializable
 data class FeatureDefinitionRequest(
     val name: String,
     val description: String? = null,
@@ -151,7 +168,8 @@ data class AnalysisJobResponse(
     val config: JsonElement,
     val createdAt: String,
     val startedAt: String? = null,
-    val endedAt: String? = null
+    val endedAt: String? = null,
+    val excInfo: String? = null
 )
 
 @Serializable

@@ -5,6 +5,7 @@ import {
   useListDatasetsQuery,
   useGetDatasetQuery,
   useTriggerFeatureExtractMutation,
+  useTriggerScalarExtractMutation,
   useLazyGetJobStatusQuery,
   useInferSchemaMutation,
   useUploadDatasetFileMutation,
@@ -40,9 +41,16 @@ export function DatasetsPage() {
   const [idColumn, setIdColumn] = useState('id');
   const [extractJobId, setExtractJobId] = useState<string | null>(null);
 
+  const [scalarExtractDatasetId, setScalarExtractDatasetId] = useState<string | null>(null);
+  const [scalarIdColumn, setScalarIdColumn] = useState('');
+  const [scalarSelectedColumns, setScalarSelectedColumns] = useState<string[]>([]);
+
   const { data: extractDataset, refetch: refetchExtractDataset } = useGetDatasetQuery(extractDatasetId ?? '', {
     skip: !extractDatasetId,
     refetchOnMountOrArgChange: 30,
+  });
+  const { data: scalarExtractDataset } = useGetDatasetQuery(scalarExtractDatasetId ?? '', {
+    skip: !scalarExtractDatasetId,
   });
   useEffect(() => {
     if (extractDatasetId) refetchExtractDataset();
@@ -54,6 +62,8 @@ export function DatasetsPage() {
   }, [extractDatasetId, refetchExtractDataset]);
   const [triggerExtract, { isLoading: isExtracting }] =
     useTriggerFeatureExtractMutation();
+  const [triggerScalarExtract, { isLoading: isScalarExtracting }] =
+    useTriggerScalarExtractMutation();
   const [uploadDatasetFile, { isLoading: isUploading }] =
     useUploadDatasetFileMutation();
   const [getJobStatus] = useLazyGetJobStatusQuery();
@@ -155,6 +165,15 @@ export function DatasetsPage() {
     setJobStatus(null);
   };
 
+  const openScalarExtractModal = (datasetId: string) => {
+    setScalarExtractDatasetId(datasetId);
+    setScalarIdColumn('');
+    setScalarSelectedColumns([]);
+  };
+  const closeScalarExtractModal = () => {
+    setScalarExtractDatasetId(null);
+  };
+
   const closeExtractModal = () => {
     setExtractDatasetId(null);
     setExtractJobId(null);
@@ -210,9 +229,36 @@ export function DatasetsPage() {
     }
   };
 
+  const handleScalarExtract = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!scalarExtractDatasetId || !scalarIdColumn.trim() || scalarSelectedColumns.length === 0) return;
+    try {
+      const { jobId } = await triggerScalarExtract({
+        datasetId: scalarExtractDatasetId,
+        body: {
+          idColumn: scalarIdColumn.trim(),
+          columns: scalarSelectedColumns.map((column) => ({ column })),
+        },
+      }).unwrap();
+      setExtractJobId(jobId);
+      setJobStatus({ status: 'queued' });
+      const result = await getJobStatus(jobId).unwrap();
+      setJobStatus({ status: result.status, excInfo: result.excInfo });
+    } catch {
+      setJobStatus({ status: 'failed', excInfo: 'Request failed' });
+    }
+  };
+
   const fileCount = Number(extractDataset?.fileCount ?? 0);
   const mappingsCount = Number(extractDataset?.mappingsCount ?? 0);
   const canExtract = fileCount > 0 && mappingsCount > 0;
+  const scalarFileCount = Number(scalarExtractDataset?.fileCount ?? 0);
+  const scalarMappingsCount = Number(scalarExtractDataset?.mappingsCount ?? 0);
+  const canScalarExtract = scalarFileCount > 0 && scalarMappingsCount > 0;
+  const scalarSchemaColumns =
+    scalarExtractDataset?.schema && typeof scalarExtractDataset.schema === 'object' && 'columns' in scalarExtractDataset.schema
+      ? (scalarExtractDataset.schema.columns as { name?: string }[]).map((c) => c.name).filter(Boolean) as string[]
+      : [];
   const jobInProgress =
     !!extractJobId &&
     !!jobStatus &&
@@ -365,13 +411,23 @@ export function DatasetsPage() {
                           Upload file
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          className="text-sm text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-slate-100"
-                          onClick={() => openExtractModal(dataset.id)}
-                        >
-                          Extract embeddings
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="text-sm text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-slate-100"
+                            onClick={() => openExtractModal(dataset.id)}
+                          >
+                            Extract embeddings
+                          </button>
+                          <span className="mx-2 text-slate-300 dark:text-slate-500">·</span>
+                          <button
+                            type="button"
+                            className="text-sm text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-slate-100"
+                            onClick={() => openScalarExtractModal(dataset.id)}
+                          >
+                            Extract scalar features
+                          </button>
+                        </>
                       )}
                       <span className="mx-2 text-slate-300 dark:text-slate-500">·</span>
                       <button
@@ -508,6 +564,130 @@ export function DatasetsPage() {
               type="button"
               className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
               onClick={closeExtractModal}
+            >
+              Close
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      <Modal
+        show={!!scalarExtractDatasetId}
+        onClose={closeScalarExtractModal}
+        size="md"
+      >
+        <ModalHeader>
+          Extract scalar features
+          {scalarExtractDataset && (
+            <span className="ml-2 text-sm font-normal text-slate-500 dark:text-slate-400">
+              {scalarExtractDataset.name}
+            </span>
+          )}
+        </ModalHeader>
+        <form onSubmit={handleScalarExtract}>
+          <ModalBody className="space-y-3">
+            {scalarExtractDataset && (
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Files: {scalarFileCount} · Mappings: {scalarMappingsCount}
+              </p>
+            )}
+            {scalarExtractDataset && !canScalarExtract && (
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                Upload data and add entity mappings first (e.g. run resolution).
+              </p>
+            )}
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="scalar-id-column">
+                ID column (links rows to resolved entities)
+              </label>
+              <select
+                id="scalar-id-column"
+                className="w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                value={scalarIdColumn}
+                onChange={(e) => setScalarIdColumn(e.target.value)}
+              >
+                <option value="">Select column…</option>
+                {scalarSchemaColumns.map((col) => (
+                  <option key={col} value={col}>
+                    {col}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Columns to import as features</label>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Select numeric or text columns to write into the feature store (one value per resolved entity).
+              </p>
+              <div className="mt-2 max-h-48 overflow-y-auto rounded border border-slate-200 dark:border-slate-600 p-2 space-y-1">
+                {scalarSchemaColumns
+                  .filter((col) => col !== scalarIdColumn)
+                  .map((col) => (
+                    <label key={col} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={scalarSelectedColumns.includes(col)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setScalarSelectedColumns((prev) => [...prev, col]);
+                          } else {
+                            setScalarSelectedColumns((prev) => prev.filter((c) => c !== col));
+                          }
+                        }}
+                        className="rounded border-slate-300 dark:border-slate-600"
+                      />
+                      <span className="text-sm">{col}</span>
+                    </label>
+                  ))}
+              </div>
+            </div>
+            {extractJobId && jobStatus && scalarExtractDatasetId && (
+              <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-600 dark:bg-slate-700">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">Job {extractJobId.slice(0, 8)}…</p>
+                  <button
+                    type="button"
+                    className="text-xs text-slate-500 hover:text-slate-700 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
+                    onClick={() => navigator.clipboard.writeText(extractJobId)}
+                  >
+                    Copy ID
+                  </button>
+                </div>
+                <span
+                  className={`inline-block mt-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    jobStatus.status.toLowerCase() === 'finished'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
+                      : jobStatus.status.toLowerCase() === 'failed'
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+                        : jobStatus.status.toLowerCase() === 'started'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-600 dark:text-slate-200'
+                  }`}
+                >
+                  {jobStatus.status}
+                </span>
+                {jobStatus.excInfo && (
+                  <p className="mt-2 text-red-600 dark:text-red-400">{jobStatus.excInfo}</p>
+                )}
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <button
+              type="submit"
+              className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-violet-600 dark:hover:bg-violet-700"
+              disabled={!canScalarExtract || !scalarIdColumn.trim() || scalarSelectedColumns.length === 0 || isScalarExtracting || jobInProgress}
+            >
+              {isScalarExtracting
+                ? 'Starting…'
+                : jobInProgress
+                  ? 'Extraction running…'
+                  : 'Start extraction'}
+            </button>
+            <button
+              type="button"
+              className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+              onClick={closeScalarExtractModal}
             >
               Close
             </button>

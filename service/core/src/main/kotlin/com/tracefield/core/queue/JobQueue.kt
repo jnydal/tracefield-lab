@@ -103,6 +103,23 @@ class JobQueue(
         return job
     }
 
+    /**
+     * Create and persist a job without sending to Kafka (for API-handled jobs like scalar extract).
+     * The job can be polled via fetch() and updated via updateStatus().
+     */
+    fun createJobOnly(
+        function: String,
+        kwargs: Map<String, String> = emptyMap()
+    ): Job {
+        val job = Job(
+            function = function,
+            args = emptyList(),
+            kwargs = kwargs
+        )
+        persistJob(job)
+        return job
+    }
+
     fun fetch(jobId: String): Job? {
         return transaction(DatabaseManager.getDatabase()) {
             JobStatusTable.select { JobStatusTable.id eq UUID.fromString(jobId) }

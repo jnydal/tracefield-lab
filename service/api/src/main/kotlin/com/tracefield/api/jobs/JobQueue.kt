@@ -2,6 +2,7 @@ package com.tracefield.api.jobs
 
 import com.tracefield.core.queue.Job
 import com.tracefield.core.queue.JobQueue
+import com.tracefield.core.queue.JobStatus
 import com.tracefield.core.queue.createJobQueue
 import com.tracefield.core.Config
 import kotlinx.serialization.encodeToString
@@ -26,6 +27,11 @@ class ApiJobQueue {
         return jobQueue.fetch(jobId) ?: featuresQueue.fetch(jobId)
     }
 
+    fun updateJobStatus(jobId: String, status: JobStatus, result: String? = null, excInfo: String? = null) {
+        featuresQueue.updateStatus(jobId, status, result, excInfo)
+        jobQueue.updateStatus(jobId, status, result, excInfo)
+    }
+
     fun enqueueFeatureExtract(
         datasetId: String,
         textColumn: String? = null,
@@ -41,6 +47,22 @@ class ApiJobQueue {
         return featuresQueue.enqueue(
             "embeddings.extract",
             kwargs = kwargs
+        )
+    }
+
+    /** Create a scalar-extract job (API-handled; no Kafka). Poll via getJobStatus, update via updateJobStatus. */
+    fun createScalarExtractJob(
+        datasetId: String,
+        idColumn: String,
+        columnsJson: String
+    ): Job {
+        return featuresQueue.createJobOnly(
+            "scalar.extract",
+            mapOf(
+                "dataset_id" to datasetId,
+                "id_column" to idColumn,
+                "columns" to columnsJson
+            )
         )
     }
 }

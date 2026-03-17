@@ -2,12 +2,14 @@ package com.tracefield.api
 
 import com.tracefield.api.models.*
 import com.tracefield.api.schema.inferSchema
+import com.tracefield.api.storage.S3Storage
 import com.tracefield.api.schema.parseFullCsv
 import com.tracefield.api.schema.parseFullJson
 import com.tracefield.api.storage.createS3Storage
 import com.tracefield.api.jobs.ApiJobQueue
 import com.tracefield.core.Config
 import com.tracefield.core.DatabaseManager
+import com.tracefield.core.queue.JobStatus
 import com.tracefield.core.invariants.InvariantChecks
 import com.tracefield.core.invariants.InvariantCheckResult
 import com.tracefield.core.schema.*
@@ -26,6 +28,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -234,6 +238,87 @@ private suspend fun fetchGoogleUserInfo(accessToken: String): JsonElement {
         throw IllegalStateException("Userinfo fetch failed with ${response.statusCode()}")
     }
     return jsonParser.parseToJsonElement(response.body())
+}
+
+private fun runScalarExtract(
+    storage: S3Storage,
+    datasetId: java.util.UUID,
+    idColumn: String,
+    columns: List<ScalarExtractColumnRequest>
+): String {
+    val (objectUri, filename, contentType) = transaction(DatabaseManager.getDatabase()) {
+        DatasetFiles.select { DatasetFiles.datasetId eq datasetId }
+            .orderBy(DatasetFiles.createdAt, SortOrder.DESC)
+            .limit(1)
+            .singleOrNull()
+            ?.let { row -> Triple(row[DatasetFiles.objectUri], row[DatasetFiles.filename] ?: "", row[DatasetFiles.contentType] ?: "") }
+    } ?: throw IllegalStateException("Dataset has no file")
+    val bytes = storage.getFile(objectUri) ?: throw IllegalStateException("Could not read dataset file from storage")
+    if (bytes.isEmpty()) throw IllegalStateException("Dataset file is empty")
+    val content = String(bytes, StandardCharsets.UTF_8)
+    val format = when {
+        filename.lowercase().endsWith(".json") || contentType.lowercase().contains("json") -> "json"
+        else -> "csv"
+    }
+    val rows = if (format == "json") parseFullJson(content) else parseFullCsv(content)
+    if (rows.isEmpty()) return """{"rowsProcessed":0,"featuresWritten":0,"message":"No rows in file"}"""
+    if (!rows.first().containsKey(idColumn)) throw IllegalStateException("ID column '$idColumn' not found in file")
+    val entityMapLookup = transaction(DatabaseManager.getDatabase()) {
+        EntityMap.select { EntityMap.datasetId eq datasetId }
+            .mapNotNull { row ->
+                val srcId = row[EntityMap.sourceRecordId] ?: return@mapNotNull null
+                srcId to row[EntityMap.entityId].value
+            }
+            .toMap()
+    }
+    if (entityMapLookup.isEmpty()) throw IllegalStateException("No entity mappings for this dataset; run resolution first")
+    val featureDefIds = mutableListOf<java.util.UUID>()
+    transaction(DatabaseManager.getDatabase()) {
+        for (colReq in columns) {
+            val defName = colReq.featureDefinitionName?.takeIf { it.isNotBlank() } ?: colReq.column
+            val existing = FeatureDefinitions.select { FeatureDefinitions.name eq defName }.singleOrNull()
+            val defId = if (existing != null) {
+                existing[FeatureDefinitions.id].value
+            } else {
+                val newId = UUID.randomUUID()
+                FeatureDefinitions.insert {
+                    it[FeatureDefinitions.id] = newId
+                    it[FeatureDefinitions.name] = defName
+                    it[FeatureDefinitions.valueType] = "number"
+                    it[FeatureDefinitions.createdAt] = Instant.now()
+                }
+                newId
+            }
+            featureDefIds.add(defId)
+        }
+    }
+    transaction(DatabaseManager.getDatabase()) {
+        Features.deleteWhere { (Features.datasetId eq datasetId) and (Features.featureDefinitionId inList featureDefIds) }
+    }
+    var written = 0
+    transaction(DatabaseManager.getDatabase()) {
+        for (row in rows) {
+            val sourceRecordId = row[idColumn] ?: continue
+            val entityId = entityMapLookup[sourceRecordId] ?: continue
+            for ((colReq, defId) in columns.zip(featureDefIds)) {
+                val raw = row[colReq.column] ?: continue
+                val valueNum = raw.trim().toDoubleOrNull()
+                val valueText = if (valueNum == null) raw else null
+                Features.insert {
+                    it[Features.id] = UUID.randomUUID()
+                    it[Features.entityId] = entityId
+                    it[Features.datasetId] = datasetId
+                    it[Features.featureDefinitionId] = defId
+                    it[Features.valueNum] = valueNum
+                    it[Features.valueText] = valueText
+                    it[Features.provenanceJson] = buildJsonObject { put("source", JsonPrimitive("extract-scalar")) }
+                    it[Features.createdAt] = Instant.now()
+                }
+                written++
+            }
+        }
+    }
+    return """{"rowsProcessed":${rows.size},"featuresWritten":$written}"""
 }
 
 fun Application.module() {
@@ -539,6 +624,48 @@ fun Application.module() {
                     return@get
                 }
                 call.respond(dataset)
+            }
+            post("/{id}/extract-scalar") {
+                val id = parseUuid(call.parameters["id"]) ?: run {
+                    call.respond(HttpStatusCode.BadRequest, "Invalid dataset id")
+                    return@post
+                }
+                val req = call.receive<ScalarExtractRequest>()
+                if (req.idColumn.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "idColumn is required"))
+                    return@post
+                }
+                if (req.columns.isEmpty()) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "At least one column is required"))
+                    return@post
+                }
+                val datasetExists = transaction(DatabaseManager.getDatabase()) {
+                    Datasets.select { Datasets.id eq EntityID(id, Datasets) }.count() > 0
+                }
+                if (!datasetExists) {
+                    call.respond(HttpStatusCode.NotFound, "Dataset not found")
+                    return@post
+                }
+                val hasFiles = transaction(DatabaseManager.getDatabase()) {
+                    DatasetFiles.select { DatasetFiles.datasetId eq id }.count() > 0
+                }
+                if (!hasFiles) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Dataset has no files; upload data first"))
+                    return@post
+                }
+                val columnsJson = kotlinx.serialization.json.Json.encodeToString(req.columns)
+                val job = jobQueue.createScalarExtractJob(id.toString(), req.idColumn, columnsJson)
+                GlobalScope.launch(Dispatchers.IO) {
+                    try {
+                        jobQueue.updateJobStatus(job.id, JobStatus.STARTED)
+                        val result = runScalarExtract(storage, id, req.idColumn, req.columns)
+                        jobQueue.updateJobStatus(job.id, JobStatus.FINISHED, result)
+                    } catch (e: Exception) {
+                        call.application.log.error("Scalar extract failed", e)
+                        jobQueue.updateJobStatus(job.id, JobStatus.FAILED, excInfo = e.message ?: "Scalar extract failed")
+                    }
+                }
+                call.respond(ScalarExtractResponse(jobId = job.id))
             }
             put("/{id}") {
                 val id = parseUuid(call.parameters["id"]) ?: run {
@@ -1079,7 +1206,8 @@ fun Application.module() {
                             config = parseJsonElement(row[AnalysisJobs.configJson]) ?: jsonParser.parseToJsonElement("{}"),
                             createdAt = row[AnalysisJobs.createdAt].toString(),
                             startedAt = row[AnalysisJobs.startedAt]?.toString(),
-                            endedAt = row[AnalysisJobs.endedAt]?.toString()
+                            endedAt = row[AnalysisJobs.endedAt]?.toString(),
+                            excInfo = row[AnalysisJobs.excInfo]
                         )
                     }
                 }
@@ -1123,7 +1251,8 @@ fun Application.module() {
                             config = parseJsonElement(row[AnalysisJobs.configJson]) ?: jsonParser.parseToJsonElement("{}"),
                             createdAt = row[AnalysisJobs.createdAt].toString(),
                             startedAt = row[AnalysisJobs.startedAt]?.toString(),
-                            endedAt = row[AnalysisJobs.endedAt]?.toString()
+                            endedAt = row[AnalysisJobs.endedAt]?.toString(),
+                            excInfo = row[AnalysisJobs.excInfo]
                         )
                     }
                 }

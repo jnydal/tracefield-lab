@@ -157,6 +157,11 @@ export function AnalysisJobsPage() {
                       >
                         {job.status}
                       </span>
+                      {job.status === 'failed' && job.excInfo && (
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400 max-w-md" title={job.excInfo}>
+                          {job.excInfo}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-xs font-mono text-slate-500 truncate max-w-[8rem] dark:text-slate-400">
                       {job.id}

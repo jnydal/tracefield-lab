@@ -167,6 +167,7 @@ object AnalysisJobs : UUIDTable("analysis_jobs", columnName = "id") {
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp())
     val startedAt = timestamp("started_at").nullable()
     val endedAt = timestamp("ended_at").nullable()
+    val excInfo = text("exc_info").nullable()
 }
 
 object ResolutionJobs : UUIDTable("resolution_jobs", columnName = "id") {

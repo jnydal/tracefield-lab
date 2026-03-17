@@ -209,6 +209,22 @@ the other."
 
 ---
 
+### Step 4b: Extract scalar features (required before Step 5)
+
+The analysis worker needs **numeric feature values** in the feature store (e.g. `total_incidents` and `units_sold_thousands` per resolved time period). "Extract embeddings" only fills the embeddings table; it does not write these scalars. To avoid a **failed** analysis job with *"No overlapping entity-feature data for left and right feature sets"*, use the GUI to import scalar columns from your uploaded CSVs:
+
+1. **Datasets** → open **NYC Crime Statistics 2023** → click **Extract scalar features**.
+2. In the modal:
+   - **ID column:** choose `crime_record_id` (links each row to the resolved time-period entity).
+   - **Columns to import as features:** check `total_incidents` (and any other numeric columns you want). Feature definitions are created by name if they don’t exist.
+3. Click **Start extraction** and wait for the job to finish (status **finished**).
+4. Repeat for **NYC Ice Cream Sales 2023**: **Extract scalar features** → ID column `period_id`, columns to import: check `units_sold_thousands`. Run and wait.
+5. Then proceed to Step 5. The Phase 1 analysis job should complete successfully.
+
+This flow is the **proper pipeline** described in [IMPROVEMENTS.md](IMPROVEMENTS.md): scalar columns from uploaded files flow into the feature store so analysis works without seed scripts.
+
+---
+
 ### Step 5: Run the spurious correlation analysis (≈2 min)
 
 **What you say:** "Here's the moment. We ask the system: does crime correlate with
@@ -437,6 +453,8 @@ partial correlation drops toward zero when temperature is held constant.
 - **Logs:** `docker compose logs -f api` or `docker compose logs -f worker-analysis`
 - **DB:** See `RUNBOOK.md` for connection and migration commands.
 - **Full workflow test:** `./scripts/run-integration-tests.ps1` (or `.sh`)
+
+**Analysis job shows "failed":** The UI shows the failure reason (e.g. *"No overlapping entity-feature data for left and right feature sets"*). For the Heat/Crime demo, that usually means scalar feature values were not loaded — complete **Step 4b** (use **Extract scalar features** in the GUI on each dataset for the relevant columns), then re-create the analysis job.
 
 ---
 
