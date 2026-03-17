@@ -19,6 +19,7 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.origin
 import io.ktor.http.content.PartData
+import io.ktor.utils.io.core.readBytes
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -325,9 +326,8 @@ fun Application.module() {
                     }
                     is PartData.FileItem -> {
                         if (part.name == "file") {
-                            val channel = part.provider()
-                            val stream = java.nio.channels.Channels.newInputStream(channel as java.nio.channels.ReadableByteChannel)
-                            fileBytes = stream.readBytes()
+                            val input = part.provider()
+                            fileBytes = input.readBytes()
                             filename = part.originalFileName
                             contentType = part.contentType?.toString()
                         }
