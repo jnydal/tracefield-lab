@@ -6,6 +6,7 @@ import {
   useListDatasetsQuery,
   useListResolutionJobsQuery,
   useCreateResolutionJobMutation,
+  useGetDatasetPreviewRowsQuery,
   useLazySimilaritySearchQuery,
 } from '../../../services/api/pipeline-api';
 
@@ -58,6 +59,11 @@ export function EntityMappingsPage() {
   const [semanticFields, setSemanticFields] = useState('name');
   const [threshold, setThreshold] = useState(0.85);
   const [createIfNoMatch, setCreateIfNoMatch] = useState(false);
+  const [useAllRows, setUseAllRows] = useState(false);
+  const { data: previewRows } = useGetDatasetPreviewRowsQuery(
+    resolutionDatasetId,
+    { skip: !useAllRows || !resolutionDatasetId }
+  );
   const [records, setRecords] = useState<ResolutionRecord[]>([
     { source_record_id: 'rec-1', keys: { id: '1', name: 'Example' } },
   ]);
@@ -84,34 +90,43 @@ export function EntityMappingsPage() {
     setMethod('');
   };
 
-  const buildConfig = (): Record<string, unknown> => ({
-    joinKeys: joinKeys
-      .split(',')
-      .map((k) => k.trim())
-      .filter(Boolean),
-    semanticFields: semanticFields
-      .split(',')
-      .map((k) => k.trim())
-      .filter(Boolean),
-    threshold: Number(threshold),
-    createIfNoMatch,
-    records: records
-      .filter((r) => r.source_record_id.trim())
-      .map((r) => ({
-        source_record_id: r.source_record_id.trim(),
-        keys: Object.fromEntries(
-          Object.entries(r.keys).filter(([, v]) => v != null && String(v).trim() !== '')
-        ),
-      })),
-  });
+  const buildConfig = (): Record<string, unknown> => {
+    const base = {
+      joinKeys: joinKeys
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean),
+      semanticFields: semanticFields
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean),
+      threshold: Number(threshold),
+      createIfNoMatch,
+    };
+    if (useAllRows) {
+      return { ...base, useAllRows: true, records: [] };
+    }
+    return {
+      ...base,
+      records: records
+        .filter((r) => r.source_record_id.trim())
+        .map((r) => ({
+          source_record_id: r.source_record_id.trim(),
+          keys: Object.fromEntries(
+            Object.entries(r.keys).filter(([, v]) => v != null && String(v).trim() !== '')
+          ),
+        })),
+    };
+  };
 
   const handleCreateResolutionJob = async (event: React.FormEvent) => {
     event.preventDefault();
     setConfigError(null);
     if (!jobName.trim() || !resolutionDatasetId.trim()) return;
     const config = buildConfig();
-    if (!Array.isArray(config.records) || config.records.length === 0) {
-      setConfigError('Add at least one record.');
+    const useAllRowsFlag = config.useAllRows === true;
+    if (!useAllRowsFlag && (!Array.isArray(config.records) || config.records.length === 0)) {
+      setConfigError('Add at least one record, or check "Use all ingested rows".');
       return;
     }
     try {
@@ -360,7 +375,7 @@ export function EntityMappingsPage() {
                     value={threshold}
                     onChange={(event) => setThreshold(Number(event.target.value))}
                   />
-                  <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={createIfNoMatch}
@@ -369,10 +384,20 @@ export function EntityMappingsPage() {
                     />
                     <span className="text-sm text-slate-900 dark:text-slate-200">Create if no match</span>
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useAllRows}
+                      onChange={(event) => setUseAllRows(event.target.checked)}
+                      className="rounded border-slate-300 dark:border-slate-600"
+                    />
+                    <span className="text-sm text-slate-900 dark:text-slate-200">Use all ingested rows from this dataset</span>
+                  </label>
                 </div>
               </div>
             </div>
 
+            {!useAllRows && (
             <div className="space-y-2 pt-1">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-slate-900 dark:text-slate-200">Records</label>
@@ -432,6 +457,14 @@ export function EntityMappingsPage() {
                 ))}
               </div>
             </div>
+            )}
+            {useAllRows && (
+              <p className="text-sm text-slate-600 dark:text-slate-400 pt-1">
+                {previewRows != null
+                  ? `${previewRows.rowCount} rows from the selected dataset's latest uploaded file will be used as resolution input.`
+                  : "All rows from the selected dataset's latest uploaded file will be used as resolution input."}
+              </p>
+            )}
             {configError && (
               <p className="text-sm text-red-600 dark:text-red-400">{configError}</p>
             )}

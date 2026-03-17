@@ -3,6 +3,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Flowbite form controls (checkbox, radio) use these; without them the checkmark doesn't show. */
+:root {
+  --color-brand: #7c3aed;   /* violet-600, matches app theme */
+  --color-default: #cbd5e1; /* slate-300, border color */
+}
+.dark {
+  --color-brand: #8b5cf6;   /* violet-500 */
+  --color-default: #475569; /* slate-600 */
+}
+
 @layer base {
   /* Reserve space for scrollbar so content doesn't shift when navigating between
      short pages (no scrollbar) and long pages (scrollbar visible). */

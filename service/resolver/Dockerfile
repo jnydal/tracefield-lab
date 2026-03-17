@@ -10,7 +10,7 @@ RUN pip install --upgrade pip && pip install -r workers-resolver.txt
 
 COPY service/ /app/service/
 WORKDIR /app/service/resolver
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/service
 
 EXPOSE 8000
 CMD ["python", "main.py"]

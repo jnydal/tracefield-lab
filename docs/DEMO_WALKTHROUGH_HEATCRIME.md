@@ -71,6 +71,20 @@ follow in lockstep.
 - **Sample files:** `docs/demo/nyc_crime_2023.csv`, `docs/demo/nyc_icecream_sales_2023.csv`, `docs/demo/nyc_temperature_2023.csv`
 - **UI:** Open the app (e.g. https://tracefieldlab.thor-nydal.no or `http://localhost:5173`).
 
+### Verify resolution jobs will be processed
+
+Resolution jobs are processed by the **resolver** service. It polls the database every few seconds for jobs with status `queued`, runs resolution, then sets status to `completed` or `failed`. To be sure jobs can and will run:
+
+1. **Resolver is running**  
+   With Docker: `docker compose ps` — the `resolver` service should be up and healthy.  
+   Health check: `curl -s http://localhost:8000/healthz` (if the resolver is mapped to port 8000; adjust host/port if your stack exposes it elsewhere). You should see `{"status":"ok","service":"resolver"}`.
+
+2. **Jobs are created with status `queued`**  
+   When you click "Create resolution job" in the UI, the API inserts a row into `resolution_jobs` with `status = 'queued'`. The resolver only picks up rows where `status = 'queued'`.
+
+3. **After creating a job**  
+   On **Entity Mappings**, the resolution jobs table shows each job’s status. Within a few seconds to a minute (depending on load and model startup), a `queued` job should move to `running` then `completed`. The first job may take longer because the resolver loads the BGE embedding model on first use. If a job stays `queued` for several minutes, check resolver logs: `docker compose logs resolver`.
+
 ---
 
 ## Phase 1 — The spurious correlation
@@ -147,26 +161,27 @@ both describe *January 2023* — the same time period. That's entity resolution 
 
 **In the UI:**
 
+**Option A — Use all ingested rows (recommended for this demo):**  
 1. Go to **Entity Mappings**.
 2. **First resolution job — from the crime dataset:**
    - **Job name:** `Resolve months from crime data`
    - **Dataset:** NYC Crime Statistics 2023
    - **Entity type:** `time_period`
    - **Join keys:** `crime_record_id`
-   - **Semantic fields:** `month_label` (e.g. "January 2023" gets an embedding)
-   - **Create new entities if no match:** Yes (this creates 12 canonical time periods)
-   - Add all 12 crime records as input rows.
-   - Run and wait for completion. You now have 12 canonical `time_period` entities.
-
+   - **Semantic fields:** `month_label`
+   - **Create new entities if no match:** Yes
+   - Check **Use all ingested rows from this dataset**. The UI will show how many rows will be used (12). Create the job and wait for completion.
 3. **Second resolution job — from the ice cream dataset:**
    - **Job name:** `Resolve months from ice cream data`
    - **Dataset:** NYC Ice Cream Sales 2023
    - **Entity type:** `time_period`
    - **Join keys:** `period_id`
-   - **Semantic fields:** `period_label` (e.g. "Jan 2023" will match "January 2023")
-   - **Create new entities if no match:** No (match to the 12 entities you just made)
-   - Add all 12 ice cream records as input rows.
-   - Run and wait. "Jan 2023" resolves to the January entity, "Jul 2023" to July, etc.
+   - **Semantic fields:** `period_label`
+   - **Create new entities if no match:** No
+   - Check **Use all ingested rows from this dataset** (12 rows). Create the job and wait.
+
+**Option B — Manual records:**  
+If you prefer to add records by hand (or the dataset has no uploaded file), leave "Use all ingested rows" unchecked and add one record per row. For each record set **source_record_id** and **keys** (e.g. `crime_record_id: NYC-CRIME-2023-01, month_label: January 2023`). Crime IDs: `NYC-CRIME-2023-01` … `NYC-CRIME-2023-12`. Ice cream IDs: `ICECREAM-JAN-2023` … `ICECREAM-DEC-2023`.
 
 **Point to make:** "The resolver uses BGE embeddings on the month label text. 'Jan 2023'
 and 'January 2023' produce similar embedding vectors, so they match — without us
@@ -179,6 +194,8 @@ writing any parsing code. That's the semantic matching at work."
 **What you say:** "Now we pull out the numbers we care about as features on each
 time period entity: total crime incidents from one source, ice cream units sold from
 the other."
+
+**Before you start:** Make sure Step 3 is complete — both resolution jobs must show **Completed** on the Entity Mappings page. The Extract embeddings modal requires **Files: 1 · Mappings: 12** (or similar); if you see "Mappings: 0", the resolution jobs have not finished or did not run. Wait for them to complete, then open Extract embeddings again (counts refresh when the modal opens).
 
 **In the UI:**
 

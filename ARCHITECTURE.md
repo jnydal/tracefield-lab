@@ -105,6 +105,7 @@ Core assumptions that protect the pipeline from silent derailing are documented 
 - Feature extraction job orchestration
 - Analysis job submission and result access
 - **Similarity search**: `GET /entities/{entityId}/similar` — vector search across entities using embeddings (pgvector cosine distance)
+- **Dataset preview rows**: `GET /datasets/{id}/preview-rows` — returns row count and column names from the dataset’s latest ingested file (for “use all rows” resolution UI feedback)
 
 **Dependencies**: Database, Kafka, Object Storage
 
@@ -132,7 +133,7 @@ These services become modular feature providers in the generic system.
 - Create entities if `createIfNoMatch` is enabled
 - Emit provenance events
 
-**Trigger**: API creates job via `POST /resolution/jobs`; resolver picks it up. No Kafka.
+**Trigger**: API creates job via `POST /resolution/jobs`; resolver picks it up. No Kafka. Resolution jobs can be created with an explicit `config.records` list, or with `config.useAllRows: true`; in the latter case the API reads the dataset’s latest ingested file from object storage, parses it to rows, and expands `config.records` before persisting the job (resolver always receives a concrete records list).
 
 ### 5. Worker-Embeddings (`service/worker_embeddings`)
 

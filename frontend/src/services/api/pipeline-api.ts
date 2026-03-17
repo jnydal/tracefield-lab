@@ -203,6 +203,15 @@ export const pipelineApi = baseApi.injectEndpoints({
       providesTags: (result, _, id) =>
         result ? [{ type: 'Datasets', id }] : ['Datasets'],
     }),
+    getDatasetPreviewRows: builder.query<
+      { rowCount: number; columns: string[] },
+      string
+    >({
+      query: (datasetId) => ({
+        url: `/datasets/${datasetId}/preview-rows`,
+        method: 'GET',
+      }),
+    }),
     triggerFeatureExtract: builder.mutation<
       FeatureExtractResponse,
       FeatureExtractRequest
@@ -318,6 +327,7 @@ export const {
   useDeleteDatasetMutation,
   useGetDatasetQuery,
   useLazyGetDatasetQuery,
+  useGetDatasetPreviewRowsQuery,
   useTriggerFeatureExtractMutation,
   useGetJobStatusQuery,
   useLazyGetJobStatusQuery,

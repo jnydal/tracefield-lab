@@ -2,6 +2,8 @@ package com.tracefield.api
 
 import com.tracefield.api.models.*
 import com.tracefield.api.schema.inferSchema
+import com.tracefield.api.schema.parseFullCsv
+import com.tracefield.api.schema.parseFullJson
 import com.tracefield.api.storage.createS3Storage
 import com.tracefield.api.jobs.ApiJobQueue
 import com.tracefield.core.Config
@@ -28,8 +30,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
@@ -468,6 +472,42 @@ fun Application.module() {
                         mapOf("error" to (e.message ?: "Failed to create dataset"))
                     )
                 }
+            }
+            get("/{id}/preview-rows") {
+                val id = parseUuid(call.parameters["id"]) ?: run {
+                    call.respond(HttpStatusCode.BadRequest, "Invalid dataset id")
+                    return@get
+                }
+                val fileRow = transaction(DatabaseManager.getDatabase()) {
+                    DatasetFiles.select { DatasetFiles.datasetId eq id }
+                        .orderBy(DatasetFiles.createdAt, SortOrder.DESC)
+                        .limit(1)
+                        .singleOrNull()
+                        ?.let { row -> Triple(row[DatasetFiles.objectUri], row[DatasetFiles.filename] ?: "", row[DatasetFiles.contentType] ?: "") }
+                }
+                if (fileRow == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Dataset has no ingested file."))
+                    return@get
+                }
+                val (objectUri, filename, contentType) = fileRow
+                val bytes = storage.getFile(objectUri)
+                if (bytes == null || bytes.isEmpty()) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Could not read dataset file."))
+                    return@get
+                }
+                val maxFileBytes = 50 * 1024 * 1024L
+                if (bytes.size > maxFileBytes) {
+                    call.respond(HttpStatusCode.PayloadTooLarge, mapOf("error" to "File too large (max 50MB)."))
+                    return@get
+                }
+                val content = String(bytes, StandardCharsets.UTF_8)
+                val format = when {
+                    filename.lowercase().endsWith(".json") || contentType.lowercase().contains("json") -> "json"
+                    else -> "csv"
+                }
+                val rows = if (format == "json") parseFullJson(content) else parseFullCsv(content)
+                val columns = rows.flatMap { it.keys }.distinct()
+                call.respond(mapOf("rowCount" to rows.size, "columns" to columns))
             }
             get("/{id}") {
                 val id = parseUuid(call.parameters["id"]) ?: run {
@@ -1146,6 +1186,85 @@ fun Application.module() {
                     call.respond(HttpStatusCode.BadRequest, "Invalid datasetId")
                     return@post
                 }
+                val configObj = req.config.jsonObject
+                val useAllRowsEl = configObj["useAllRows"]
+                val useAllRows = when (useAllRowsEl) {
+                    is kotlinx.serialization.json.JsonPrimitive -> useAllRowsEl.content == "true"
+                    else -> false
+                }
+                val configToStore = if (useAllRows) {
+                    val fileRow = transaction(DatabaseManager.getDatabase()) {
+                        DatasetFiles.select { DatasetFiles.datasetId eq datasetId }
+                            .orderBy(DatasetFiles.createdAt, SortOrder.DESC)
+                            .limit(1)
+                            .singleOrNull()
+                            ?.let { row ->
+                                Triple(
+                                    row[DatasetFiles.objectUri],
+                                    row[DatasetFiles.filename] ?: "",
+                                    row[DatasetFiles.contentType] ?: ""
+                                )
+                            }
+                    }
+                    val (objectUri, filename, contentType) = fileRow ?: run {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf("error" to "Dataset has no ingested file; upload a file first.")
+                        )
+                        return@post
+                    }
+                    val bytes = storage.getFile(objectUri)
+                    if (bytes == null || bytes.isEmpty()) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf("error" to "Could not read dataset file from storage.")
+                        )
+                        return@post
+                    }
+                    val maxFileBytes = 50 * 1024 * 1024L
+                    if (bytes.size > maxFileBytes) {
+                        call.respond(
+                            HttpStatusCode.PayloadTooLarge,
+                            mapOf("error" to "Dataset file too large for 'use all rows' (max 50MB).")
+                        )
+                        return@post
+                    }
+                    val content = String(bytes, StandardCharsets.UTF_8)
+                    val format = when {
+                        filename.lowercase().endsWith(".json") || contentType.lowercase().contains("json") -> "json"
+                        else -> "csv"
+                    }
+                    val rows = if (format == "json") parseFullJson(content) else parseFullCsv(content)
+                    val joinKeysList = when (val jk = configObj["joinKeys"]) {
+                        is kotlinx.serialization.json.JsonArray -> jk.mapNotNull {
+                            it.jsonPrimitive.content.takeIf { s -> s.isNotBlank() }
+                        }
+                        is kotlinx.serialization.json.JsonPrimitive -> {
+                            val s = jk.content.takeIf { it.isNotBlank() }
+                            if (s != null) listOf(s) else emptyList()
+                        }
+                        else -> emptyList()
+                    }
+                    val records = rows.map { row ->
+                        val firstKey = joinKeysList.firstOrNull()?.takeIf { row.containsKey(it) }
+                        val sourceRecordId = firstKey?.let { row[it] } ?: row.values.firstOrNull() ?: ""
+                        val keysObj = buildJsonObject {
+                            row.forEach { (k, v) -> put(k, JsonPrimitive(v)) }
+                        }
+                        buildJsonObject {
+                            put("source_record_id", JsonPrimitive(sourceRecordId))
+                            put("keys", keysObj)
+                        }
+                    }
+                    buildJsonObject {
+                        configObj.entries.forEach { (k, v) ->
+                            if (k != "useAllRows") put(k, v)
+                        }
+                        put("records", buildJsonArray { records.forEach { add(it) } })
+                    }
+                } else {
+                    req.config
+                }
                 val id = UUID.randomUUID()
                 val status = "queued"
                 val createdAt = Instant.now()
@@ -1154,7 +1273,7 @@ fun Application.module() {
                         it[ResolutionJobs.id] = id
                         it[ResolutionJobs.name] = req.name
                         it[ResolutionJobs.status] = status
-                        it[ResolutionJobs.configJson] = req.config.toString()
+                        it[ResolutionJobs.configJson] = configToStore.toString()
                         it[ResolutionJobs.datasetId] = datasetId
                         it[ResolutionJobs.entityType] = req.entityType
                         it[ResolutionJobs.createdAt] = createdAt
@@ -1167,7 +1286,7 @@ fun Application.module() {
                         status = status,
                         datasetId = req.datasetId,
                         entityType = req.entityType,
-                        config = req.config,
+                        config = configToStore,
                         createdAt = createdAt.toString()
                     )
                 )

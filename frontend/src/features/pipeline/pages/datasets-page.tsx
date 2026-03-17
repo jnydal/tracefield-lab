@@ -40,9 +40,18 @@ export function DatasetsPage() {
   const [idColumn, setIdColumn] = useState('id');
   const [extractJobId, setExtractJobId] = useState<string | null>(null);
 
-  const { data: extractDataset } = useGetDatasetQuery(extractDatasetId ?? '', {
+  const { data: extractDataset, refetch: refetchExtractDataset } = useGetDatasetQuery(extractDatasetId ?? '', {
     skip: !extractDatasetId,
+    refetchOnMountOrArgChange: 30,
   });
+  useEffect(() => {
+    if (extractDatasetId) refetchExtractDataset();
+  }, [extractDatasetId, refetchExtractDataset]);
+  useEffect(() => {
+    if (!extractDatasetId) return;
+    const interval = setInterval(() => refetchExtractDataset(), 5000);
+    return () => clearInterval(interval);
+  }, [extractDatasetId, refetchExtractDataset]);
   const [triggerExtract, { isLoading: isExtracting }] =
     useTriggerFeatureExtractMutation();
   const [uploadDatasetFile, { isLoading: isUploading }] =

@@ -1,10 +1,15 @@
 package com.tracefield.api.storage
 
 import aws.sdk.kotlin.services.s3.S3Client
-import aws.sdk.kotlin.services.s3.model.*
+import aws.sdk.kotlin.services.s3.model.BucketCannedAcl
+import aws.sdk.kotlin.services.s3.model.CreateBucketRequest
+import aws.sdk.kotlin.services.s3.model.GetObjectRequest
+import aws.sdk.kotlin.services.s3.model.HeadBucketRequest
+import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
 import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
 import aws.smithy.kotlin.runtime.content.ByteStream
+import aws.smithy.kotlin.runtime.content.toByteArray
 import aws.smithy.kotlin.runtime.net.url.Url
 import com.tracefield.core.Config
 import kotlinx.coroutines.runBlocking
@@ -98,6 +103,32 @@ class S3Storage(
             })
         }
         return "s3://$bucket/$key"
+    }
+
+    /**
+     * Read an object from storage by its URI (e.g. s3://bucket/key).
+     * Returns null if the URI does not refer to this bucket or the object does not exist.
+     */
+    fun getFile(objectUri: String): ByteArray? {
+        if (!objectUri.startsWith("s3://")) return null
+        val path = objectUri.removePrefix("s3://")
+        val slash = path.indexOf('/')
+        if (slash <= 0) return null
+        val uriBucket = path.substring(0, slash)
+        val key = path.substring(slash + 1)
+        if (uriBucket != bucket || key.isBlank()) return null
+        return runBlocking {
+            try {
+                s3Client.getObject(GetObjectRequest {
+                    bucket = this@S3Storage.bucket
+                    this.key = key
+                }) { resp ->
+                    resp.body?.toByteArray()
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
 }
 
