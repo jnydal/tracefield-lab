@@ -177,7 +177,7 @@ both describe *January 2023* — the same time period. That's entity resolution 
    - **Entity type:** `time_period`
    - **Join keys:** `period_id`
    - **Semantic fields:** `period_label`
-   - **Create new entities if no match:** No
+   - **Create new entities if no match:** Yes
    - Check **Use all ingested rows from this dataset** (12 rows). Create the job and wait.
 
 **Option B — Manual records:**  
@@ -201,16 +201,11 @@ the other."
 
 1. **Datasets** → open **NYC Crime Statistics 2023** → **Extract embeddings**.
    - Text column: `month_label`, ID column: `crime_record_id`.
-   - Run and wait. (Scalar features `total_incidents`, `violent_incidents` may be
-     available via the ingest worker or seed data — see note below.)
+   - Run and wait. (Feature definitions for analysis are created in the UI — see Step 5 "Before you start" and the note below.)
 2. **Datasets** → open **NYC Ice Cream Sales 2023** → **Extract embeddings**.
    - Text column: `period_label` (or `notes`), ID column: `period_id`. Run and wait.
 
-> **Note on scalar features:** If your setup doesn't automatically extract
-> `total_incidents` and `units_sold_thousands` as scalar features, load the seed
-> for these two datasets from `infra/sql/` or register them manually via the
-> feature worker API. The analysis step in Phase 1 requires these two numeric
-> features on the resolved `time_period` entities.
+> **Note on scalar features:** Create the feature definitions in the UI (**Features** → create `total_incidents` and `units_sold_thousands` as in Step 5 "Before you start") so they appear in the analysis dropdowns. The analysis step also needs numeric *values* for these features on the resolved `time_period` entities; if your setup doesn't populate those automatically via an ingest or feature worker, you may need to load or sync that data separately.
 
 ---
 
@@ -218,6 +213,16 @@ the other."
 
 **What you say:** "Here's the moment. We ask the system: does crime correlate with
 ice cream sales? Let's see what it finds."
+
+**Before you start:** The Left/Right feature dropdowns are filled from **Features** (feature definitions). Create the ones you need in the UI so they appear in the dropdowns:
+
+1. Go to **Features** (in the app nav).
+2. **Create** two feature definitions (use "Feature name" and "Value type", submit for each):
+   - Name: `total_incidents`, Value type: `float` (or `number`).
+   - Name: `units_sold_thousands`, Value type: `float` (or `number`).
+3. For later steps (temperature), you can add now or when you get there: `avg_temp_f` and `heat_index_f` (value type `float`).
+
+Then go to **Analysis jobs**; the Left/Right feature dropdowns should list these names.
 
 **In the UI:**
 
@@ -318,8 +323,7 @@ scalar features on the time period entities."
 
 1. **Datasets** → open **NYC Monthly Temperature 2023** → **Extract embeddings**.
    - Text column: `notes`, ID column: `temp_record_id`. Run and wait.
-2. Ensure scalar features `avg_temp_f` and `heat_index_f` are available on the
-   `time_period` entities (via ingest worker or seed data, same as step 4).
+2. Ensure feature definitions `avg_temp_f` and `heat_index_f` exist (**Features** → create them if you didn’t in Step 5) and that numeric values for them are available on the `time_period` entities (via your ingest or feature pipeline).
 
 ---
 
