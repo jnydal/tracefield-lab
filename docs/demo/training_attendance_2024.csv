@@ -1,0 +1,6 @@
+employee_id,full_name,training_hours,department,notes
+emp-101,Alice Chen,24,Engineering,Completed safety and compliance
+emp-102,Robert Smith,8,Operations,Basic onboarding only
+emp-103,Carol Jones,32,Engineering,Full certification track
+emp-104,David Lee,12,Sales,Product training
+emp-105,Eve Martinez,28,Engineering,Leadership and technical
