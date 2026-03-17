@@ -41,7 +41,11 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.serializer
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.dao.id.EntityID
 import java.util.*
@@ -263,13 +267,14 @@ private fun runScalarExtract(
     val rows = if (format == "json") parseFullJson(content) else parseFullCsv(content)
     if (rows.isEmpty()) return """{"rowsProcessed":0,"featuresWritten":0,"message":"No rows in file"}"""
     if (!rows.first().containsKey(idColumn)) throw IllegalStateException("ID column '$idColumn' not found in file")
-    val entityMapLookup = transaction(DatabaseManager.getDatabase()) {
-        EntityMap.select { EntityMap.datasetId eq datasetId }
+    val entityMapLookup: Map<String, UUID> = transaction(DatabaseManager.getDatabase()) {
+        val pairs = EntityMap.select { EntityMap.datasetId eq datasetId }
             .mapNotNull { row ->
                 val srcId = row[EntityMap.sourceRecordId] ?: return@mapNotNull null
-                srcId to row[EntityMap.entityId].value
+                val eid = (row[EntityMap.entityId] as EntityID<UUID>).value
+                Pair(srcId, eid)
             }
-            .toMap()
+        pairs.toMap()
     }
     if (entityMapLookup.isEmpty()) throw IllegalStateException("No entity mappings for this dataset; run resolution first")
     val featureDefIds = mutableListOf<java.util.UUID>()
@@ -293,7 +298,9 @@ private fun runScalarExtract(
         }
     }
     transaction(DatabaseManager.getDatabase()) {
-        Features.deleteWhere { (Features.datasetId eq datasetId) and (Features.featureDefinitionId inList featureDefIds) }
+        Features.deleteWhere {
+            (Features.datasetId eq datasetId) and (Features.featureDefinitionId inList featureDefIds)
+        }
     }
     var written = 0
     transaction(DatabaseManager.getDatabase()) {
@@ -311,8 +318,7 @@ private fun runScalarExtract(
                     it[Features.featureDefinitionId] = defId
                     it[Features.valueNum] = valueNum
                     it[Features.valueText] = valueText
-                    it[Features.provenanceJson] = buildJsonObject { put("source", JsonPrimitive("extract-scalar")) }
-                    it[Features.createdAt] = Instant.now()
+                    it[Features.provenanceJson] = buildJsonObject { put("source", JsonPrimitive("extract-scalar")) }.toString()
                 }
                 written++
             }
@@ -653,7 +659,7 @@ fun Application.module() {
                     call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Dataset has no files; upload data first"))
                     return@post
                 }
-                val columnsJson = kotlinx.serialization.json.Json.encodeToString(req.columns)
+                val columnsJson = jsonParser.encodeToString(ListSerializer(serializer<ScalarExtractColumnRequest>()), req.columns)
                 val job = jobQueue.createScalarExtractJob(id.toString(), req.idColumn, columnsJson)
                 GlobalScope.launch(Dispatchers.IO) {
                     try {
