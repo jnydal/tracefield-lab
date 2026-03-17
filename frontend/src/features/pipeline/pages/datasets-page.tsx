@@ -213,6 +213,10 @@ export function DatasetsPage() {
   const fileCount = Number(extractDataset?.fileCount ?? 0);
   const mappingsCount = Number(extractDataset?.mappingsCount ?? 0);
   const canExtract = fileCount > 0 && mappingsCount > 0;
+  const jobInProgress =
+    !!extractJobId &&
+    !!jobStatus &&
+    !['finished', 'failed'].includes(jobStatus.status.toLowerCase());
 
   const schemaColumns =
     extractDataset?.schema && typeof extractDataset.schema === 'object' && 'columns' in extractDataset.schema
@@ -492,9 +496,13 @@ export function DatasetsPage() {
             <button
               type="submit"
               className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-violet-600 dark:hover:bg-violet-700"
-              disabled={!canExtract || !textColumn.trim() || isExtracting}
+              disabled={!canExtract || !textColumn.trim() || isExtracting || jobInProgress}
             >
-              {isExtracting ? 'Starting…' : 'Start extraction'}
+              {isExtracting
+                ? 'Starting…'
+                : jobInProgress
+                  ? 'Extraction running…'
+                  : 'Start extraction'}
             </button>
             <button
               type="button"
