@@ -8,7 +8,18 @@ alwaysApply: true
 
 These rules are specific to the Tracefield Lab system. They complement the generic rules and
 reflect the architecture defined in `docs/ARCHITECTURE.md`, the NFR in `docs/NFR.md`,
-and the agent contract in `AGENT.md`.
+the agent contract in `AGENT.md`, and the **system invariants** in `docs/INVARIANTS.md`.
+
+---
+
+## System Invariants
+
+Tracefield defines core invariants that protect the pipeline from silent derailing. **All pipeline and schema changes must preserve them.**
+
+- **Before adding or changing a pipeline stage or schema:** Consult `docs/INVARIANTS.md`. Ensure the change does not violate any listed invariant (provenance on output, job status lifecycle, feature contract, analysis result shape, no orphan features).
+- **New pipeline stage:** Must emit provenance for all data produced; must update job status correctly; must not leave jobs indefinitely in non-terminal states.
+- **Schema change:** Migrations must not break invariant enforcement (e.g. feature tables must support provenance; status columns must allow only defined values).
+- Invariant checks run in CI (`test/invariants/`) and are exposed live at `GET /invariants`; do not introduce code that would cause those checks to fail.
 
 ---
 
@@ -97,3 +108,4 @@ When generating a new feature worker, API route, or pipeline stage, confirm all 
 8. Migration is backward compatible (if schema change required)
 9. No real PII in fixtures, seeds, or comments
 10. **Relevant documentation updated** — ARCHITECTURE.md, RUNBOOK.md, AGENT.md, or README.md as applicable (see architecture-quality rules)
+11. **Invariants preserved** — change does not violate any invariant in `docs/INVARIANTS.md`; if adding pipeline/schema, confirm against that doc

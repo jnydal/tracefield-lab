@@ -22,6 +22,7 @@ AGENT.md                              ← Feature module contract and API intera
 docs/
   ARCHITECTURE.md                     ← System design, patterns, module boundaries
   NFR.md                              ← Performance, scalability, availability targets
+  INVARIANTS.md                       ← Pipeline invariants; preserve when changing pipeline/schema
   DECISIONS.md                        ← [YOU CREATE] Architecture Decision Records (ADRs)
   CONTRIBUTING.md                     ← [YOU CREATE] Code style, PR process, branching
 ```
@@ -92,5 +93,6 @@ These rules are most effective when paired with automated enforcement:
 | Data Integrity | Migrations are irreversible. Backward compatibility is mandatory. |
 | Performance | Flag N+1s, unbounded fetches, and blocking async operations at generation time. |
 | Provenance | Every pipeline stage that produces data must emit a provenance_event. |
+| Invariants | Pipeline and schema changes must preserve invariants in `docs/INVARIANTS.md`. |
 | Kafka Integrity | Idempotent consumers. Offset commits after writes. Dead-letter on exhaustion. |
 | Statistical Validity | Never silently change tests, corrections, or effect size calculations. |
