@@ -59,6 +59,14 @@ FEAT_DEF_ICE_CREAM = "66666666-6666-6666-6666-666666666801"
 FEAT_DEF_CRIME = "66666666-6666-6666-6666-666666666802"
 ANALYSIS_JOB_ID_IC = "66666666-6666-6666-6666-666666666901"
 
+# Heat/Crime demo contract (docs/DEMO_WALKTHROUGH_HEATCRIME.md): same feature names and 12 time_period entities
+DATASET_ID_HEATCRIME_CRIME = "77777777-7777-7777-7777-777777777701"
+DATASET_ID_HEATCRIME_ICECREAM = "77777777-7777-7777-7777-777777777702"
+ENTITY_IDS_HEATCRIME = [f"77777777-7777-7777-7777-777777777{i:02d}" for i in range(1, 13)]
+FEAT_DEF_TOTAL_INCIDENTS = "77777777-7777-7777-7777-777777778801"
+FEAT_DEF_UNITS_SOLD = "77777777-7777-7777-7777-777777778802"
+ANALYSIS_JOB_ID_HEATCRIME = "77777777-7777-7777-7777-777777779901"
+
 
 def _get_db_url() -> str | None:
     return os.environ.get("DATABASE_URL") or os.environ.get("PG_DSN")
@@ -295,6 +303,133 @@ def _seed_ice_cream_crime(conn) -> None:
         cur.close()
 
 
+def _seed_heatcrime_demo_contract(conn) -> None:
+    """Seed data matching docs/DEMO_WALKTHROUGH_HEATCRIME.md: 12 time_period entities, two datasets,
+    feature definitions total_incidents and units_sold_thousands, and features that produce the
+    documented spurious correlation. Locks the demo contract for integration tests.
+    """
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM analysis_results WHERE job_id = %s::uuid", (ANALYSIS_JOB_ID_HEATCRIME,))
+        cur.execute("DELETE FROM analysis_jobs WHERE id = %s::uuid", (ANALYSIS_JOB_ID_HEATCRIME,))
+        cur.execute(
+            "DELETE FROM features WHERE dataset_id IN (%s::uuid, %s::uuid)",
+            (DATASET_ID_HEATCRIME_CRIME, DATASET_ID_HEATCRIME_ICECREAM),
+        )
+        cur.execute(
+            "DELETE FROM entity_map WHERE dataset_id IN (%s::uuid, %s::uuid)",
+            (DATASET_ID_HEATCRIME_CRIME, DATASET_ID_HEATCRIME_ICECREAM),
+        )
+        cur.execute(
+            "DELETE FROM entities WHERE id IN (" + ",".join(["%s::uuid"] * len(ENTITY_IDS_HEATCRIME)) + ")",
+            tuple(ENTITY_IDS_HEATCRIME),
+        )
+        cur.execute(
+            "DELETE FROM feature_definitions WHERE id IN (%s::uuid, %s::uuid)",
+            (FEAT_DEF_TOTAL_INCIDENTS, FEAT_DEF_UNITS_SOLD),
+        )
+        cur.execute(
+            "DELETE FROM datasets WHERE id IN (%s::uuid, %s::uuid)",
+            (DATASET_ID_HEATCRIME_CRIME, DATASET_ID_HEATCRIME_ICECREAM),
+        )
+
+        cur.execute(
+            """
+            INSERT INTO users (id, email, display_name, created_at, updated_at)
+            VALUES (gen_random_uuid(), %s, %s, NOW(), NOW())
+            ON CONFLICT (email) DO NOTHING
+            """,
+            ("test@example.com", "Test User"),
+        )
+
+        cur.execute(
+            """
+            INSERT INTO datasets (id, name, description, source, license, schema_json, created_at, updated_at)
+            VALUES
+              (%s::uuid, 'NYC Crime Statistics 2023', 'Crime demo dataset', 'https://example.org', 'CC-BY-4.0', '{}', NOW(), NOW()),
+              (%s::uuid, 'NYC Ice Cream Sales 2023', 'Ice cream demo dataset', 'https://example.org', 'CC-BY-4.0', '{}', NOW(), NOW())
+            ON CONFLICT (id) DO NOTHING
+            """,
+            (DATASET_ID_HEATCRIME_CRIME, DATASET_ID_HEATCRIME_ICECREAM),
+        )
+
+        for i, eid in enumerate(ENTITY_IDS_HEATCRIME):
+            cur.execute(
+                """
+                INSERT INTO entities (id, entity_type, display_name, external_ids, created_at, updated_at)
+                VALUES (%s::uuid, 'time_period', %s, %s::jsonb, NOW(), NOW())
+                ON CONFLICT (id) DO NOTHING
+                """,
+                (eid, f"2023-{i+1:02d}", json.dumps({"month_index": i + 1})),
+            )
+
+        for i, eid in enumerate(ENTITY_IDS_HEATCRIME):
+            rec_crime = f"NYC-CRIME-2023-{i+1:02d}"
+            cur.execute(
+                """
+                INSERT INTO entity_map (id, dataset_id, entity_id, source_record_id, source_keys, method, score, created_at)
+                VALUES (gen_random_uuid(), %s::uuid, %s::uuid, %s, %s::jsonb, 'exact', 1.0, NOW())
+                """,
+                (DATASET_ID_HEATCRIME_CRIME, eid, rec_crime, json.dumps({"crime_record_id": rec_crime})),
+            )
+            rec_ice = f"ICECREAM-{['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][i]}-2023"
+            cur.execute(
+                """
+                INSERT INTO entity_map (id, dataset_id, entity_id, source_record_id, source_keys, method, score, created_at)
+                VALUES (gen_random_uuid(), %s::uuid, %s::uuid, %s, %s::jsonb, 'exact', 1.0, NOW())
+                """,
+                (DATASET_ID_HEATCRIME_ICECREAM, eid, rec_ice, json.dumps({"period_id": rec_ice})),
+            )
+
+        cur.execute(
+            """
+            INSERT INTO feature_definitions (id, name, description, value_type, unit, owner, created_at)
+            VALUES
+              (%s::uuid, 'total_incidents', 'Total crime incidents (demo)', 'number', NULL, 'test@example.com', NOW()),
+              (%s::uuid, 'units_sold_thousands', 'Units sold thousands (demo)', 'number', NULL, 'test@example.com', NOW())
+            ON CONFLICT (id) DO NOTHING
+            """,
+            (FEAT_DEF_TOTAL_INCIDENTS, FEAT_DEF_UNITS_SOLD),
+        )
+
+        # Seasonal pattern from demo: crime and ice cream both high in summer (indices 5-7), low in winter -> strong correlation
+        crime_values = [5821, 5900, 6100, 6912, 7200, 8000, 10412, 9000, 7612, 7000, 6000, 5908]
+        ice_cream_values = [11.8, 12.0, 15.0, 38.4, 45.0, 80.0, 148.2, 100.0, 51.6, 40.0, 20.0, 15.9]
+        prov = json.dumps({"source": "test-heatcrime-demo"})
+        for i, eid in enumerate(ENTITY_IDS_HEATCRIME):
+            cur.execute(
+                """
+                INSERT INTO features (id, entity_id, dataset_id, feature_definition_id, value_num, value_text, provenance_json, created_at)
+                VALUES (gen_random_uuid(), %s::uuid, %s::uuid, %s::uuid, %s, NULL, %s::jsonb, NOW())
+                """,
+                (eid, DATASET_ID_HEATCRIME_CRIME, FEAT_DEF_TOTAL_INCIDENTS, crime_values[i], prov),
+            )
+            cur.execute(
+                """
+                INSERT INTO features (id, entity_id, dataset_id, feature_definition_id, value_num, value_text, provenance_json, created_at)
+                VALUES (gen_random_uuid(), %s::uuid, %s::uuid, %s::uuid, %s, NULL, %s::jsonb, NOW())
+                """,
+                (eid, DATASET_ID_HEATCRIME_ICECREAM, FEAT_DEF_UNITS_SOLD, ice_cream_values[i], prov),
+            )
+
+        cur.execute(
+            """
+            INSERT INTO analysis_jobs (id, name, status, config_json, requested_by, created_at)
+            VALUES (
+                %s::uuid,
+                'Crime vs ice cream — Phase 1 (spurious)',
+                'queued',
+                '{"leftFeatureSet":"total_incidents","rightFeatureSet":"units_sold_thousands","test":"spearman","correction":"benjamini-hochberg"}'::jsonb,
+                (SELECT id FROM users WHERE email = 'test@example.com' LIMIT 1),
+                NOW()
+            )
+            """,
+            (ANALYSIS_JOB_ID_HEATCRIME,),
+        )
+    finally:
+        cur.close()
+
+
 @pytest.fixture(scope="module")
 def db_conn():
     """Database connection for integration test. Skips if DATABASE_URL not set or connection fails."""
@@ -351,6 +486,39 @@ def seeded_ice_cream_conn(db_conn):
         (FEAT_DEF_ICE_CREAM, FEAT_DEF_CRIME),
     )
     cur.execute("DELETE FROM datasets WHERE id IN (%s::uuid, %s::uuid)", (DATASET_ID_RETAIL, DATASET_ID_CRIME))
+    db_conn.commit()
+    cur.close()
+
+
+@pytest.fixture
+def seeded_heatcrime_conn(db_conn):
+    """Connection with Heat/Crime demo contract seed (12 time_periods, total_incidents, units_sold_thousands); cleans up after test."""
+    _seed_heatcrime_demo_contract(db_conn)
+    db_conn.commit()
+    yield db_conn
+    cur = db_conn.cursor()
+    cur.execute("DELETE FROM analysis_results WHERE job_id = %s::uuid", (ANALYSIS_JOB_ID_HEATCRIME,))
+    cur.execute("DELETE FROM analysis_jobs WHERE id = %s::uuid", (ANALYSIS_JOB_ID_HEATCRIME,))
+    cur.execute(
+        "DELETE FROM features WHERE dataset_id IN (%s::uuid, %s::uuid)",
+        (DATASET_ID_HEATCRIME_CRIME, DATASET_ID_HEATCRIME_ICECREAM),
+    )
+    cur.execute(
+        "DELETE FROM entity_map WHERE dataset_id IN (%s::uuid, %s::uuid)",
+        (DATASET_ID_HEATCRIME_CRIME, DATASET_ID_HEATCRIME_ICECREAM),
+    )
+    cur.execute(
+        "DELETE FROM entities WHERE id IN (" + ",".join(["%s::uuid"] * len(ENTITY_IDS_HEATCRIME)) + ")",
+        tuple(ENTITY_IDS_HEATCRIME),
+    )
+    cur.execute(
+        "DELETE FROM feature_definitions WHERE id IN (%s::uuid, %s::uuid)",
+        (FEAT_DEF_TOTAL_INCIDENTS, FEAT_DEF_UNITS_SOLD),
+    )
+    cur.execute(
+        "DELETE FROM datasets WHERE id IN (%s::uuid, %s::uuid)",
+        (DATASET_ID_HEATCRIME_CRIME, DATASET_ID_HEATCRIME_ICECREAM),
+    )
     db_conn.commit()
     cur.close()
 
@@ -490,6 +658,75 @@ def test_ice_cream_crime_spurious_correlation_cross_dataset(seeded_ice_cream_con
     )
     prov_count = cur.fetchone()[0]
     assert prov_count >= 1, "Expected at least one provenance_event for stage=analysis"
+
+    check_results = run_all_checks(conn)
+    failed = [r for r in check_results if not r.passed]
+    assert not failed, f"Invariant check(s) failed: {[f.name + ': ' + f.message for f in failed]}"
+    cur.close()
+
+
+@pytest.mark.integration
+def test_heatcrime_demo_contract(seeded_heatcrime_conn):
+    """
+    Heat/Crime demo contract (docs/DEMO_WALKTHROUGH_HEATCRIME.md).
+
+    Seeds 12 time_period entities, two datasets (crime + ice cream), feature definitions
+    total_incidents and units_sold_thousands, and features that produce the documented
+    spurious correlation. Runs Spearman(total_incidents, units_sold_thousands) and asserts:
+    - Job completes successfully.
+    - Result has strong positive correlation (r > 0.9) and significant p-value.
+    - Provenance and invariant checks pass.
+
+    This locks the demo contract: if the walkthrough or feature names change, update
+    this test and the doc together.
+    """
+    if fetch_queued_job is None or process_job is None:
+        pytest.skip("worker_analysis not importable (numpy/scipy required)")
+
+    conn = seeded_heatcrime_conn
+    job = fetch_queued_job(conn)
+    assert job is not None, "Expected one queued analysis job after Heat/Crime demo seed"
+    process_job(conn, dict(job))
+    conn.commit()
+
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT status FROM analysis_jobs WHERE id = %s::uuid",
+        (ANALYSIS_JOB_ID_HEATCRIME,),
+    )
+    row = cur.fetchone()
+    assert row is not None, "Analysis job should exist"
+    assert row[0] == "completed", f"Expected status=completed, got {row[0]}"
+
+    cur.execute(
+        """
+        SELECT id, job_id, feature_x_id, feature_y_id, stats_json, p_value, effect_size, correction
+        FROM analysis_results
+        WHERE job_id = %s::uuid
+        """,
+        (ANALYSIS_JOB_ID_HEATCRIME,),
+    )
+    results = cur.fetchall()
+    assert len(results) >= 1, "Expected at least one analysis result"
+    one = results[0]
+    stats_json = one[4]
+    assert stats_json is not None, "stats_json must be set"
+    if isinstance(stats_json, str):
+        stats_json = json.loads(stats_json)
+    assert stats_json.get("test") == "spearman", "Expected Spearman result"
+    assert stats_json.get("n") == 12, "Expected n=12 (12 months)"
+    rho = stats_json.get("correlation") or stats_json.get("rho") or one[6]
+    assert rho is not None, "Spearman result should include correlation/rho or effect_size"
+    if isinstance(rho, (int, float)) and rho == rho:
+        assert rho > 0.9, f"Demo expects strong correlation (rho > 0.9), got {rho}"
+    assert one[5] is not None, "p_value should be set"
+    assert one[5] < 0.05, f"Expected significant p-value for demo data, got {one[5]}"
+
+    cur.execute(
+        "SELECT COUNT(*) FROM provenance_event WHERE stage = 'analysis' AND job_id = %s::uuid",
+        (ANALYSIS_JOB_ID_HEATCRIME,),
+    )
+    assert cur.fetchone()[0] >= 1, "Expected at least one provenance_event for stage=analysis"
 
     check_results = run_all_checks(conn)
     failed = [r for r in check_results if not r.passed]

@@ -9,6 +9,7 @@ import com.tracefield.api.storage.createS3Storage
 import com.tracefield.api.jobs.ApiJobQueue
 import com.tracefield.core.Config
 import com.tracefield.core.DatabaseManager
+import com.tracefield.core.logProvenanceEvent
 import com.tracefield.core.queue.JobStatus
 import com.tracefield.core.invariants.InvariantChecks
 import com.tracefield.core.invariants.InvariantCheckResult
@@ -666,6 +667,14 @@ fun Application.module() {
                         jobQueue.updateJobStatus(job.id, JobStatus.STARTED)
                         val result = runScalarExtract(storage, id, req.idColumn, req.columns)
                         jobQueue.updateJobStatus(job.id, JobStatus.FINISHED, result)
+                        runCatching {
+                            logProvenanceEvent(
+                                jobId = UUID.fromString(job.id),
+                                datasetId = id,
+                                stage = "scalar.extract",
+                                detail = mapOf("result" to result),
+                            )
+                        }.onFailure { call.application.log.error("Failed to emit scalar.extract provenance", it) }
                     } catch (e: Exception) {
                         call.application.log.error("Scalar extract failed", e)
                         jobQueue.updateJobStatus(job.id, JobStatus.FAILED, excInfo = e.message ?: "Scalar extract failed")

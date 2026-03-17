@@ -7,6 +7,7 @@ This document lists **invariants** that protect the pipeline from silent deraili
 | Invariant | Meaning | Enforced by |
 |-----------|--------|-------------|
 | [Provenance on output](#1-provenance-on-output) | Every pipeline stage that produces or transforms data emits at least one `provenance_event`. | Workers (code); verified by [invariant checks](test/invariants/checks.py) in CI. |
+| [Scalar-extract provenance](#scalar-extract-provenance) | If any features have `provenance_json->>'source' = 'extract-scalar'`, at least one `provenance_event` has `stage = 'scalar.extract'`. | API (emits event on success); invariant check `scalar_extract_provenance_event`. |
 | [Job status lifecycle](#2-job-status-lifecycle) | `job_status` and `analysis_jobs` use only allowed status values and sensible transitions. | Application logic; DB CHECK constraints (optional migration). |
 | [Feature contract](#3-feature-contract) | Every row in `features` has `entity_id`, `feature_definition_id`, and non-null `provenance_json`. | DB FKs; application validation; invariant checks. |
 | [Analysis result shape](#4-analysis-result-shape) | Every row in `analysis_results` has required fields; multi-test jobs have correction. | Worker-analysis; invariant checks. |
@@ -23,8 +24,19 @@ This document lists **invariants** that protect the pipeline from silent deraili
 
 **Enforcement:**
 
-- **Application:** Worker-embeddings, resolver, and worker-analysis emit provenance after writing data. See `.cursor/rules/tracefield.mdc` (Provenance — Non-Negotiable).
+- **Application:** Worker-embeddings, resolver, worker-analysis, and the API (scalar extract) emit provenance after writing data. See `.cursor/rules/tracefield.mdc` (Provenance — Non-Negotiable).
 - **Tests:** Full-workflow integration test asserts presence of provenance for embeddings and analysis. Invariant check module can query for stages that should have produced data and verify at least one event exists.
+
+### Scalar-extract provenance
+
+**Invariant:** If any row in `features` has `provenance_json->>'source' = 'extract-scalar'`, then at least one row in `provenance_event` must have `stage = 'scalar.extract'`.
+
+**Rationale:** The scalar-extract pipeline stage (API `POST /datasets/{id}/extract-scalar`) produces feature rows; the same provenance-on-output rule applies so the audit trail is complete.
+
+**Enforcement:**
+
+- **Application:** After a successful scalar extract, the API calls `logProvenanceEvent(jobId, datasetId, stage = "scalar.extract", detail = result)`.
+- **Tests:** Invariant check `scalar_extract_provenance_event` fails if there are extract-scalar features but no `provenance_event` for stage `scalar.extract`. When there are no such features, the check passes (N/A).
 
 ---
 
@@ -103,7 +115,7 @@ When an analysis produces multiple p-values, config or results include a correct
 
 ## Live checks (production)
 
-The API exposes **`GET /invariants`** so production (or staging) can detect invariant violations live. On each request the API runs the same five checks against the database.
+The API exposes **`GET /invariants`** so production (or staging) can detect invariant violations live. On each request the API runs the same six checks against the database.
 
 - **When all checks pass:** Response is **200 OK** with a JSON body containing `allPass: true` and a list of check results (`name`, `passed`, `message`, optional `details`).
 - **When any check fails:** Response is **503 Service Unavailable** with the same JSON body and `allPass: false`; the `checks` array lists which checks failed and their messages.

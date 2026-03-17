@@ -479,7 +479,7 @@ Example (interpret 503 for on-call):
 curl -s http://localhost:8000/invariants | jq .
 ```
 
-If you get 503, inspect the `checks` array for entries with `"passed": false`; the `message` and `details` fields explain what is wrong (e.g. feature rows missing provenance, disallowed job status values). See [docs/INVARIANTS.md](docs/INVARIANTS.md) for the list of invariants.
+If you get 503, inspect the `checks` array for entries with `"passed": false`; the `message` and `details` fields explain what is wrong (e.g. feature rows missing provenance, disallowed job status values, or extract-scalar features without a matching `scalar.extract` provenance_event). See [docs/INVARIANTS.md](docs/INVARIANTS.md) for the full list of invariants.
 
 ### Database Health
 

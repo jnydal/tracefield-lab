@@ -30,6 +30,7 @@ object InvariantChecks {
             runCheck("analysis_jobs_status_values") { checkAnalysisJobsStatusValues(conn) },
             runCheck("job_status_terminal_ended_at") { checkJobStatusTerminalEndedAt(conn) },
             runCheck("analysis_results_required_fields") { checkAnalysisResultsRequiredFields(conn) },
+            runCheck("scalar_extract_provenance_event") { checkScalarExtractProvenanceEvent(conn) },
         )
     }
 
@@ -187,6 +188,53 @@ object InvariantChecks {
                         passed = true,
                         message = "All analysis_results rows have required fields",
                     )
+                }
+            }
+        }
+    }
+
+    /**
+     * If any features have provenance_json->>'source' = 'extract-scalar', at least one
+     * provenance_event must have stage = 'scalar.extract'.
+     */
+    private fun checkScalarExtractProvenanceEvent(conn: Connection): InvariantCheckResult {
+        conn.prepareStatement("""
+            SELECT COUNT(*) AS n
+            FROM features
+            WHERE provenance_json IS NOT NULL
+              AND provenance_json->>'source' = 'extract-scalar'
+        """.trimIndent()).use { stmt ->
+            stmt.executeQuery().use { rs ->
+                val nScalarFeatures = if (rs.next()) rs.getLong("n") else 0L
+                if (nScalarFeatures == 0L) {
+                    return InvariantCheckResult(
+                        name = "scalar_extract_provenance_event",
+                        passed = true,
+                        message = "No extract-scalar features; check N/A",
+                    )
+                }
+                conn.prepareStatement("""
+                    SELECT COUNT(*) AS n
+                    FROM provenance_event
+                    WHERE stage = 'scalar.extract'
+                """.trimIndent()).use { stmt2 ->
+                    stmt2.executeQuery().use { rs2 ->
+                        val nEvents = if (rs2.next()) rs2.getLong("n") else 0L
+                        return if (nEvents == 0L) {
+                            InvariantCheckResult(
+                                name = "scalar_extract_provenance_event",
+                                passed = false,
+                                message = "$nScalarFeatures feature(s) from extract-scalar but no provenance_event for stage scalar.extract",
+                                details = mapOf("scalar_feature_count" to nScalarFeatures),
+                            )
+                        } else {
+                            InvariantCheckResult(
+                                name = "scalar_extract_provenance_event",
+                                passed = true,
+                                message = "Extract-scalar features have corresponding provenance_event(s)",
+                            )
+                        }
+                    }
                 }
             }
         }

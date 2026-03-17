@@ -173,6 +173,49 @@ def check_analysis_results_required_fields(conn) -> CheckResult:
     )
 
 
+def check_scalar_extract_provenance_event(conn) -> CheckResult:
+    """If any features have provenance_json->>'source' = 'extract-scalar', at least one provenance_event must have stage = 'scalar.extract'."""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT COUNT(*) AS n
+            FROM features
+            WHERE provenance_json IS NOT NULL
+              AND provenance_json->>'source' = 'extract-scalar'
+            """
+        )
+        row = cur.fetchone()
+    n_scalar_features = row["n"] if row else 0
+    if n_scalar_features == 0:
+        return CheckResult(
+            name="scalar_extract_provenance_event",
+            passed=True,
+            message="No extract-scalar features; check N/A",
+        )
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT COUNT(*) AS n
+            FROM provenance_event
+            WHERE stage = 'scalar.extract'
+            """
+        )
+        row = cur.fetchone()
+    n_events = row["n"] if row else 0
+    if n_events == 0:
+        return CheckResult(
+            name="scalar_extract_provenance_event",
+            passed=False,
+            message=f"{n_scalar_features} feature(s) from extract-scalar but no provenance_event for stage scalar.extract",
+            details={"scalar_feature_count": n_scalar_features},
+        )
+    return CheckResult(
+        name="scalar_extract_provenance_event",
+        passed=True,
+        message="Extract-scalar features have corresponding provenance_event(s)",
+    )
+
+
 def run_all_checks(conn) -> list[CheckResult]:
     """Run all invariant checks against the given DB connection. Returns list of CheckResult."""
     checks = [
@@ -181,6 +224,7 @@ def run_all_checks(conn) -> list[CheckResult]:
         check_analysis_jobs_status_values,
         check_job_status_terminal_has_ended_at,
         check_analysis_results_required_fields,
+        check_scalar_extract_provenance_event,
     ]
     results = []
     for check_fn in checks:
