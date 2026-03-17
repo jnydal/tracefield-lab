@@ -1,0 +1,13 @@
+temp_record_id,month_reference,avg_temp_f,avg_temp_c,heat_index_f,days_above_80f,days_below_32f,precipitation_inches,notes
+TEMP-NYC-JAN23,January_2023,36.1,2.3,34.8,0,18,3.41,"Below-average temperatures; several hard freezes"
+TEMP-NYC-FEB23,February_2023,38.4,3.6,36.9,0,14,2.87,"Cold and dry; brief warm spell late month"
+TEMP-NYC-MAR23,March_2023,47.8,8.8,46.2,0,4,4.12,"Warming trend mid-month; still cool nights"
+TEMP-NYC-APR23,April_2023,58.6,14.8,57.4,0,0,3.96,"Comfortable spring temperatures; mild nights"
+TEMP-NYC-MAY23,May_2023,68.9,20.5,70.1,2,0,4.23,"Warm; first heat days in late May"
+TEMP-NYC-JUN23,June_2023,77.8,25.4,81.3,8,0,3.67,"Hot and humid; heat advisory issued once"
+TEMP-NYC-JUL23,July_2023,83.2,28.4,89.6,19,0,4.01,"Hottest month; multiple heat waves; 3-day 95°F+ stretch"
+TEMP-NYC-AUG23,August_2023,81.7,27.6,87.2,16,0,3.88,"Persistently hot; humidity elevated throughout"
+TEMP-NYC-SEP23,September_2023,73.5,23.1,76.4,6,0,3.29,"Warm start; cooling in final week"
+TEMP-NYC-OCT23,October_2023,62.8,17.1,62.0,0,0,3.54,"Pleasant fall temperatures; no heat stress"
+TEMP-NYC-NOV23,November_2023,51.4,10.8,50.1,0,1,3.72,"Cool; first frost late month"
+TEMP-NYC-DEC23,December_2023,41.3,5.2,39.7,0,9,3.18,"Cold; freeze events returned"

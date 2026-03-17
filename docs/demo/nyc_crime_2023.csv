@@ -1,0 +1,13 @@
+crime_record_id,month_label,total_incidents,violent_incidents,property_incidents,aggravated_assault,robbery,source_notes
+NYC-CRIME-2023-01,January 2023,5821,1204,4617,612,592,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-02,February 2023,5244,1091,4153,554,537,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-03,March 2023,6138,1278,4860,648,630,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-04,April 2023,6912,1436,5476,729,707,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-05,May 2023,7803,1621,6182,822,799,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-06,June 2023,9187,1908,7279,967,940,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-07,July 2023,10412,2164,8248,1096,1068,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-08,August 2023,10108,2100,8008,1064,1036,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-09,September 2023,8934,1856,7078,941,916,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-10,October 2023,7612,1581,6031,801,780,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-11,November 2023,6423,1334,5089,676,658,"NYPD CompStat, monthly aggregate"
+NYC-CRIME-2023-12,December 2023,5908,1227,4681,622,606,"NYPD CompStat, monthly aggregate"
