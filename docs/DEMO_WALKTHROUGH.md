@@ -171,7 +171,7 @@ If scalar features aren’t available yet, run a job that uses embeddings (e.g. 
 
 ---
 
-## One-line summary for your boss
+## One-line summary for your audience
 
 > “We brought in two siloed datasets—satisfaction survey and training attendance—resolved the same people across both, extracted features, and ran a cross-dataset analysis (satisfaction vs training hours) with proper correction and full provenance.”
 

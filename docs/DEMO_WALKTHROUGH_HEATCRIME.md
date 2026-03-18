@@ -10,7 +10,7 @@ Runtime: ~20–25 minutes.
 
 > "We have **two datasets** from totally different domains — NYPD monthly crime
 > statistics and a New York City ice cream sales report. After we resolve months onto
-> the same canonical entities (shared **`canonical_month`** key in the demo data), we
+> the same canonical entities (shared `**canonical_month`** key in the demo data), we
 > run a correlation analysis and get an alarming result: **ice cream sales and crime
 > rates are strongly correlated.** r ≈ 0.97, p < 0.001.
 >
@@ -37,16 +37,18 @@ for the same 12 calendar months — that part is realistic siloed data.
 
 So that Tracefield can **fuse** those silos reliably (same canonical entity per month,
 correct scalar pairing for analysis), every row also carries a shared
-**`canonical_month`** value (`2023-01` … `2023-12`). In a real deployment this might
+`**canonical_month`** value (`2023-01` … `2023-12`). In a real deployment this might
 come from a master calendar, data warehouse surrogate key, or ETL — here it is
 embedded in the files so **exact-match resolution** aligns months without depending
 on embedding similarity alone.
 
-| File | Domain | Operational ID | Federation key + analysis columns |
-|------|---------|----------------|-------------------------------------|
-| `docs/demo/nyc_crime_2023.csv` | NYPD crime statistics | `crime_record_id` | `canonical_month`, `month_label`, `total_incidents`, … |
-| `docs/demo/nyc_icecream_sales_2023.csv` | Ice cream vendor sales | `period_id` | `canonical_month`, `period_label`, `units_sold_thousands`, … |
-| `docs/demo/nyc_temperature_2023.csv` | NOAA-style temperature log | `temp_record_id` | `canonical_month`, `month_reference`, `avg_temp_f`, … |
+
+| File                                    | Domain                     | Operational ID    | Federation key + analysis columns                            |
+| --------------------------------------- | -------------------------- | ----------------- | ------------------------------------------------------------ |
+| `docs/demo/nyc_crime_2023.csv`          | NYPD crime statistics      | `crime_record_id` | `canonical_month`, `month_label`, `total_incidents`, …       |
+| `docs/demo/nyc_icecream_sales_2023.csv` | Ice cream vendor sales     | `period_id`       | `canonical_month`, `period_label`, `units_sold_thousands`, … |
+| `docs/demo/nyc_temperature_2023.csv`    | NOAA-style temperature log | `temp_record_id`  | `canonical_month`, `month_reference`, `avg_temp_f`, …        |
+
 
 **Join keys in resolution (Step 3 / 7):** list the **native ID first**, then
 `canonical_month` (comma-separated). The native ID stays the `source_record_id` for
@@ -55,13 +57,15 @@ scalar extract; `canonical_month` is what matches rows to the **same** canonical
 
 ### Data preview — the spurious correlation at a glance
 
+
 | Month | Avg Temp (°F) | Crime Incidents | Ice Cream Sales (k units) |
-|-------|-------------|-----------------|--------------------------|
-| Jan   | 36           | 5,821           | 11.8                     |
-| Apr   | 59           | 6,912           | 38.4                     |
-| Jul   | 83           | 10,412          | 148.2                    |
-| Oct   | 63           | 7,612           | 51.6                     |
-| Dec   | 41           | 5,908           | 15.9                     |
+| ----- | ------------- | --------------- | ------------------------- |
+| Jan   | 36            | 5,821           | 11.8                      |
+| Apr   | 59            | 6,912           | 38.4                      |
+| Jul   | 83            | 10,412          | 148.2                     |
+| Oct   | 63            | 7,612           | 51.6                      |
+| Dec   | 41            | 5,908           | 15.9                      |
+
 
 The seasonal pattern is unmistakable. Temperature moves first; crime and ice cream
 follow in lockstep.
@@ -78,21 +82,19 @@ follow in lockstep.
   docker compose exec -T kafka rpk topic create analysis
   ```
 - **Sample files:** `docs/demo/nyc_crime_2023.csv`, `docs/demo/nyc_icecream_sales_2023.csv`, `docs/demo/nyc_temperature_2023.csv`
-- **UI:** Open the app (e.g. https://tracefieldlab.thor-nydal.no or `http://localhost:5173`).
+- **UI:** Open the app (e.g. [https://tracefieldlab.thor-nydal.no](https://tracefieldlab.thor-nydal.no) or `http://localhost:5173`).
 
 ### Verify resolution jobs will be processed
 
 Resolution jobs are processed by the **resolver** service. It polls the database every few seconds for jobs with status `queued`, runs resolution, then sets status to `completed` or `failed`. To be sure jobs can and will run:
 
-1. **Resolver is running**  
-   With Docker: `docker compose ps` — the `resolver` service should be up and healthy.  
+1. **Resolver is running**
+  With Docker: `docker compose ps` — the `resolver` service should be up and healthy.  
    Health check: `curl -s http://localhost:8000/healthz` (if the resolver is mapped to port 8000; adjust host/port if your stack exposes it elsewhere). You should see `{"status":"ok","service":"resolver"}`.
-
-2. **Jobs are created with status `queued`**  
-   When you click "Create resolution job" in the UI, the API inserts a row into `resolution_jobs` with `status = 'queued'`. The resolver only picks up rows where `status = 'queued'`.
-
-3. **After creating a job**  
-   On **Entity Mappings**, the resolution jobs table shows each job’s status. Within a few seconds to a minute (depending on load and model startup), a `queued` job should move to `running` then `completed`. The first job may take longer because the resolver loads the BGE embedding model on first use. If a job stays `queued` for several minutes, check resolver logs: `docker compose logs resolver`.
+2. **Jobs are created with status `queued`**
+  When you click "Create resolution job" in the UI, the API inserts a row into `resolution_jobs` with `status = 'queued'`. The resolver only picks up rows where `status = 'queued'`.
+3. **After creating a job**
+  On **Entity Mappings**, the resolution jobs table shows each job’s status. Within a few seconds to a minute (depending on load and model startup), a `queued` job should move to `running` then `completed`. The first job may take longer because the resolver loads the BGE embedding model on first use. If a job stays `queued` for several minutes, check resolver logs: `docker compose logs resolver`.
 
 ---
 
@@ -113,13 +115,13 @@ cream."
 
 1. Go to **Datasets** → **Create dataset**.
 2. Fill in:
-   - **Name:** `NYC Crime Statistics 2023`
-   - **Source:** `https://data.cityofnewyork.us/Public-Safety/`
-   - **License:** `Public Domain (NYC Open Data)`
-   - **Schema:** Paste the first few lines of `nyc_crime_2023.csv` and use
-     **Infer schema**, or add columns: `crime_record_id`, `canonical_month`,
-     `month_label`, `total_incidents`, `violent_incidents`, `property_incidents`,
-     `aggravated_assault`, `robbery`, `source_notes`.
+  - **Name:** `NYC Crime Statistics 2023`
+  - **Source:** `https://data.cityofnewyork.us/Public-Safety/`
+  - **License:** `Public Domain (NYC Open Data)`
+  - **Schema:** Paste the first few lines of `nyc_crime_2023.csv` and use
+  **Infer schema**, or add columns: `crime_record_id`, `canonical_month`,
+  `month_label`, `total_incidents`, `violent_incidents`, `property_incidents`,
+  `aggravated_assault`, `robbery`, `source_notes`.
 3. Create the dataset, then **Upload file** → `docs/demo/nyc_crime_2023.csv`.
 
 **Content reference** (from `docs/demo/nyc_crime_2023.csv`):
@@ -143,12 +145,12 @@ to the crime system."
 
 1. **Datasets** → **Create dataset**.
 2. Fill in:
-   - **Name:** `NYC Ice Cream Sales 2023`
-   - **Source:** `https://nyc-retail-aggregator.example.com/icecream/2023`
-   - **License:** `CC-BY-4.0`
-   - **Schema:** Add columns: `period_id`, `canonical_month`, `period_label`,
-     `units_sold_thousands`, `revenue_usd_thousands`, `active_vendor_locations`,
-     `top_product`, `notes`.
+  - **Name:** `NYC Ice Cream Sales 2023`
+  - **Source:** `https://nyc-retail-aggregator.example.com/icecream/2023`
+  - **License:** `CC-BY-4.0`
+  - **Schema:** Add columns: `period_id`, `canonical_month`, `period_label`,
+  `units_sold_thousands`, `revenue_usd_thousands`, `active_vendor_locations`,
+  `top_product`, `notes`.
 3. Create, then **Upload file** → `docs/demo/nyc_icecream_sales_2023.csv`.
 
 **Content reference** (from `docs/demo/nyc_icecream_sales_2023.csv`):
@@ -165,7 +167,7 @@ ICECREAM-DEC-2023,2023-12,Dec 2023,15.9,127,56,Hot Cocoa Float,"Holiday specials
 ### Step 3: Entity resolution — link calendar months across both datasets (≈4 min)
 
 **What you say:** "Crime uses NYPD record IDs; ice cream uses retail period IDs — they
-still don't *know* about each other operationally. We added a **`canonical_month`**
+still don't *know* about each other operationally. We added a `**canonical_month`**
 key (like a warehouse would) so Tracefield can **exact-match** every row to the same
 calendar month entity. Same feature values land on the same entity; analysis is
 meaningful."
@@ -173,31 +175,32 @@ meaningful."
 **In the UI:**
 
 **Option A — Use all ingested rows (recommended for this demo):**  
+
 1. Go to **Entity Mappings**.
 2. **First resolution job — from the crime dataset:**
-   - **Job name:** `Resolve months from crime data`
-   - **Dataset:** NYC Crime Statistics 2023
-   - **Entity type:** `time_period`
-   - **Join keys:** `crime_record_id, canonical_month`  
-     *(native ID first — keeps `entity_map.source_record_id` = crime row id for scalar extract; `canonical_month` is stored on the entity for cross-dataset matching.)*
-   - **Semantic fields:** **leave empty** *(critical)*  
-     *If you set `month_label` here, embeddings for “January 2023”, “February 2023”, … are often all similar enough to pass the default threshold. The resolver then maps **many different months onto the same entity** (e.g. everything collapses to “September 2023”). Empty semantic fields → no semantic step → **one new entity per crime row** → 12 distinct months.*
-   - **Create new entities if no match:** Yes
-   - Check **Use all ingested rows from this dataset** (12 rows). Create the job and wait for completion.  
+  - **Job name:** `Resolve months from crime data`
+  - **Dataset:** NYC Crime Statistics 2023
+  - **Entity type:** `time_period`
+  - **Join keys:** `crime_record_id, canonical_month`  
+  *(native ID first — keeps `entity_map.source_record_id` = crime row id for scalar extract; `canonical_month` is stored on the entity for cross-dataset matching.)*
+  - **Semantic fields:** **leave empty** *(critical)*  
+  *If you set `month_label` here, embeddings for “January 2023”, “February 2023”, … are often all similar enough to pass the default threshold. The resolver then maps **many different months onto the same entity** (e.g. everything collapses to “September 2023”). Empty semantic fields → no semantic step → **one new entity per crime row** → 12 distinct months.*
+  - **Create new entities if no match:** Yes
+  - Check **Use all ingested rows from this dataset** (12 rows). Create the job and wait for completion.  
    *You should see **12 mappings**, each to a **different** entity (display names may look like `NYC-CRIME-2023-01` … — that’s fine).*
 3. **Second resolution job — from the ice cream dataset:**
-   - **Job name:** `Resolve months from ice cream data`
-   - **Dataset:** NYC Ice Cream Sales 2023
-   - **Entity type:** `time_period`
-   - **Join keys:** `period_id, canonical_month`
-   - **Semantic fields:** leave empty *(exact match on `canonical_month` should attach every row to the right month; avoid semantic fallback creating duplicates.)*
-   - **Create new entities if no match:** Yes *(safety net; expect **0 created** if crime step succeeded)*
-   - Check **Use all ingested rows from this dataset** (12 rows). Create the job and wait.
+  - **Job name:** `Resolve months from ice cream data`
+  - **Dataset:** NYC Ice Cream Sales 2023
+  - **Entity type:** `time_period`
+  - **Join keys:** `period_id, canonical_month`
+  - **Semantic fields:** leave empty *(exact match on `canonical_month` should attach every row to the right month; avoid semantic fallback creating duplicates.)*
+  - **Create new entities if no match:** Yes *(safety net; expect **0 created** if crime step succeeded)*
+  - Check **Use all ingested rows from this dataset** (12 rows). Create the job and wait.
 
 **Option B — Manual records:**  
 Include `canonical_month` in keys (e.g. `crime_record_id: NYC-CRIME-2023-01, canonical_month: 2023-01, month_label: January 2023`). Use the same **join key order** as Option A.
 
-**Point to make:** "We created twelve separate month entities from crime without fuzzy matching so months don’t collapse. Then the shared **`canonical_month`** key **exact-matches** ice cream onto those same twelve — no ambiguous embeddings for that link."
+**Point to make:** "We created twelve separate month entities from crime without fuzzy matching so months don’t collapse. Then the shared `**canonical_month`** key **exact-matches** ice cream onto those same twelve — no ambiguous embeddings for that link."
 
 **If your Mappings table already looks wrong** (many rows pointing at the same month entity, lots of **semantic** on crime): delete those mappings (and orphaned entities if needed), then re-run Step 3 with **empty semantic fields** on the crime job as above.
 
@@ -214,10 +217,10 @@ the other."
 **In the UI:**
 
 1. **Datasets** → open **NYC Crime Statistics 2023** → **Extract embeddings**.
-   - Text column: `month_label`, ID column: `crime_record_id`.
-   - Run and wait. (Feature definitions for analysis are created in the UI — see Step 5 "Before you start" and the note below.)
+  - Text column: `month_label`, ID column: `crime_record_id`.
+  - Run and wait. (Feature definitions for analysis are created in the UI — see Step 5 "Before you start" and the note below.)
 2. **Datasets** → open **NYC Ice Cream Sales 2023** → **Extract embeddings**.
-   - Text column: `period_label` (or `notes`), ID column: `period_id`. Run and wait.
+  - Text column: `period_label` (or `notes`), ID column: `period_id`. Run and wait.
 
 > **Note on scalar features:** Create the feature definitions in the UI (**Features** → create `total_incidents` and `units_sold_thousands` as in Step 5 "Before you start") so they appear in the analysis dropdowns. The analysis step also needs numeric *values* for these features on the resolved `time_period` entities; if your setup doesn't populate those automatically via an ingest or feature worker, you may need to load or sync that data separately.
 
@@ -230,8 +233,8 @@ The analysis worker needs **numeric feature values** in the feature store (e.g. 
 1. **Datasets** → open **NYC Crime Statistics 2023** → click **Extract scalar features**.
 2. **CSV from your computer:** choose `nyc_crime_2023.csv` (the same file you uploaded). That fills the column list and runs extraction from your browser copy — **required** if the API cannot read cloud storage (common on split prod setups). If columns already appear without choosing a file, you can use those instead.
 3. In the modal:
-   - **ID column:** `crime_record_id` (links each row to the resolved time-period entity).
-   - **Columns to import as features:** check `total_incidents` (and any other numeric columns you want). Feature definitions are created by name if they don’t exist.
+  - **ID column:** `crime_record_id` (links each row to the resolved time-period entity).
+  - **Columns to import as features:** check `total_incidents` (and any other numeric columns you want). Feature definitions are created by name if they don’t exist.
 4. Click **Start extraction** and wait for the job to finish (status **finished**).
 5. Repeat for **NYC Ice Cream Sales 2023**: attach `nyc_icecream_sales_2023.csv`, ID `period_id`, check `units_sold_thousands`. Run and wait.
 6. Then proceed to Step 5. The Phase 1 analysis job should complete successfully.
@@ -251,8 +254,8 @@ ice cream sales? Let's see what it finds."
 
 1. Go to **Features** (in the app nav).
 2. **Create** two feature definitions (use "Feature name" and "Value type", submit for each):
-   - Name: `total_incidents`, Value type: `float` (or `number`).
-   - Name: `units_sold_thousands`, Value type: `float` (or `number`).
+  - Name: `total_incidents`, Value type: `float` (or `number`).
+  - Name: `units_sold_thousands`, Value type: `float` (or `number`).
 3. For later steps (temperature), you can add now or when you get there: `avg_temp_f` and `heat_index_f` (value type `float`).
 
 Then go to **Analysis jobs**; the Left/Right feature dropdowns should list these names.
@@ -261,21 +264,23 @@ Then go to **Analysis jobs**; the Left/Right feature dropdowns should list these
 
 1. Go to **Analysis jobs** → **Create new job**.
 2. Fill in:
-   - **Name:** `Crime vs ice cream sales — Phase 1 (spurious)`
-   - **Left feature:** `total_incidents` (from crime dataset)
-   - **Right feature:** `units_sold_thousands` (from ice cream dataset)
-   - **Test:** Spearman rank correlation (robust to non-normality)
-   - **Correction:** Benjamini–Hochberg (required even for a single test — habit matters)
+  - **Name:** `Crime vs ice cream sales — Phase 1 (spurious)`
+  - **Left feature:** `total_incidents` (from crime dataset)
+  - **Right feature:** `units_sold_thousands` (from ice cream dataset)
+  - **Test:** Spearman rank correlation (robust to non-normality)
+  - **Correction:** Benjamini–Hochberg (required even for a single test — habit matters)
 3. Submit. Wait for the job to complete.
 
 **What you'll see:**
 
-| Metric | Expected result |
-|--------|----------------|
-| Spearman r | ≈ 0.97 |
-| p-value | < 0.001 |
-| Effect size | Large |
+
+| Metric         | Expected result                         |
+| -------------- | --------------------------------------- |
+| Spearman r     | ≈ 0.97                                  |
+| p-value        | < 0.001                                 |
+| Effect size    | Large                                   |
 | Interpretation | Highly significant positive correlation |
+
 
 **What you say:** "r = 0.97. p-value under 0.001. By any conventional measure this
 is a near-perfect correlation between ice cream sales and crime. If we stopped here —
@@ -303,12 +308,12 @@ vendor ever thought to combine with theirs."
 
 1. **Datasets** → **Create dataset**.
 2. Fill in:
-   - **Name:** `NYC Monthly Temperature 2023`
-   - **Source:** `https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/`
-   - **License:** `Public Domain (NOAA)`
-   - **Schema:** Add columns: `temp_record_id`, `canonical_month`, `month_reference`,
-     `avg_temp_f`, `avg_temp_c`, `heat_index_f`, `days_above_80f`, `days_below_32f`,
-     `precipitation_inches`, `notes`.
+  - **Name:** `NYC Monthly Temperature 2023`
+  - **Source:** `https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/`
+  - **License:** `Public Domain (NOAA)`
+  - **Schema:** Add columns: `temp_record_id`, `canonical_month`, `month_reference`,
+  `avg_temp_f`, `avg_temp_c`, `heat_index_f`, `days_above_80f`, `days_below_32f`,
+  `precipitation_inches`, `notes`.
 3. Create, then **Upload file** → `docs/demo/nyc_temperature_2023.csv`.
 
 **Content reference** (from `docs/demo/nyc_temperature_2023.csv`):
@@ -330,13 +335,13 @@ TEMP-NYC-DEC23,2023-12,December_2023,41.3,5.2,39.7,0,9,3.18,"Cold; freeze events
 **In the UI:**
 
 1. **Entity Mappings** → create a new resolution job:
-   - **Job name:** `Resolve months from temperature data`
-   - **Dataset:** NYC Monthly Temperature 2023
-   - **Entity type:** `time_period`
-   - **Join keys:** `temp_record_id, canonical_month`
-   - **Semantic fields:** leave empty *(rely on `canonical_month` exact match to the existing 12 entities)*
-   - **Create new entities if no match:** No
-   - Check **Use all ingested rows** (12 rows).
+  - **Job name:** `Resolve months from temperature data`
+  - **Dataset:** NYC Monthly Temperature 2023
+  - **Entity type:** `time_period`
+  - **Join keys:** `temp_record_id, canonical_month`
+  - **Semantic fields:** leave empty *(rely on `canonical_month` exact match to the existing 12 entities)*
+  - **Create new entities if no match:** No
+  - Check **Use all ingested rows** (12 rows).
 2. Run and wait. All 12 rows should **exact-match** onto the existing canonical months.
 
 **Point to make:** "Three operational ID schemes, one shared period key, one entity
@@ -352,12 +357,12 @@ extract** for the numbers we analyze."
 **In the UI:**
 
 1. **Datasets** → open **NYC Monthly Temperature 2023** → **Extract embeddings**.
-   - Text column: `notes`, ID column: `temp_record_id`. Run and wait.
+  - Text column: `notes`, ID column: `temp_record_id`. Run and wait.
 2. **Extract scalar features** (required for Steps 9–10, same as Step 4b):
-   - Open **Extract scalar features**, attach `nyc_temperature_2023.csv` if needed.
-   - **ID column:** `temp_record_id`
-   - **Columns:** check `avg_temp_f` and `heat_index_f` (and any other numeric columns you want).
-   - Run until status **finished**.
+  - Open **Extract scalar features**, attach `nyc_temperature_2023.csv` if needed.
+  - **ID column:** `temp_record_id`
+  - **Columns:** check `avg_temp_f` and `heat_index_f` (and any other numeric columns you want).
+  - Run until status **finished**.
 3. Ensure feature definitions `avg_temp_f` and `heat_index_f` exist (**Features** → create if missing).
 
 ---
@@ -370,11 +375,11 @@ extract** for the numbers we analyze."
 
 1. **Analysis jobs** → **Create new job**.
 2. Fill in:
-   - **Name:** `Crime vs temperature`
-   - **Left feature:** `total_incidents`
-   - **Right feature:** `avg_temp_f`
-   - **Test:** Spearman
-   - **Correction:** Benjamini–Hochberg
+  - **Name:** `Crime vs temperature`
+  - **Left feature:** `total_incidents`
+  - **Right feature:** `avg_temp_f`
+  - **Test:** Spearman
+  - **Correction:** Benjamini–Hochberg
 3. Submit. Wait for results.
 
 **What you'll see:** r ≈ 0.96–0.98, p < 0.001. Temperature is nearly as strongly
@@ -390,11 +395,11 @@ correlated with crime as ice cream was.
 
 1. **Analysis jobs** → **Create new job**.
 2. Fill in:
-   - **Name:** `Ice cream vs temperature`
-   - **Left feature:** `units_sold_thousands`
-   - **Right feature:** `avg_temp_f`
-   - **Test:** Spearman
-   - **Correction:** Benjamini–Hochberg
+  - **Name:** `Ice cream vs temperature`
+  - **Left feature:** `units_sold_thousands`
+  - **Right feature:** `avg_temp_f`
+  - **Test:** Spearman
+  - **Correction:** Benjamini–Hochberg
 3. Submit. Wait for results.
 
 **What you'll see:** r ≈ 0.97–0.99, p < 0.001. Temperature explains ice cream sales
@@ -407,11 +412,13 @@ just as strongly.
 **What you say:** "Here's what we now know — from three datasets that were never
 designed to talk to each other:"
 
-| Analysis | r | p-value | Interpretation |
-|----------|---|---------|---------------|
-| Crime ↔ Ice cream | ≈ 0.97 | < 0.001 | Spurious — shared cause |
-| Crime ↔ Temperature | ≈ 0.97 | < 0.001 | Causal pathway confirmed |
+
+| Analysis                | r      | p-value | Interpretation           |
+| ----------------------- | ------ | ------- | ------------------------ |
+| Crime ↔ Ice cream       | ≈ 0.97 | < 0.001 | Spurious — shared cause  |
+| Crime ↔ Temperature     | ≈ 0.97 | < 0.001 | Causal pathway confirmed |
 | Ice cream ↔ Temperature | ≈ 0.98 | < 0.001 | Causal pathway confirmed |
+
 
 > "Ice cream does not cause crime. Crime does not cause ice cream sales.
 > **Temperature drives both.** People buy more ice cream in heat. People are
@@ -424,13 +431,13 @@ designed to talk to each other:"
 1. Go to **Analysis results** (or open each completed job).
 2. Show the three result rows side by side.
 3. Open provenance on any result and say: "Every one of these results points back
-   to the exact datasets, versions, and statistical configuration that produced it.
+  to the exact datasets, versions, and statistical configuration that produced it.
    If a reviewer asks us to reproduce this tomorrow, we run the same job against
    the same provenance chain."
 
 ---
 
-## One-line summary for your boss
+## One-line summary for your audience
 
 > "We loaded NYC crime stats, ice cream sales, and temperature data — three sources
 > with completely different ID schemes — resolved them all onto the same 12 calendar
@@ -473,19 +480,21 @@ partial correlation drops toward zero when temperature is held constant.
 - **DB:** See `RUNBOOK.md` for connection and migration commands.
 - **Full workflow test:** `./scripts/run-integration-tests.ps1` (or `.sh`)
 
-**Analysis job shows "failed":** The UI shows the failure reason (e.g. *"No overlapping entity-feature data for left and right feature sets"*). For the Heat/Crime demo, that usually means scalar feature values were not loaded — complete **Step 4b** (crime + ice cream) and **Step 8** scalar extract (temperature). Also confirm resolution used join keys **`native_id, canonical_month`** as in Steps 3 and 7; otherwise Phase 1 can “succeed” with meaningless ρ.
+**Analysis job shows "failed":** The UI shows the failure reason (e.g. *"No overlapping entity-feature data for left and right feature sets"*). For the Heat/Crime demo, that usually means scalar feature values were not loaded — complete **Step 4b** (crime + ice cream) and **Step 8** scalar extract (temperature). Also confirm resolution used join keys `**native_id, canonical_month*`* as in Steps 3 and 7; otherwise Phase 1 can “succeed” with meaningless ρ.
 
 ---
 
 ## Demo data files
 
-| File | Description |
-|------|-------------|
-| `docs/demo/nyc_crime_2023.csv` | 12 months of NYC crime statistics (NYPD CompStat-style) |
-| `docs/demo/nyc_icecream_sales_2023.csv` | 12 months of NYC ice cream vendor sales |
-| `docs/demo/nyc_temperature_2023.csv` | 12 months of NYC average temperature (NOAA-style) |
 
-All three use different operational IDs plus a shared **`canonical_month`** so
+| File                                    | Description                                             |
+| --------------------------------------- | ------------------------------------------------------- |
+| `docs/demo/nyc_crime_2023.csv`          | 12 months of NYC crime statistics (NYPD CompStat-style) |
+| `docs/demo/nyc_icecream_sales_2023.csv` | 12 months of NYC ice cream vendor sales                 |
+| `docs/demo/nyc_temperature_2023.csv`    | 12 months of NYC average temperature (NOAA-style)       |
+
+
+All three use different operational IDs plus a shared `**canonical_month**` so
 exact-match resolution fuses the same 12 `time_period` entities across silos.
 
 ---
