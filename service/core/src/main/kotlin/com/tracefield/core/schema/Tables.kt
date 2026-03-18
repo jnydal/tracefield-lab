@@ -112,7 +112,10 @@ object DatasetFiles : UUIDTable("dataset_files", columnName = "id") {
     val contentType = text("content_type").nullable()
     val sizeBytes = long("size_bytes").nullable()
     val checksum = text("checksum").nullable()
-    val ingestColumnsJson = text("ingest_columns_json").nullable()
+    // JSONB column per migration 017_dataset_file_ingest_cache.sql; stores header column names
+    // captured at ingest time so preview and scalar extract can fall back when object storage
+    // is unavailable.
+    val ingestColumnsJson = jsonb("ingest_columns_json").nullable()
     val inlineFileB64 = text("inline_file_b64").nullable()
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp())
 }
