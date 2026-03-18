@@ -99,7 +99,6 @@ export function DatasetsPage() {
   const {
     data: scalarPreviewRows,
     isFetching: scalarPreviewLoading,
-    isError: scalarPreviewError,
   } = useGetDatasetPreviewRowsQuery(scalarExtractDatasetId ?? '', {
     skip: !scalarExtractDatasetId,
   });

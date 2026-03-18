@@ -270,7 +270,17 @@ def run_resolution(conn, job: dict) -> dict:
 
         # 3. Create if no match
         if not matched_entity_id and create_if_no_match:
-            display_name = keys.get("name") or keys.get("display_name") or source_record_id
+            # Prefer a human-readable, semantically meaningful display name built from the same
+            # semantic fields used for matching (e.g. month labels for time_period). This makes
+            # subsequent semantic resolution jobs for other datasets more likely to reuse the
+            # same canonical entity instead of creating per-dataset duplicates.
+            display_name_text = _build_text(keys, semantic_fields)
+            display_name = (
+                display_name_text
+                or keys.get("name")
+                or keys.get("display_name")
+                or source_record_id
+            )
             matched_entity_id = create_entity(conn, entity_type, str(display_name), keys)
             method = "created"
             score = 1.0
