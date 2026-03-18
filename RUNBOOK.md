@@ -521,8 +521,16 @@ After completing resolution and feature definitions for the Heat/Crime walkthrou
 To add new schema (e.g. `analysis_jobs.exc_info` for failure reasons):
 
 ```bash
-docker compose exec -T db psql -U postgres -d tracefield -f infra/sql/016_analysis_jobs_exc_info.sql
+# Paths after -f are inside the container — use shell redirection so the SQL runs from your repo copy on the host:
+docker compose exec -T db psql -U postgres -d tracefield < infra/sql/016_analysis_jobs_exc_info.sql
+docker compose exec -T db psql -U postgres -d tracefield < infra/sql/017_dataset_file_ingest_cache.sql
 ```
+
+**017** adds ingest-time column metadata and an optional inline copy of uploads ≤1MB so **Extract scalar features** and preview work when object-store GET fails. After applying 017, **re-upload** each dataset file once (or recreate datasets) so existing rows get `ingest_columns_json` / `inline_file_b64`.
+
+**Windows (PowerShell):** `<` may not work; use:
+
+`Get-Content infra/sql/017_dataset_file_ingest_cache.sql -Raw | docker compose exec -T db psql -U postgres -d tracefield`
 
 ### Reset Pipeline for New Dataset
 

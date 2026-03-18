@@ -4,14 +4,49 @@ import {
   useDeleteDatasetMutation,
   useListDatasetsQuery,
   useGetDatasetQuery,
+  useGetDatasetPreviewRowsQuery,
   useTriggerFeatureExtractMutation,
   useTriggerScalarExtractMutation,
   useLazyGetJobStatusQuery,
   useInferSchemaMutation,
   useUploadDatasetFileMutation,
+  useSyncDatasetFileMetadataMutation,
+  useScalarExtractUploadMutation,
 } from '../../../services/api/pipeline-api';
 import type { SchemaColumn } from '../../../services/api/pipeline-api';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'flowbite-react';
+
+/** Column names from dataset.schema (infer-schema shape). Empty if schema missing. */
+function columnNamesFromDatasetSchema(schema: Record<string, unknown> | undefined): string[] {
+  if (!schema || typeof schema !== 'object' || !('columns' in schema)) return [];
+  const cols = (schema as { columns: unknown }).columns;
+  if (!Array.isArray(cols)) return [];
+  return cols
+    .map((c) =>
+      typeof c === 'string'
+        ? c
+        : c && typeof c === 'object' && 'name' in c
+          ? String((c as { name: unknown }).name)
+          : ''
+    )
+    .filter(Boolean);
+}
+
+function parseManualScalarColumns(raw: string): string[] {
+  return raw
+    .split(/[,\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** First line of CSV → header names (demo CSVs have simple unquoted headers). */
+function parseCsvHeaderFromText(text: string): string[] {
+  const line = text.split(/\r?\n/).find((l) => l.trim().length > 0) ?? '';
+  return line
+    .split(',')
+    .map((s) => s.trim().replace(/^"|"$/g, ''))
+    .filter(Boolean);
+}
 
 export function DatasetsPage() {
   const { data = [], isLoading } = useListDatasetsQuery();
@@ -44,6 +79,14 @@ export function DatasetsPage() {
   const [scalarExtractDatasetId, setScalarExtractDatasetId] = useState<string | null>(null);
   const [scalarIdColumn, setScalarIdColumn] = useState('');
   const [scalarSelectedColumns, setScalarSelectedColumns] = useState<string[]>([]);
+  const [scalarManualFeatureColumns, setScalarManualFeatureColumns] = useState('');
+  const [scalarSyncColumns, setScalarSyncColumns] = useState<string[]>([]);
+  const [scalarSyncLoading, setScalarSyncLoading] = useState(false);
+  const [scalarAttachFile, setScalarAttachFile] = useState<File | null>(null);
+  const [scalarAttachColumns, setScalarAttachColumns] = useState<string[]>([]);
+
+  const [syncFileMetadata] = useSyncDatasetFileMetadataMutation();
+  const [scalarExtractUpload, { isLoading: isScalarUploading }] = useScalarExtractUploadMutation();
 
   const { data: extractDataset, refetch: refetchExtractDataset } = useGetDatasetQuery(extractDatasetId ?? '', {
     skip: !extractDatasetId,
@@ -51,6 +94,17 @@ export function DatasetsPage() {
   });
   const { data: scalarExtractDataset } = useGetDatasetQuery(scalarExtractDatasetId ?? '', {
     skip: !scalarExtractDatasetId,
+    refetchOnMountOrArgChange: true,
+  });
+  const {
+    data: scalarPreviewRows,
+    isFetching: scalarPreviewLoading,
+    isError: scalarPreviewError,
+  } = useGetDatasetPreviewRowsQuery(scalarExtractDatasetId ?? '', {
+    skip: !scalarExtractDatasetId,
+  });
+  const { data: extractPreviewRows } = useGetDatasetPreviewRowsQuery(extractDatasetId ?? '', {
+    skip: !extractDatasetId,
   });
   useEffect(() => {
     if (extractDatasetId) refetchExtractDataset();
@@ -77,6 +131,33 @@ export function DatasetsPage() {
     const timer = setTimeout(() => sampleContentRef.current?.focus(), 100);
     return () => clearTimeout(timer);
   }, [inferModalOpen]);
+
+  useEffect(() => {
+    if (!scalarExtractDatasetId) {
+      setScalarSyncColumns([]);
+      setScalarSyncLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setScalarSyncColumns([]);
+    setScalarSyncLoading(true);
+    syncFileMetadata(scalarExtractDatasetId)
+      .unwrap()
+      .then((res) => {
+        if (!cancelled && Array.isArray(res.columns) && res.columns.length > 0) {
+          setScalarSyncColumns(res.columns);
+        }
+      })
+      .catch(() => {
+        /* old API without route — fall back to preview/manual */
+      })
+      .finally(() => {
+        if (!cancelled) setScalarSyncLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scalarExtractDatasetId, syncFileMetadata]);
 
   useEffect(() => {
     if (!extractJobId) return;
@@ -169,9 +250,15 @@ export function DatasetsPage() {
     setScalarExtractDatasetId(datasetId);
     setScalarIdColumn('');
     setScalarSelectedColumns([]);
+    setScalarManualFeatureColumns('');
+    setScalarAttachFile(null);
+    setScalarAttachColumns([]);
   };
   const closeScalarExtractModal = () => {
     setScalarExtractDatasetId(null);
+    setScalarManualFeatureColumns('');
+    setScalarAttachFile(null);
+    setScalarAttachColumns([]);
   };
 
   const closeExtractModal = () => {
@@ -231,15 +318,28 @@ export function DatasetsPage() {
 
   const handleScalarExtract = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!scalarExtractDatasetId || !scalarIdColumn.trim() || scalarSelectedColumns.length === 0) return;
+    if (!scalarExtractDatasetId || !scalarIdColumn.trim()) return;
+    const idCol = scalarIdColumn.trim();
+    const usePicker = scalarSchemaColumns.length > 0;
+    const featureCols = usePicker
+      ? scalarSelectedColumns
+      : parseManualScalarColumns(scalarManualFeatureColumns).filter((c) => c !== idCol);
+    if (featureCols.length === 0) return;
     try {
-      const { jobId } = await triggerScalarExtract({
-        datasetId: scalarExtractDatasetId,
-        body: {
-          idColumn: scalarIdColumn.trim(),
-          columns: scalarSelectedColumns.map((column) => ({ column })),
-        },
-      }).unwrap();
+      const { jobId } = scalarAttachFile
+        ? await scalarExtractUpload({
+            datasetId: scalarExtractDatasetId,
+            idColumn: idCol,
+            columns: featureCols.map((column) => ({ column })),
+            file: scalarAttachFile,
+          }).unwrap()
+        : await triggerScalarExtract({
+            datasetId: scalarExtractDatasetId,
+            body: {
+              idColumn: idCol,
+              columns: featureCols.map((column) => ({ column })),
+            },
+          }).unwrap();
       setExtractJobId(jobId);
       setJobStatus({ status: 'queued' });
       const result = await getJobStatus(jobId).unwrap();
@@ -255,19 +355,39 @@ export function DatasetsPage() {
   const scalarFileCount = Number(scalarExtractDataset?.fileCount ?? 0);
   const scalarMappingsCount = Number(scalarExtractDataset?.mappingsCount ?? 0);
   const canScalarExtract = scalarFileCount > 0 && scalarMappingsCount > 0;
+  const scalarSchemaFromRegistry = columnNamesFromDatasetSchema(scalarExtractDataset?.schema);
+  const scalarColumnsFromIngest = Array.isArray(scalarExtractDataset?.latestFileColumns)
+    ? scalarExtractDataset.latestFileColumns
+    : [];
   const scalarSchemaColumns =
-    scalarExtractDataset?.schema && typeof scalarExtractDataset.schema === 'object' && 'columns' in scalarExtractDataset.schema
-      ? (scalarExtractDataset.schema.columns as { name?: string }[]).map((c) => c.name).filter(Boolean) as string[]
-      : [];
+    scalarAttachColumns.length > 0
+      ? scalarAttachColumns
+      : scalarSchemaFromRegistry.length > 0
+        ? scalarSchemaFromRegistry
+        : scalarColumnsFromIngest.length > 0
+          ? scalarColumnsFromIngest
+          : scalarSyncColumns.length > 0
+            ? scalarSyncColumns
+            : (scalarPreviewRows?.columns ?? []);
+  const scalarUseColumnPicker = scalarSchemaColumns.length > 0;
+  const scalarFeaturesReady = scalarUseColumnPicker
+    ? scalarSelectedColumns.length > 0
+    : parseManualScalarColumns(scalarManualFeatureColumns).filter((c) => c !== scalarIdColumn.trim()).length > 0;
   const jobInProgress =
     !!extractJobId &&
     !!jobStatus &&
     !['finished', 'failed'].includes(jobStatus.status.toLowerCase());
 
+  const schemaFromRegistry = columnNamesFromDatasetSchema(extractDataset?.schema);
+  const schemaFromIngest = Array.isArray(extractDataset?.latestFileColumns)
+    ? extractDataset.latestFileColumns
+    : [];
   const schemaColumns =
-    extractDataset?.schema && typeof extractDataset.schema === 'object' && 'columns' in extractDataset.schema
-      ? (extractDataset.schema.columns as { name?: string }[]).map((c) => c.name).filter(Boolean) as string[]
-      : [];
+    schemaFromRegistry.length > 0
+      ? schemaFromRegistry
+      : schemaFromIngest.length > 0
+        ? schemaFromIngest
+        : (extractPreviewRows?.columns ?? []);
 
   return (
     <section className="p-6 space-y-6">
@@ -596,50 +716,128 @@ export function DatasetsPage() {
                 Upload data and add entity mappings first (e.g. run resolution).
               </p>
             )}
+            {scalarExtractDataset && canScalarExtract && (
+              <div className="space-y-1 rounded border border-slate-200 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-800/50">
+                <label className="text-sm font-medium text-slate-800 dark:text-slate-200" htmlFor="scalar-attach-csv">
+                  CSV from your computer
+                </label>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Use the <strong>same</strong> file you uploaded for this dataset. Extraction runs from this copy — works
+                  even when the API cannot read cloud storage.
+                </p>
+                <input
+                  key={scalarExtractDatasetId ?? 'x'}
+                  id="scalar-attach-csv"
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="block w-full text-sm text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 dark:text-slate-300 dark:file:bg-slate-600 dark:file:text-slate-100"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) {
+                      setScalarAttachFile(null);
+                      setScalarAttachColumns([]);
+                      setScalarSelectedColumns([]);
+                      return;
+                    }
+                    setScalarAttachFile(f);
+                    setScalarSelectedColumns([]);
+                    f.text()
+                      .then((t) => {
+                        const cols = parseCsvHeaderFromText(t);
+                        setScalarAttachColumns(cols);
+                      })
+                      .catch(() => setScalarAttachColumns([]));
+                  }}
+                />
+                {scalarAttachFile && (
+                  <p className="text-xs text-green-700 dark:text-green-400">
+                    Using attached file: {scalarAttachFile.name} ({scalarAttachColumns.length} columns detected)
+                  </p>
+                )}
+              </div>
+            )}
+            {scalarExtractDataset &&
+              canScalarExtract &&
+              scalarSchemaColumns.length === 0 &&
+              (scalarSyncLoading || scalarPreviewLoading) && (
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Loading column list from the API…
+                </p>
+              )}
+            {scalarExtractDataset &&
+              canScalarExtract &&
+              !scalarUseColumnPicker &&
+              !scalarSyncLoading &&
+              !scalarPreviewLoading &&
+              !scalarAttachFile && (
+                <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  <p className="font-medium">Choose your CSV above</p>
+                  <p className="mt-1 text-xs leading-relaxed">
+                    Pick the same CSV you used for this dataset — column checkboxes will appear and extraction will use
+                    your file (no MinIO/S3 read needed). Alternatively type ID + feature columns below and attach the CSV
+                    before starting.
+                  </p>
+                </div>
+              )}
             <div className="space-y-1">
               <label className="text-sm font-medium" htmlFor="scalar-id-column">
                 ID column (links rows to resolved entities)
               </label>
-              <select
+              <input
                 id="scalar-id-column"
                 className="w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                 value={scalarIdColumn}
                 onChange={(e) => setScalarIdColumn(e.target.value)}
-              >
-                <option value="">Select column…</option>
-                {scalarSchemaColumns.map((col) => (
-                  <option key={col} value={col}>
-                    {col}
-                  </option>
-                ))}
-              </select>
+                placeholder={scalarUseColumnPicker ? 'Select or type…' : 'e.g. crime_record_id'}
+                list={scalarUseColumnPicker ? 'scalar-id-datalist' : undefined}
+                autoComplete="off"
+              />
+              {scalarUseColumnPicker && (
+                <datalist id="scalar-id-datalist">
+                  {scalarSchemaColumns.map((col) => (
+                    <option key={col} value={col} />
+                  ))}
+                </datalist>
+              )}
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Columns to import as features</label>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Select numeric or text columns to write into the feature store (one value per resolved entity).
+                {scalarUseColumnPicker
+                  ? 'Select numeric or text columns (one value per resolved entity).'
+                  : 'Comma or newline separated — must match CSV headers exactly.'}
               </p>
-              <div className="mt-2 max-h-48 overflow-y-auto rounded border border-slate-200 dark:border-slate-600 p-2 space-y-1">
-                {scalarSchemaColumns
-                  .filter((col) => col !== scalarIdColumn)
-                  .map((col) => (
-                    <label key={col} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={scalarSelectedColumns.includes(col)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setScalarSelectedColumns((prev) => [...prev, col]);
-                          } else {
-                            setScalarSelectedColumns((prev) => prev.filter((c) => c !== col));
-                          }
-                        }}
-                        className="rounded border-slate-300 dark:border-slate-600"
-                      />
-                      <span className="text-sm">{col}</span>
-                    </label>
-                  ))}
-              </div>
+              {scalarUseColumnPicker ? (
+                <div className="mt-2 max-h-48 overflow-y-auto rounded border border-slate-200 dark:border-slate-600 p-2 space-y-1">
+                  {scalarSchemaColumns
+                    .filter((col) => col !== scalarIdColumn.trim())
+                    .map((col) => (
+                      <label key={col} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={scalarSelectedColumns.includes(col)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setScalarSelectedColumns((prev) => [...prev, col]);
+                            } else {
+                              setScalarSelectedColumns((prev) => prev.filter((c) => c !== col));
+                            }
+                          }}
+                          className="rounded border-slate-300 dark:border-slate-600"
+                        />
+                        <span className="text-sm">{col}</span>
+                      </label>
+                    ))}
+                </div>
+              ) : (
+                <textarea
+                  className="mt-2 w-full rounded border border-slate-300 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                  rows={3}
+                  value={scalarManualFeatureColumns}
+                  onChange={(e) => setScalarManualFeatureColumns(e.target.value)}
+                  placeholder="total_incidents"
+                />
+              )}
             </div>
             {extractJobId && jobStatus && scalarExtractDatasetId && (
               <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-600 dark:bg-slate-700">
@@ -676,7 +874,15 @@ export function DatasetsPage() {
             <button
               type="submit"
               className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-violet-600 dark:hover:bg-violet-700"
-              disabled={!canScalarExtract || !scalarIdColumn.trim() || scalarSelectedColumns.length === 0 || isScalarExtracting || jobInProgress}
+              disabled={
+                !canScalarExtract ||
+                !scalarIdColumn.trim() ||
+                !scalarFeaturesReady ||
+                isScalarExtracting ||
+                isScalarUploading ||
+                jobInProgress ||
+                (!scalarAttachFile && !scalarUseColumnPicker)
+              }
             >
               {isScalarExtracting
                 ? 'Starting…'

@@ -1,5 +1,6 @@
 package com.tracefield.api.schema
 
+import java.nio.charset.StandardCharsets
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -9,6 +10,25 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 private val json = Json { ignoreUnknownKeys = true }
+
+/** Column names from the first non-blank line (CSV header). */
+fun csvHeaderColumnNamesFromContent(content: String): List<String> {
+    val lines = content.trim().lines().filter { it.isNotBlank() }
+    if (lines.isEmpty()) return emptyList()
+    return parseCsvLinePublic(lines[0]).map { it.trim().removeSurrounding("\"") }.filter { it.isNotBlank() }
+}
+
+fun columnNamesFromUploadedBytes(filename: String?, contentType: String?, bytes: ByteArray): List<String> {
+    val content = String(bytes, StandardCharsets.UTF_8)
+    val asJson = filename?.lowercase()?.endsWith(".json") == true ||
+        contentType?.lowercase()?.contains("json") == true
+    return if (asJson) {
+        val rows = parseFullJson(content)
+        rows.firstOrNull()?.keys?.toList() ?: emptyList()
+    } else {
+        csvHeaderColumnNamesFromContent(content)
+    }
+}
 
 /**
  * Parse a full CSV string into rows (all rows, no limit).

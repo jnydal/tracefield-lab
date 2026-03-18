@@ -68,7 +68,9 @@ data class DatasetResponse(
     val createdAt: String,
     val updatedAt: String,
     val fileCount: Long? = null,
-    val mappingsCount: Long? = null
+    val mappingsCount: Long? = null,
+    /** Column names from latest upload (ingest); avoids object-store read for UI. */
+    val latestFileColumns: List<String>? = null,
 )
 
 @Serializable

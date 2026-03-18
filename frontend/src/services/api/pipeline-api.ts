@@ -12,6 +12,8 @@ export type Dataset = {
   updatedAt: string;
   fileCount?: number;
   mappingsCount?: number;
+  /** Column names saved at last ingest (≤1MB files also cached for read). */
+  latestFileColumns?: string[];
 };
 
 export type FeatureExtractRequest = {
@@ -254,6 +256,28 @@ export const pipelineApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['FeatureDefinitions'],
     }),
+    scalarExtractUpload: builder.mutation<
+      ScalarExtractResponse,
+      {
+        datasetId: string;
+        idColumn: string;
+        columns: ScalarExtractColumnRequest[];
+        file: File;
+      }
+    >({
+      query: ({ datasetId, idColumn, columns, file }) => {
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+        formData.append('idColumn', idColumn);
+        formData.append('columns', JSON.stringify(columns));
+        return {
+          url: `/datasets/${datasetId}/extract-scalar-upload`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: ['FeatureDefinitions'],
+    }),
     listEntityMappings: builder.query<EntityMapping[], void>({
       query: () => ({ url: '/entity-mappings', method: 'GET' }),
       providesTags: ['EntityMappings'],
@@ -342,7 +366,17 @@ export const pipelineApi = baseApi.injectEndpoints({
           body: formData,
         };
       },
-      invalidatesTags: ['Datasets'],
+      invalidatesTags: (_r, _e, { datasetId }) => ['Datasets', { type: 'Datasets', id: datasetId }],
+    }),
+    syncDatasetFileMetadata: builder.mutation<
+      { columns: string[]; synced: boolean; reason: string },
+      string
+    >({
+      query: (datasetId) => ({
+        url: `/datasets/${datasetId}/sync-file-metadata`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_r, _e, datasetId) => [{ type: 'Datasets', id: datasetId }],
     }),
   }),
 });
@@ -356,6 +390,7 @@ export const {
   useGetDatasetPreviewRowsQuery,
   useTriggerFeatureExtractMutation,
   useTriggerScalarExtractMutation,
+  useScalarExtractUploadMutation,
   useGetJobStatusQuery,
   useLazyGetJobStatusQuery,
   useListEntityMappingsQuery,
@@ -375,4 +410,5 @@ export const {
   useLazySimilaritySearchQuery,
   useInferSchemaMutation,
   useUploadDatasetFileMutation,
+  useSyncDatasetFileMetadataMutation,
 } = pipelineApi;

@@ -99,13 +99,15 @@ Core assumptions that protect the pipeline from silent derailing are documented 
 **Responsibilities**:
 - Dataset registration and schema management
 - **Schema inference**: `POST /schema/infer` — infer column types and mapping suggestions (textColumn, idColumn, joinKeys, semanticFields) from pasted CSV/JSON sample; uses heuristic inference always, optionally enhances with LLM (Ollama) when `OLLAMA_URL` or `LLM_URL` is set
-- **Ingest**: `POST /ingest` — multipart form with `datasetId` and `file`; stores file in object storage, inserts into `dataset_files`; returns `objectUri` (and optional `jobId`); supports CSV/JSON; worker-embeddings reads from `dataset_files.object_uri`
+- **Ingest**: `POST /ingest` — multipart form with `datasetId` and `file`; stores file in object storage, inserts into `dataset_files` with **ingest-time column names** (`ingest_columns_json`) and, for files ≤1MB, **inline base64 copy** (`inline_file_b64`) so scalar extract and preview can fall back if object-store GET fails; worker-embeddings still reads from `object_uri` when possible
 - Ingest job submission and status
 - Entity mapping configuration
 - Feature extraction job orchestration
 - Analysis job submission and result access
 - **Similarity search**: `GET /entities/{entityId}/similar` — vector search across entities using embeddings (pgvector cosine distance)
-- **Dataset preview rows**: `GET /datasets/{id}/preview-rows` — returns row count and column names from the dataset’s latest ingested file (for “use all rows” resolution UI feedback)
+- **Dataset preview rows**: `GET /datasets/{id}/preview-rows` — row count and column names from latest file (object storage or inline cache); CSV header-only files still expose columns. `GET /datasets/{id}` includes `latestFileColumns` from the last ingest
+- **Sync file metadata**: `POST /datasets/{id}/sync-file-metadata` — re-reads the latest file from object storage (or inline cache), updates `ingest_columns_json` / small-file inline copy, returns column names (used by the scalar-extract modal when the list would otherwise be empty)
+- **Scalar extract from browser upload**: `POST /datasets/{id}/extract-scalar-upload` — multipart `file`, `idColumn`, `columns` (JSON); parses the uploaded CSV/JSON and writes features without reading object storage (demo / broken MinIO)
 
 **Dependencies**: Database, Kafka, Object Storage
 

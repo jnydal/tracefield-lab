@@ -214,14 +214,17 @@ the other."
 The analysis worker needs **numeric feature values** in the feature store (e.g. `total_incidents` and `units_sold_thousands` per resolved time period). "Extract embeddings" only fills the embeddings table; it does not write these scalars. To avoid a **failed** analysis job with *"No overlapping entity-feature data for left and right feature sets"*, use the GUI to import scalar columns from your uploaded CSVs:
 
 1. **Datasets** → open **NYC Crime Statistics 2023** → click **Extract scalar features**.
-2. In the modal:
-   - **ID column:** choose `crime_record_id` (links each row to the resolved time-period entity).
+2. **CSV from your computer:** choose `nyc_crime_2023.csv` (the same file you uploaded). That fills the column list and runs extraction from your browser copy — **required** if the API cannot read cloud storage (common on split prod setups). If columns already appear without choosing a file, you can use those instead.
+3. In the modal:
+   - **ID column:** `crime_record_id` (links each row to the resolved time-period entity).
    - **Columns to import as features:** check `total_incidents` (and any other numeric columns you want). Feature definitions are created by name if they don’t exist.
-3. Click **Start extraction** and wait for the job to finish (status **finished**).
-4. Repeat for **NYC Ice Cream Sales 2023**: **Extract scalar features** → ID column `period_id`, columns to import: check `units_sold_thousands`. Run and wait.
-5. Then proceed to Step 5. The Phase 1 analysis job should complete successfully.
+4. Click **Start extraction** and wait for the job to finish (status **finished**).
+5. Repeat for **NYC Ice Cream Sales 2023**: attach `nyc_icecream_sales_2023.csv`, ID `period_id`, check `units_sold_thousands`. Run and wait.
+6. Then proceed to Step 5. The Phase 1 analysis job should complete successfully.
 
 This flow is the **proper pipeline** described in [IMPROVEMENTS.md](IMPROVEMENTS.md): scalar columns from uploaded files flow into the feature store so analysis works without seed scripts.
+
+**If columns still don’t load:** Use **CSV from your computer** in the modal (same demo file) — that path does not need MinIO. For persistent ingest metadata, apply migration `017` and rebuild the API (`psql … < infra/sql/017_dataset_file_ingest_cache.sql` from repo root on the host).
 
 ---
 

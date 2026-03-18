@@ -105,7 +105,7 @@ const baseQueryWithRetry: BaseQueryFn<
     credentials: 'include',
     prepareHeaders: (headers, { endpoint }) => {
       // For multipart uploads, let the browser set Content-Type with boundary
-      if (endpoint === 'uploadDatasetFile') {
+      if (endpoint === 'uploadDatasetFile' || endpoint === 'scalarExtractUpload') {
         return headers;
       }
       headers.set('Content-Type', 'application/json');

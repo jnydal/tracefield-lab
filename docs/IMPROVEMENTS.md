@@ -1,43 +1,98 @@
-You can fix it in two ways: proper pipeline (scalars from CSVs) or demo-only (seed so the exact analysis runs).
+# Tracefield Lab — improvements backlog
 
-1. Pipeline fix: scalar features from uploaded files
-Make scalar columns in uploaded CSVs flow into the feature store, similar to embeddings.
+Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object storage, scalar features). For the Heat/Crime demo flow, see [DEMO_WALKTHROUGH_HEATCRIME.md](DEMO_WALKTHROUGH_HEATCRIME.md).
 
-Backend
+---
 
-Option A – New worker (recommended)
-A small worker (e.g. worker-scalar-features or a mode in an existing worker) that:
+## Delivered (reference)
 
-Is triggered per dataset (Kafka message or job table), with config: dataset id, list of columns to ingest (e.g. score, training_hours), and optionally column → feature_definition name.
-Reads the dataset’s files from object storage (same as worker-embeddings).
-For each row, gets entity_id via entity_map (dataset_id + source record id from the row).
-For each configured column, ensures a feature definition exists (by name), then upserts into features (entity_id, dataset_id, feature_definition_id, value_num/value_text, provenance).
-Emits provenance and updates job status. Idempotent and tolerant of out-of-order messages per project rules.
-Option B – API-only job
-Same logic in the API or a sync job: on “extract scalar features”, read dataset files, resolve entities via entity_map, write to feature_definitions + features. Simpler but heavier for large files; workers scale better.
+- **Scalar features from uploaded CSVs**: GUI **Extract scalar features** writes numeric/text columns into the feature store keyed by resolved entities (`POST /datasets/{id}/extract-scalar`). Analysis jobs can use those values without SQL seeds.
+- **Resilience when object-store GET fails**: On ingest, the API stores **`ingest_columns_json`** (header names) and, for uploads **≤ 1 MB**, **`inline_file_b64`** so preview and scalar extract can fall back if MinIO/S3 read fails. See migration `017_dataset_file_ingest_cache.sql` and [ARCHITECTURE.md](../ARCHITECTURE.md) (API ingest / preview).
+- **UI**: Column pickers prefer **attached CSV header** (browser) → registered schema → **`latestFileColumns`** → **`POST …/sync-file-metadata`** → preview API. **`POST …/extract-scalar-upload`** sends the CSV with the job so extraction does not depend on MinIO/S3 GET.
 
-UI
+---
 
-On Datasets, add something like “Extract scalar features” (or “Import columns as features”) next to “Extract embeddings”.
-User picks the dataset and which columns to import (e.g. score, training_hours, age_group). Optionally name the feature definition or use column name.
-Frontend calls a new API (e.g. POST /features/extract-scalar or POST /datasets/{id}/extract-scalar) with { "columns": ["score", "training_hours"] } (and maybe idColumn for row→entity).
-Backend enqueues the worker job (or runs it) and returns job id; UI can poll job status like for embedding extraction.
-Result: User uploads the two CSVs, runs resolution, then “Extract scalar features” on each dataset for the relevant columns. After that, “satisfaction vs training hours” works in the GUI with no seed.
+## Open issues & improvements
 
-2. Demo-only fix: seed for the two-dataset story
-If the goal is only to make the demo run end-to-end without building the scalar pipeline yet:
+### 1. No automated tests for ingest cache / scalar extract
 
-Add (or extend) seed SQL that:
-Inserts the two datasets (survey 2024, training 2024) and their metadata.
-Inserts the five entities (Alice, Bob, Carol, Dave, Eve) and entity_map rows for both datasets (survey rec-* and training emp-* → same entity_ids).
-Inserts feature definitions for score, training_hours, and optionally age_group.
-Inserts features for each entity from both datasets (score and training_hours per person).
-Don’t insert raw file content; the “content” is only in the CSVs for upload. So you have two choices:
-A: Seed only structure + features; in the demo you still register/upload the two CSVs and show resolution, but skip “extract scalar” and run analysis using the pre-seeded features.
-B: Seed so that dataset records and files exist and the seed data exactly matches what’s in docs/demo/survey_2024.csv and training_attendance_2024.csv; then the demo is “everything already loaded, show resolution and analysis”.
-Result: The exact “satisfaction vs training hours” analysis works in the GUI for the demo, but you still don’t have a general “scalar from CSV” path until you add the worker/API above.
+**Gap:** The path “upload → DB columns + optional inline body → scalar extract without S3” is not covered by CI tests.
 
-Summary
+**Suggestion:** Integration test: ingest small CSV, stub or break S3 GET, assert scalar extract still completes and features exist; separate test with S3-only success.
 
-**Proper fix (implemented):** API `POST /datasets/{id}/extract-scalar` plus UI **Extract scalar features** on the Datasets page; user picks ID column and columns to import, backend reads dataset file(s), resolves entities via `entity_map`, upserts into `features`; job status is polled like embedding extraction. See Heat/Crime walkthrough Step 4b.
-Quick fix: Seed data or the SQL script in docs/demo/seed_heatcrime_scalar_features.sql for automation; the GUI is the preferred path.
+---
+
+### 2. Duplicate storage for small files (S3 + Postgres)
+
+**Issue:** Files ≤ 1 MB are stored in object storage **and** as base64 in `dataset_files.inline_file_b64`. Doubles storage footprint for that tier and creates two sources of truth (mitigated by “S3 first, then inline”).
+
+**Suggestions:**
+
+- Document **retention** for `inline_file_b64` alongside raw objects ([NFR.md](../NFR.md) categories).
+- Longer-term: optional **inline only on failed S3 verify** or **lazy backfill** after first failed GET (more complex).
+
+---
+
+### 3. Base64 in `TEXT` vs binary column
+
+**Issue:** Inline file body is stored as base64 text (~33% overhead vs raw bytes).
+
+**Suggestion:** Migrate to `BYTEA` (or equivalent) if inline storage grows; keep migration backward compatible.
+
+---
+
+### 4. Schema / Exposed typing for `ingest_columns_json`
+
+**Issue:** Column is JSONB in SQL; Exposed maps it as nullable text. Works but is not type-expressive.
+
+**Suggestion:** Use Exposed JSON/JSONB mapping if the stack supports it consistently across drivers.
+
+---
+
+### 5. Extra queries on `PUT /datasets/{id}`
+
+**Issue:** After update, the handler loads `latestFileColumns`, `fileCount`, and `mappingsCount` via additional queries.
+
+**Suggestion:** Acceptable for now; consolidate into one query or drop redundant fields from PUT response if clients only need them from `GET /datasets/{id}`.
+
+---
+
+### 6. Large files still fully dependent on object storage
+
+**Issue:** Files **> 1 MB** have no inline fallback. Scalar extract and preview fail if S3 GET fails.
+
+**Suggestions:** Raise cap with explicit ops limit, or **chunked / streaming** read path; avoid unbounded Postgres blobs.
+
+---
+
+### 7. `parseFullCsv` requires ≥ 2 non-blank lines for row maps
+
+**Issue:** Historically, CSV with **header only** produced no parsed rows (empty column list from row keys). Header-only preview is now improved server-side for preview-rows; scalar extract still needs data rows to write features.
+
+**Suggestion:** Document “header-only uploads cannot produce scalar features”; optional validation at ingest.
+
+---
+
+### 8. Demo / ops friction
+
+**Issues encountered:**
+
+- **`psql -f path` inside DB container** fails (path is container FS, not repo). **Fix:** pipe SQL from host (`< file.sql` or PowerShell `Get-Content … | psql`).
+- **Existing datasets** before migration **017**: must **re-upload** once (or recreate) to populate `ingest_columns_json` / `inline_file_b64`.
+
+**Suggestion:** Add a one-shot admin task or migration note in RUNBOOK (already partially there); consider **“Repair ingest metadata”** job that re-reads from S3 when healthy.
+
+---
+
+### 9. Embeddings worker still S3-only
+
+**Issue:** `worker-embeddings` reads `object_uri` from DB; it does not use `inline_file_b64`. If S3 is broken, embeddings extract can still fail while scalar extract succeeds for small files.
+
+**Suggestion:** Align worker with same fallback chain or document the limitation.
+
+---
+
+## How to use this doc
+
+- Treat items as **backlog**, not blockers for the demo, unless marked critical for your environment.
+- When closing an item, move a one-line summary to **Delivered** (or ARCHITECTURE/RUNBOOK) and link the PR.

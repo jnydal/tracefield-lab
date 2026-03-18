@@ -3,6 +3,8 @@ package com.tracefield.api
 import com.tracefield.api.models.*
 import com.tracefield.api.schema.inferSchema
 import com.tracefield.api.storage.S3Storage
+import com.tracefield.api.schema.columnNamesFromUploadedBytes
+import com.tracefield.api.schema.csvHeaderColumnNamesFromContent
 import com.tracefield.api.schema.parseFullCsv
 import com.tracefield.api.schema.parseFullJson
 import com.tracefield.api.storage.createS3Storage
@@ -43,7 +45,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.serializer
+import java.util.Base64
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
@@ -76,6 +80,15 @@ private val jsonParser = Json { ignoreUnknownKeys = true }
 private fun parseJsonElement(value: String?): JsonElement? {
     if (value.isNullOrBlank() || value == "null") return null
     return runCatching { jsonParser.parseToJsonElement(value) }.getOrNull()
+}
+
+private const val MAX_INLINE_FILE_BYTES = 1024 * 1024
+
+private fun parseIngestColumnsJson(raw: String?): List<String>? {
+    if (raw.isNullOrBlank()) return null
+    return runCatching {
+        jsonParser.decodeFromString(ListSerializer(String.serializer()), raw)
+    }.getOrNull()
 }
 
 private fun sanitizeReturnTo(value: String?): String {
@@ -245,20 +258,14 @@ private suspend fun fetchGoogleUserInfo(accessToken: String): JsonElement {
     return jsonParser.parseToJsonElement(response.body())
 }
 
-private fun runScalarExtract(
-    storage: S3Storage,
+private fun runScalarExtractFromBytes(
     datasetId: java.util.UUID,
     idColumn: String,
-    columns: List<ScalarExtractColumnRequest>
+    columns: List<ScalarExtractColumnRequest>,
+    bytes: ByteArray,
+    filename: String,
+    contentType: String,
 ): String {
-    val (objectUri, filename, contentType) = transaction(DatabaseManager.getDatabase()) {
-        DatasetFiles.select { DatasetFiles.datasetId eq datasetId }
-            .orderBy(DatasetFiles.createdAt, SortOrder.DESC)
-            .limit(1)
-            .singleOrNull()
-            ?.let { row -> Triple(row[DatasetFiles.objectUri], row[DatasetFiles.filename] ?: "", row[DatasetFiles.contentType] ?: "") }
-    } ?: throw IllegalStateException("Dataset has no file")
-    val bytes = storage.getFile(objectUri) ?: throw IllegalStateException("Could not read dataset file from storage")
     if (bytes.isEmpty()) throw IllegalStateException("Dataset file is empty")
     val content = String(bytes, StandardCharsets.UTF_8)
     val format = when {
@@ -272,7 +279,12 @@ private fun runScalarExtract(
         val pairs = EntityMap.select { EntityMap.datasetId eq datasetId }
             .mapNotNull { row ->
                 val srcId = row[EntityMap.sourceRecordId] ?: return@mapNotNull null
-                val eid = (row[EntityMap.entityId] as EntityID<UUID>).value
+                val o = row[EntityMap.entityId] as Any
+                val eid: UUID = when (o) {
+                    is UUID -> o
+                    is EntityID<*> -> o.value as UUID
+                    else -> return@mapNotNull null
+                }
                 Pair(srcId, eid)
             }
         pairs.toMap()
@@ -299,8 +311,10 @@ private fun runScalarExtract(
         }
     }
     transaction(DatabaseManager.getDatabase()) {
-        Features.deleteWhere {
-            (Features.datasetId eq datasetId) and (Features.featureDefinitionId inList featureDefIds)
+        for (defId in featureDefIds) {
+            Features.deleteWhere {
+                (Features.datasetId eq datasetId) and (Features.featureDefinitionId eq defId)
+            }
         }
     }
     var written = 0
@@ -326,6 +340,28 @@ private fun runScalarExtract(
         }
     }
     return """{"rowsProcessed":${rows.size},"featuresWritten":$written}"""
+}
+
+private fun runScalarExtract(
+    storage: S3Storage,
+    datasetId: java.util.UUID,
+    idColumn: String,
+    columns: List<ScalarExtractColumnRequest>
+): String {
+    val latest = transaction(DatabaseManager.getDatabase()) {
+        DatasetFiles.select { DatasetFiles.datasetId eq datasetId }
+            .orderBy(DatasetFiles.createdAt, SortOrder.DESC)
+            .limit(1)
+            .singleOrNull()
+    } ?: throw IllegalStateException("Dataset has no file")
+    val objectUri = latest[DatasetFiles.objectUri]
+    val filename = latest[DatasetFiles.filename] ?: ""
+    val contentType = latest[DatasetFiles.contentType] ?: ""
+    val inlineB64 = latest[DatasetFiles.inlineFileB64]
+    val bytes = storage.getFile(objectUri)?.takeIf { it.isNotEmpty() }
+        ?: inlineB64?.let { runCatching { Base64.getDecoder().decode(it) }.getOrNull() }?.takeIf { it.isNotEmpty() }
+        ?: throw IllegalStateException("Could not read dataset file from storage or inline cache; re-upload the file.")
+    return runScalarExtractFromBytes(datasetId, idColumn, columns, bytes, filename, contentType)
 }
 
 fun Application.module() {
@@ -455,6 +491,10 @@ fun Application.module() {
             }
             val namespace = "datasets/$datasetId"
             val objectUri = storage.putFile(namespace, fileBytes!!, filename, contentType)
+            val colNames = columnNamesFromUploadedBytes(filename, contentType, fileBytes!!)
+            val ingestColsJson = jsonParser.encodeToString(ListSerializer(String.serializer()), colNames)
+            val inlineB64 =
+                if (fileBytes!!.size <= MAX_INLINE_FILE_BYTES) Base64.getEncoder().encodeToString(fileBytes) else null
             val fileId = UUID.randomUUID()
             val now = Instant.now()
             transaction(DatabaseManager.getDatabase()) {
@@ -465,6 +505,8 @@ fun Application.module() {
                     it[DatasetFiles.filename] = filename
                     it[DatasetFiles.contentType] = contentType
                     it[DatasetFiles.sizeBytes] = fileBytes!!.size.toLong()
+                    it[DatasetFiles.ingestColumnsJson] = ingestColsJson
+                    it[DatasetFiles.inlineFileB64] = inlineB64
                     it[DatasetFiles.createdAt] = now
                 }
             }
@@ -575,15 +617,23 @@ fun Application.module() {
                         .orderBy(DatasetFiles.createdAt, SortOrder.DESC)
                         .limit(1)
                         .singleOrNull()
-                        ?.let { row -> Triple(row[DatasetFiles.objectUri], row[DatasetFiles.filename] ?: "", row[DatasetFiles.contentType] ?: "") }
                 }
                 if (fileRow == null) {
                     call.respond(HttpStatusCode.NotFound, mapOf("error" to "Dataset has no ingested file."))
                     return@get
                 }
-                val (objectUri, filename, contentType) = fileRow
-                val bytes = storage.getFile(objectUri)
+                val objectUri = fileRow[DatasetFiles.objectUri]
+                val filename = fileRow[DatasetFiles.filename] ?: ""
+                val contentType = fileRow[DatasetFiles.contentType] ?: ""
+                val inlineB64 = fileRow[DatasetFiles.inlineFileB64]
+                val bytes = storage.getFile(objectUri)?.takeIf { it.isNotEmpty() }
+                    ?: inlineB64?.let { runCatching { Base64.getDecoder().decode(it) }.getOrNull() }?.takeIf { it.isNotEmpty() }
                 if (bytes == null || bytes.isEmpty()) {
+                    val fallbackCols = parseIngestColumnsJson(fileRow[DatasetFiles.ingestColumnsJson])
+                    if (!fallbackCols.isNullOrEmpty()) {
+                        call.respond(mapOf("rowCount" to 0, "columns" to fallbackCols))
+                        return@get
+                    }
                     call.respond(HttpStatusCode.NotFound, mapOf("error" to "Could not read dataset file."))
                     return@get
                 }
@@ -598,8 +648,78 @@ fun Application.module() {
                     else -> "csv"
                 }
                 val rows = if (format == "json") parseFullJson(content) else parseFullCsv(content)
-                val columns = rows.flatMap { it.keys }.distinct()
+                val columns = when {
+                    rows.isNotEmpty() -> rows.flatMap { it.keys }.distinct()
+                    format != "json" -> csvHeaderColumnNamesFromContent(content)
+                    else -> emptyList()
+                }
                 call.respond(mapOf("rowCount" to rows.size, "columns" to columns))
+            }
+            post("/{id}/sync-file-metadata") {
+                val id = parseUuid(call.parameters["id"]) ?: run {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid dataset id"))
+                    return@post
+                }
+                val datasetExists = transaction(DatabaseManager.getDatabase()) {
+                    Datasets.select { Datasets.id eq EntityID(id, Datasets) }.count() > 0
+                }
+                if (!datasetExists) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Dataset not found"))
+                    return@post
+                }
+                val result = transaction(DatabaseManager.getDatabase()) {
+                    val fileRow = DatasetFiles.select { DatasetFiles.datasetId eq id }
+                        .orderBy(DatasetFiles.createdAt, SortOrder.DESC)
+                        .limit(1)
+                        .singleOrNull()
+                        ?: return@transaction Triple(false, emptyList<String>(), "no_file")
+                    val objectUri = fileRow[DatasetFiles.objectUri]
+                    val filename = fileRow[DatasetFiles.filename] ?: ""
+                    val contentType = fileRow[DatasetFiles.contentType] ?: ""
+                    val inlineB64 = fileRow[DatasetFiles.inlineFileB64]
+                    val bytes = storage.getFile(objectUri)?.takeIf { it.isNotEmpty() }
+                        ?: inlineB64?.let { runCatching { Base64.getDecoder().decode(it) }.getOrNull() }
+                            ?.takeIf { it.isNotEmpty() }
+                    if (bytes == null || bytes.isEmpty()) {
+                        val cached = parseIngestColumnsJson(fileRow[DatasetFiles.ingestColumnsJson])
+                        return@transaction Triple(
+                            false,
+                            cached ?: emptyList(),
+                            if (cached.isNullOrEmpty()) "not_readable" else "cached_only",
+                        )
+                    }
+                    val colNames = columnNamesFromUploadedBytes(filename, contentType, bytes)
+                    if (colNames.isEmpty()) {
+                        return@transaction Triple(false, emptyList(), "no_columns")
+                    }
+                    val ingestJson = jsonParser.encodeToString(ListSerializer(String.serializer()), colNames)
+                    val newInline =
+                        if (bytes.size <= MAX_INLINE_FILE_BYTES) {
+                            Base64.getEncoder().encodeToString(bytes)
+                        } else {
+                            fileRow[DatasetFiles.inlineFileB64]
+                        }
+                    var persisted = false
+                    try {
+                        DatasetFiles.update({ DatasetFiles.id eq fileRow[DatasetFiles.id] }) {
+                            it[DatasetFiles.ingestColumnsJson] = ingestJson
+                            it[DatasetFiles.inlineFileB64] = newInline
+                        }
+                        persisted = true
+                    } catch (e: Exception) {
+                        org.slf4j.LoggerFactory.getLogger("com.tracefield.api")
+                            .warn("sync-file-metadata: persist failed (run migration 017?): {}", e.message)
+                    }
+                    Triple(persisted, colNames, if (persisted) "ok" else "columns_only")
+                }
+                val (ok, columns, reason) = result
+                call.respond(
+                    mapOf(
+                        "columns" to columns,
+                        "synced" to ok,
+                        "reason" to reason,
+                    ),
+                )
             }
             get("/{id}") {
                 val id = parseUuid(call.parameters["id"]) ?: run {
@@ -611,6 +731,11 @@ fun Application.module() {
                         val datasetId = row[Datasets.id].value
                         val fileCount = DatasetFiles.select { DatasetFiles.datasetId eq datasetId }.count()
                         val mappingsCount = EntityMap.select { EntityMap.datasetId eq datasetId }.count()
+                        val latestCols = DatasetFiles.select { DatasetFiles.datasetId eq datasetId }
+                            .orderBy(DatasetFiles.createdAt, SortOrder.DESC)
+                            .limit(1)
+                            .singleOrNull()
+                            ?.let { parseIngestColumnsJson(it[DatasetFiles.ingestColumnsJson]) }
                         DatasetResponse(
                             id = row[Datasets.id].value.toString(),
                             name = row[Datasets.name],
@@ -622,7 +747,8 @@ fun Application.module() {
                             createdAt = row[Datasets.createdAt].toString(),
                             updatedAt = row[Datasets.updatedAt].toString(),
                             fileCount = fileCount,
-                            mappingsCount = mappingsCount
+                            mappingsCount = mappingsCount,
+                            latestFileColumns = latestCols,
                         )
                     }
                 }
@@ -682,6 +808,103 @@ fun Application.module() {
                 }
                 call.respond(ScalarExtractResponse(jobId = job.id))
             }
+            post("/{id}/extract-scalar-upload") {
+                val id = parseUuid(call.parameters["id"]) ?: run {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid dataset id"))
+                    return@post
+                }
+                val maxBytes = 15 * 1024 * 1024L
+                var fileBytes: ByteArray? = null
+                var filename: String? = null
+                var contentType: String? = null
+                var idColumnStr: String? = null
+                var columnsJson: String? = null
+                val multipart = call.receiveMultipart()
+                var part = multipart.readPart()
+                while (part != null) {
+                    val p = part!!
+                    when (p) {
+                        is PartData.FormItem -> {
+                            when (p.name) {
+                                "idColumn" -> idColumnStr = p.value
+                                "columns" -> columnsJson = p.value
+                            }
+                        }
+                        is PartData.FileItem -> {
+                            if (p.name == "file") {
+                                val input = p.provider()
+                                fileBytes = input.readBytes()
+                                filename = p.originalFileName
+                                contentType = p.contentType?.toString()
+                            }
+                        }
+                        else -> {}
+                    }
+                    p.dispose()
+                    part = multipart.readPart()
+                }
+                if (fileBytes != null && fileBytes!!.size > maxBytes) {
+                    call.respond(HttpStatusCode.PayloadTooLarge, mapOf("error" to "File too large (max 15MB)"))
+                    return@post
+                }
+                if (fileBytes == null || fileBytes!!.isEmpty()) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "file is required"))
+                    return@post
+                }
+                if (idColumnStr.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "idColumn is required"))
+                    return@post
+                }
+                val columns = runCatching {
+                    jsonParser.decodeFromString(ListSerializer(serializer<ScalarExtractColumnRequest>()), columnsJson ?: "[]")
+                }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid columns JSON"))
+                    return@post
+                }
+                if (columns.isEmpty()) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "At least one column is required"))
+                    return@post
+                }
+                val datasetExists = transaction(DatabaseManager.getDatabase()) {
+                    Datasets.select { Datasets.id eq EntityID(id, Datasets) }.count() > 0
+                }
+                if (!datasetExists) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Dataset not found"))
+                    return@post
+                }
+                val hasFiles = transaction(DatabaseManager.getDatabase()) {
+                    DatasetFiles.select { DatasetFiles.datasetId eq id }.count() > 0
+                }
+                if (!hasFiles) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Dataset has no files; upload data first"))
+                    return@post
+                }
+                val fn = filename ?: "upload.csv"
+                val ct = contentType ?: "text/csv"
+                val columnsJsonJob = jsonParser.encodeToString(ListSerializer(serializer<ScalarExtractColumnRequest>()), columns)
+                val job = jobQueue.createScalarExtractJob(id.toString(), idColumnStr.trim(), columnsJsonJob)
+                val uploadBytes = fileBytes!!
+                val idColTrim = idColumnStr.trim()
+                GlobalScope.launch(Dispatchers.IO) {
+                    try {
+                        jobQueue.updateJobStatus(job.id, JobStatus.STARTED)
+                        val result = runScalarExtractFromBytes(id, idColTrim, columns, uploadBytes, fn, ct)
+                        jobQueue.updateJobStatus(job.id, JobStatus.FINISHED, result)
+                        runCatching {
+                            logProvenanceEvent(
+                                jobId = UUID.fromString(job.id),
+                                datasetId = id,
+                                stage = "scalar.extract",
+                                detail = mapOf("result" to result, "source" to "browser_upload"),
+                            )
+                        }.onFailure { call.application.log.error("Failed to emit scalar.extract provenance", it) }
+                    } catch (e: Exception) {
+                        call.application.log.error("Scalar extract (upload) failed", e)
+                        jobQueue.updateJobStatus(job.id, JobStatus.FAILED, excInfo = e.message ?: "Scalar extract failed")
+                    }
+                }
+                call.respond(ScalarExtractResponse(jobId = job.id))
+            }
             put("/{id}") {
                 val id = parseUuid(call.parameters["id"]) ?: run {
                     call.respond(HttpStatusCode.BadRequest, "Invalid dataset id")
@@ -707,6 +930,20 @@ fun Application.module() {
                     call.respond(HttpStatusCode.NotFound, "Dataset not found")
                     return@put
                 }
+                val putDatasetId = id
+                val putLatestCols = transaction(DatabaseManager.getDatabase()) {
+                    DatasetFiles.select { DatasetFiles.datasetId eq putDatasetId }
+                        .orderBy(DatasetFiles.createdAt, SortOrder.DESC)
+                        .limit(1)
+                        .singleOrNull()
+                        ?.let { parseIngestColumnsJson(it[DatasetFiles.ingestColumnsJson]) }
+                }
+                val putFileCount = transaction(DatabaseManager.getDatabase()) {
+                    DatasetFiles.select { DatasetFiles.datasetId eq putDatasetId }.count()
+                }
+                val putMappingsCount = transaction(DatabaseManager.getDatabase()) {
+                    EntityMap.select { EntityMap.datasetId eq putDatasetId }.count()
+                }
                 call.respond(
                     DatasetResponse(
                         id = id.toString(),
@@ -717,7 +954,10 @@ fun Application.module() {
                         schema = req.schema,
                         refreshSchedule = req.refreshSchedule,
                         createdAt = updated[Datasets.createdAt].toString(),
-                        updatedAt = now.toString()
+                        updatedAt = now.toString(),
+                        fileCount = putFileCount,
+                        mappingsCount = putMappingsCount,
+                        latestFileColumns = putLatestCols,
                     )
                 )
             }

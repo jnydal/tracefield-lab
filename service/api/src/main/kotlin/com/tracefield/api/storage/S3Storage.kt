@@ -13,8 +13,11 @@ import aws.smithy.kotlin.runtime.content.toByteArray
 import aws.smithy.kotlin.runtime.net.url.Url
 import com.tracefield.core.Config
 import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
 import java.security.MessageDigest
 import java.time.Instant
+
+private val s3Log = LoggerFactory.getLogger("com.tracefield.api.storage.S3Storage")
 
 class S3Storage(
     private val bucket: String,
@@ -126,6 +129,7 @@ class S3Storage(
                     resp.body?.toByteArray()
                 }
             } catch (e: Exception) {
+                s3Log.warn("getObject failed bucket={} key_prefix={}… : {}", bucket, key.take(48), e.message)
                 null
             }
         }

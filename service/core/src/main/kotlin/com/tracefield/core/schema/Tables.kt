@@ -112,6 +112,8 @@ object DatasetFiles : UUIDTable("dataset_files", columnName = "id") {
     val contentType = text("content_type").nullable()
     val sizeBytes = long("size_bytes").nullable()
     val checksum = text("checksum").nullable()
+    val ingestColumnsJson = text("ingest_columns_json").nullable()
+    val inlineFileB64 = text("inline_file_b64").nullable()
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp())
 }
 
