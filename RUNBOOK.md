@@ -514,7 +514,7 @@ This creates: user, dataset `test-survey-2024`, 3 entities (Alice, Bob, Carol), 
 
 ### Heat/Crime demo scalar features
 
-After completing resolution and feature definitions for the Heat/Crime walkthrough, load scalar feature values so the Phase 1 analysis job can run. **Preferred:** use the GUI — **Datasets** → open each dataset → **Extract scalar features** (ID column + columns to import). See `docs/DEMO_WALKTHROUGH_HEATCRIME.md` Step 4b. For automation or CI, a SQL seed script is available at `docs/demo/seed_heatcrime_scalar_features.sql`.
+After completing resolution and feature definitions for the Heat/Crime walkthrough, load scalar feature values so the Phase 1 analysis job can run. **Resolution:** use join keys `native_id, canonical_month` as in `docs/DEMO_WALKTHROUGH_HEATCRIME.md` Step 3 so crime and ice cream map to the same entities. **Scalars:** use the GUI — **Datasets** → **Extract scalar features** (ID column + columns to import). See Step 4b in that doc. For automation or CI, a SQL seed script is available at `docs/demo/seed_heatcrime_scalar_features.sql`.
 
 ### Apply schema migrations
 

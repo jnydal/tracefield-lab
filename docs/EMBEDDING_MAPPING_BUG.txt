@@ -1,0 +1,76 @@
+What the walkthrough assumes
+Phase 1 text assumes:
+
+One shared canonical month per row: the same time_period entity has January crime and January ice cream (and similarly for all 12 months).
+Spearman on those 12 aligned pairs from the demo CSVs gives ρ ≈ 0.97 and p < 0.001 (the CSVs are built so both series rise through summer and fall in winter).
+So the doc is describing correct resolution + scalar extract on those same 12 entities, not “any completed job named Phase 1.”
+
+What your result means
+Your result	Walkthrough
+p ≈ 0.66	p < 0.001
+Effect size ≈ 0.07	ρ ≈ 0.97
+An effect size around 0.07 with a non‑significant p-value means: in the data the worker actually used, the two variables are essentially unrelated (weak/no monotonic association). That is not what you get from the intended 12 aligned months; it’s what you expect when pairs are misaligned, mixed, or diluted.
+
+The analysis worker does not join on month. It only does:
+
+                SELECT
+                    l.entity_id,
+                    l.value_num AS left_num,
+                    ...
+                    r.value_num AS right_num,
+                    ...
+                FROM features l
+                JOIN features r ON l.entity_id = r.entity_id
+                    AND r.feature_definition_id = %s
+                WHERE l.feature_definition_id = %s
+So each point is (total_incidents, units_sold_thousands) on the same entity_id. If that entity is not “January for both sources,” the point is wrong for the demo story.
+
+Likely causes (ordered)
+1. Crime and ice cream on different entities (partial overlap)
+docs/IMPROVEMENTS.md already records this failure mode:
+
+Crime scalars attach to entities whose display_name looks like NYC-CRIME-2023-01 ….
+Ice cream scalars attach to entities like ICECREAM-JAN-2023 ….
+That’s 24 entities, no shared entity → job usually fails with “No overlapping entity-feature data…”.
+Your job completed, so you have some entities with both features. Typical ways that happens:
+
+A few months semantically matched onto the crime entities; the rest sit on separate ice-cream-only entities → analysis uses only the overlapping subset (small n or odd subset of months).
+Wrong semantic winners: for each ice-cream row the resolver picks the single best embedding match among all time_period entities (see semantic_match in resolution.py). If several months map poorly or collide, you get scrambled month pairs on shared entities → correlation collapses toward ~0.
+So: same feature names, same CSVs, but wrong or partial entity alignment fully explains ρ ≈ 0.07, p ≈ 0.66.
+
+2. Duplicate features rows (Cartesian join)
+There is no unique constraint on (entity_id, feature_definition_id) in features. If the same entity has multiple rows for total_incidents and/or units_sold_thousands, the join multiplies rows. Spearman is then computed on a longer, repeated, inconsistent list of pairs → distorted ρ and p.
+
+Worth checking in DB for your job’s feature definition IDs.
+
+3. Walkthrough vs pipeline mismatch (documentation gap)
+The story says “r ≈ 0.97” only if both scalars land on the same 12 month-aligned entities. The doc mixes:
+
+Resolver behavior (“Jan 2023” vs “January 2023” should match).
+Reality: second dataset may create new entities if similarity < threshold (0.85), or match the wrong month if embeddings are ambiguous.
+So the numerical promises in the walkthrough are conditional on resolution outcome; they are not guaranteed by “upload CSVs + extract scalars” alone.
+
+What does not explain it
+Benjamini–Hochberg on a single test barely moves the raw p-value; it cannot turn p < 0.001 into 0.66. So correction is not the main issue.
+Spearman vs story: the worker stores Spearman ρ in effect_size for this test; ~0.07 is still “no strong association” in the paired data.
+What to verify on your deployment
+stats_json for job eba1a00c-…
+Check n (or n_total). If it’s < 12, you only have a subset of entities with both features.
+
+Entity maps
+For the crime and ice cream datasets, compare entity_id for each month: you want the same 12 UUIDs for January…December across both datasets.
+
+Feature rows
+For those feature definition IDs, count rows per entity_id: more than one row per feature per entity → join explosion.
+
+Resolver counts
+After the ice-cream resolution job, check how many mappings were semantic vs created. Many created → duplicate time_periods → overlap problem.
+
+Bottom line
+Question	Answer
+Is the walkthrough “wrong” about the CSVs?	No — the CSVs are built for a strong seasonal correlation.
+Is the worker wrong?	Not necessarily — it correlates whatever pairs exist on shared entity_id.
+Why don’t your results match?	Almost certainly total_incidents and units_sold_thousands are not aligned to the same 12 months on the same 12 entities in your DB (partial/wrong resolution, or duplicate feature rows).
+Fix path: Re-run resolution so every ice-cream month maps to the same entity as the corresponding crime month (inspect entity_map; adjust threshold or workflow), then re-run scalar extract, then re-run analysis. Optionally tighten the walkthrough to state explicitly that ρ ≈ 0.97 only after verifying 12 shared entities with correct month pairing, and add a short “Verify entity alignment” subsection + SQL checks.
+
+I can propose concrete doc edits or SQL checks tailored to your DB if you want that next.

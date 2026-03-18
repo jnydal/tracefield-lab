@@ -90,38 +90,11 @@ Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object stor
 
 **Suggestion:** Align worker with same fallback chain or document the limitation.
 
-### 10. the issue is with how your current build wires features to entities.
+### 10. Heat/Crime demo: aligning entities across silos
 
-From the DB:
+**Symptom:** Phase 1 analysis completed but Spearman ρ ≈ 0 and non-significant *p*, or failed with no overlapping features — crime scalars and ice-cream scalars were on **different** `entity_id`s when resolution created **duplicate** time_periods per dataset (embedding-only path can miss or mis-order months).
 
-total_incidents is attached to 12 time_period entities whose display_name is like NYC-CRIME-2023-01 … NYC-CRIME-2023-12.
-units_sold_thousands is attached to 12 different time_period entities whose display_name is like ICECREAM-JAN-2023 … ICECREAM-DEC-2023.
-So instead of both features landing on the same 12 canonical time periods, you effectively have 24 distinct entities: 12 “crime” time_periods and 12 “ice‑cream” time_periods, with no overlap. That’s why the analysis still fails.
-
-This tells me your resolver is configured to create new entities separately for each dataset and never unify them, so the scalar extraction is behaving exactly as coded.
-
-Given you’re running the stock Tracefield Lab stack (no local resolver changes mentioned), this is now a project bug / config mismatch rather than something you can fix purely through the UI in the demo.
-
-I recommend we do this next (I can walk you through, or make the code changes for you):
-
-Inspect the resolver’s resolution logic to confirm how it:
-
-Decides whether to reuse an existing time_period entity vs. create a new one.
-Writes display_name and external_ids so that crime and ice‑cream rows can converge on a shared entity.
-Align it with the walkthrough’s intent:
-
-When resolving time_period for multiple datasets, use semantic similarity on the month label text (month_label vs. period_label) to reuse entities, not always create new ones.
-Ensure the feature ingest pipeline uses the resolved entity_id (from entity_map) rather than implicitly treating each dataset row as its own distinct entity.
-After the fix, we re-run:
-
-Resolution jobs for crime and ice‑cream
-Scalar extraction jobs
-Then your analysis job (which should then succeed).
-If you’d like me to continue debugging this in code, tell me your preference:
-
-Option A: “Please fix the resolver/feature-wiring in code so the demo works as documented.”
-Option B: “Show me exactly which files to open and what to change; I’ll make the edits.”
-Either way, I’ll locate the relevant resolver and feature-extraction code in your repo and adjust it so that both features end up on the same canonical time_period entities, matching the demo doc.
+**Fix in repo:** Demo CSVs include a shared **`canonical_month`** column (`2023-01` … `2023-12`). Resolution **join keys** are `native_id, canonical_month` so `entity_map.source_record_id` stays the native row id (scalar extract works) and exact match on `canonical_month` reuses the same entity for ice cream and temperature. See [DEMO_WALKTHROUGH_HEATCRIME.md](DEMO_WALKTHROUGH_HEATCRIME.md) Steps 3 and 7.
 
 ---
 
