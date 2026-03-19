@@ -34,16 +34,22 @@ This document describes non-functional requirements for the generic Tracefield l
 ## Data Governance
 
 - **Provenance:** Pipeline actions recorded in `provenance_event`.
-- **Retention:** Raw data and derived features have defined retention policies.
+- **Retention:** Raw data and derived features have defined retention policies. Do not add new storage paths or tables without flagging their retention category.
 - **PII:** Personal data minimized; redaction in logs and exports.
-- **Licensing:** Dataset licenses stored and enforced downstream.
+  - Never include real personal data (emails, names, identifiers) in seed files, test fixtures, migrations, or comments. Use clearly fake placeholders: `test@example.com`, `Alice` / `Bob` / `Carol`.
+  - When logging pipeline stages that process entity data, exclude fields that could contain PII (names, emails, external IDs from source datasets). Log IDs and types only, not raw values.
+- **Licensing:** Dataset license metadata must be preserved through the pipeline. Do not strip `license` fields when transforming or copying dataset records.
 
 ## Reproducibility & Scientific Validity
 
-- **Config versioning:** Analysis jobs store full config, code version, and inputs.
+- **Config versioning:** Analysis jobs store full config, code version, and inputs at the time of job creation — not by pointer that could change later.
 - **Statistical rigor:** Support multiple-testing correction and effect sizes.
+  - Multiple-testing correction is required for any analysis producing multiple p-values. Do not omit `correction` from analysis job configs.
+  - Effect sizes and confidence intervals must accompany p-values in analysis results. A p-value alone is not a complete result.
+  - Never silently change a statistical test, correction method, or effect size calculation. These changes affect research validity; flag them explicitly and require human sign-off.
+  - Do not change default statistical parameters (thresholds, correction methods, test types) without explicit instruction — defaults are scientifically considered choices.
 - **Confounders:** Allow covariates and stratification in analysis.
-- **Data quality:** Flag missingness, outliers, and low-variance features.
+- **Data quality:** Flag missingness, outliers, and low-variance features before analysis. Do not silently drop or impute without recording it in provenance.
 
 ## Availability & Recovery
 

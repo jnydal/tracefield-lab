@@ -3,6 +3,8 @@
 This document describes how to interact with the Tracefield Lab system at a high level.
 Operational commands, troubleshooting, and step-by-step procedures live in `RUNBOOK.md`.
 
+**Claude Code / other AI agents:** See [CLAUDE.md](CLAUDE.md) for recommended read order, invariant summary, and testing philosophy vs strict TDD plugins.
+
 ## Interaction Patterns (Proposed)
 
 The web UI (frontend) supports light and dark themes driven by system preference (`prefers-color-scheme`); an optional override is stored in `localStorage` under `color-theme` (`'light'` or `'dark'`). See RUNBOOK for deployment notes.
@@ -178,8 +180,17 @@ EMBEDDINGS_MODEL=BAAI/bge-large-en-v1.5
 All feature modules implement the same contract:
 
 - **Inputs**: dataset id, entity type, column mapping
-- **Outputs**: `features` records with `entity_id`, `feature_name`, `value`, `type`
-- **Provenance**: module name, version, config hash, source dataset
+- **Outputs**: `features` records with `entity_id`, `feature_name`, `value`, `type`, and provenance
+- **Provenance**: module name, version, config hash, source dataset (see [docs/INVARIANTS.md](docs/INVARIANTS.md) for required fields)
+
+**Required outputs per feature record:**
+- `entity_id` — canonical entity identifier
+- `feature_name` — namespaced string (e.g. `trait.openness`, `embeddings.bge_large`). No bare names.
+- `value` — the feature value
+- `type` — data type string (`float`, `int`, `string`, `vector`)
+- `provenance` — `{ module, version, config_hash, source_dataset_id }`
+
+Never add a feature worker that writes to the features table in a non-standard schema. New modules must be registered in the API configuration and added to `docker-compose.yml`.
 
 Example output:
 ```json
@@ -205,10 +216,22 @@ Pipeline **invariants** are documented in [docs/INVARIANTS.md](docs/INVARIANTS.m
 ### Adding a New Feature Module
 
 1. Create service directory in `service/`
-2. Implement module contract in worker code
+2. Implement module contract in worker code (inputs → outputs with provenance)
 3. Add Dockerfile and dependencies
 4. Register module in API configuration
 5. Add to `docker-compose.yml`
+
+**Checklist (new feature worker, API route, or pipeline stage):**
+- Implements or respects the feature module contract (if a feature worker)
+- Emits provenance records for all data it produces
+- Kafka consumer is idempotent and offset-commits after successful write (see [ARCHITECTURE.md](ARCHITECTURE.md) — Kafka Pipeline Integrity)
+- Job status is updated in `job_status` table on start, success, and failure
+- Structured logging with `service`, `stage`, `job_id`, `dataset_id`, `trace_id` — no PII
+- Health check endpoint exists (if a new service)
+- Added to `docker-compose.yml` and registered in API config (if a new module)
+- Migration is backward compatible (if schema change required)
+- No real PII in fixtures, seeds, or comments
+- Relevant documentation updated (ARCHITECTURE.md, RUNBOOK.md, AGENT.md, README.md, [docs/INVARIANTS.md](docs/INVARIANTS.md))
 
 ### Extending the API
 

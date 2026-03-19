@@ -20,6 +20,8 @@ This document lists **invariants** that protect the pipeline from silent deraili
 
 **Invariant:** Every pipeline stage that produces or transforms data emits at least one row in `provenance_event` with sufficient context (e.g. `job_id` or `dataset_id`, `stage`, `detail`).
 
+**Minimum provenance context:** Provenance must capture at least: `module`, `version`, `config_hash`, `source_dataset_id`, `job_id`, `timestamp`. Analysis jobs must store the full config, code version, and all input identifiers so results are reproducible from provenance alone.
+
 **Rationale:** Reproducibility and audit trail depend on a complete record of how data was produced. Silent omission of provenance makes results unreproducible.
 
 **Enforcement:**

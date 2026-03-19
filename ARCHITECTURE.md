@@ -205,6 +205,17 @@ These services become modular feature providers in the generic system.
 - Worker-Ingest → Feature Workers
 - API → Analysis Worker
 
+### Kafka Pipeline Integrity
+
+Workers consuming Kafka topics must follow these rules (see also NFR.md — Reliability):
+
+- **Idempotency:** Handle redelivery without corrupting state. Use upserts (not blind inserts) when writing pipeline outputs; check for existing records before creating duplicates.
+- **Out-of-order tolerance:** State must be derivable from the message itself, not from message position.
+- **Producer handling:** All `producer.send()` calls must handle failures — log and surface errors; do not silently drop.
+- **Offset commits:** Commit offsets only after successful processing and write. Never pre-commit before the work is done.
+- **Dead-letter:** Failed jobs that exhaust retries must be logged with full context (`job_id`, `dataset_id`, error reason) so they can be re-enqueued manually.
+- **Job status:** Always update `job_status` (or equivalent) in PostgreSQL on job start, completion, and failure. Do not leave jobs in `queued` indefinitely.
+
 ### Database (PostgreSQL)
 - All services read/write shared database
 - Connection pooling via HikariCP

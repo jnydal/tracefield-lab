@@ -69,6 +69,10 @@ Analysis worker → results
 
 ---
 
+## AI-assisted development
+
+**Claude Code** and other agents: start with [CLAUDE.md](CLAUDE.md) for read order, non-negotiables, and how this repo’s testing philosophy relates to strict TDD workflows (e.g. [Superpowers](https://github.com/obra/superpowers)). API and workflow examples live in [AGENT.md](AGENT.md).
+
 ## Invariants and Guardrails
 
 Core pipeline assumptions (provenance, job status lifecycle, feature contract) are documented in [docs/INVARIANTS.md](docs/INVARIANTS.md) and checked in CI. A full-workflow integration test (`test/test_full_workflow_integration.py`) validates the path from seed data to analysis results and provenance. **CI** runs unit tests (excluding `@pytest.mark.integration`) then integration tests against a real Postgres; see [RUNBOOK](RUNBOOK.md) for local test commands.

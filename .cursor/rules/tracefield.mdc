@@ -7,7 +7,7 @@ alwaysApply: true
 # Tracefield Lab — Project-Specific Rules
 
 These rules are specific to the Tracefield Lab system. They complement the generic rules and
-reflect the architecture defined in `docs/ARCHITECTURE.md`, the NFR in `docs/NFR.md`,
+reflect the architecture defined in `ARCHITECTURE.md`, the NFR in `NFR.md`,
 the agent contract in `AGENT.md`, and the **system invariants** in `docs/INVARIANTS.md`.
 
 ---
@@ -90,7 +90,7 @@ Your NFR explicitly mandates PII minimization. Your RUNBOOK already demonstrates
 - **Never include real personal data (emails, names, identifiers) in seed files, test fixtures, migrations, or comments.** Use clearly fake placeholders: `test@example.com`, `Alice / Bob / Carol`.
 - When generating log statements for pipeline stages that process entity data, explicitly exclude fields that could contain PII (names, emails, external IDs from source datasets).
 - Dataset license metadata must be preserved through the pipeline. Do not strip `license` fields when transforming or copying dataset records.
-- Raw data in object storage and derived features in PostgreSQL follow the retention policies in `docs/NFR.md`. Do not add new storage paths or tables without flagging their retention category.
+- Raw data in object storage and derived features in PostgreSQL follow the retention policies in `NFR.md`. Do not add new storage paths or tables without flagging their retention category.
 
 ---
 
@@ -107,5 +107,5 @@ When generating a new feature worker, API route, or pipeline stage, confirm all 
 7. Added to `docker-compose.yml` and registered in API config (if a new module)
 8. Migration is backward compatible (if schema change required)
 9. No real PII in fixtures, seeds, or comments
-10. **Relevant documentation updated** — ARCHITECTURE.md, RUNBOOK.md, AGENT.md, or README.md as applicable (see architecture-quality rules)
+10. **Relevant documentation updated** — ARCHITECTURE.md, NFR.md, RUNBOOK.md, AGENT.md, or README.md as applicable (see architecture-quality rules)
 11. **Invariants preserved** — change does not violate any invariant in `docs/INVARIANTS.md`; if adding pipeline/schema, confirm against that doc
