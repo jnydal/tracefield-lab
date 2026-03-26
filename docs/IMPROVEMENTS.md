@@ -98,6 +98,80 @@ Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object stor
 
 ---
 
+## UI / Researcher Experience
+
+### 11. No pipeline wizard or guided flow (highest impact)
+
+**Issue:** The five pipeline stages (Datasets → Entity Mappings → Features → Analysis Jobs → Results) have no connective tissue. There is no checklist, no prerequisite indicator, and no "you need X before Y" signal. The only guidance is the external demo walkthrough doc. Researchers must already know the correct sequence and configuration semantics; modal warnings exist for some gating but do not form a coherent flow.
+
+**Suggestion:** Add a pipeline stage navigator or progress sidebar that shows completion state per stage and surfaces blockers (e.g. "embeddings required before resolution", "no features computed yet"). Even a lightweight status summary per dataset would significantly reduce cognitive load.
+
+---
+
+### 12. Feature definitions decoupled from computed features
+
+**Issue:** Analysis job creation populates feature dropdowns from the **feature definitions registry**, not from features that are actually computed and stored in the database. If definitions are missing, misnamed, or out of sync with what workers actually stored, jobs fail or produce confusing results with no actionable error. There is no "what features exist for this dataset?" discovery view.
+
+**Suggestion:** Add a computed features browser — either inline on the datasets page or as a panel on the analysis job form — that queries the features table directly and shows what is actually available keyed to the selected datasets/entities.
+
+---
+
+### 13. Entity resolution: no schema-linked column pickers
+
+**Issue:** Join keys and semantic fields in the automated resolution form are plain free-text inputs. Researchers type column names from memory, with no connection to the actual columns on the source datasets. The distinction between join key and semantic field is architecturally critical (wrong semantic fields can collapse all entities into one), but there is no in-app guidance, warning, or preview of the outcome.
+
+**Suggestion:**
+- Load the column list for the selected datasets and offer a column picker (multi-select or combobox) for join keys and semantic fields.
+- Add a tooltip or inline warning explaining the semantic field risk (collapse behaviour).
+- Optional: show a "preview entity count" dry run before submitting the resolution job.
+
+---
+
+### 14. Manual entity mapping uses raw UUIDs
+
+**Issue:** The manual mapping tab requires raw `dataset_id` and `entity_id` UUIDs, with no name lookup or picker. A UUID typo produces no meaningful error until a downstream job fails. This is more error-prone than even the free-text column name issue.
+
+**Suggestion:** Replace UUID inputs with searchable dataset/entity pickers that resolve to IDs on submit, consistent with the dataset dropdown already used in the automated resolution form.
+
+---
+
+### 15. Analysis results show truncated feature IDs, not names
+
+**Issue:** The results table displays truncated internal feature IDs rather than human-readable feature definition names. For a research tool where interpreting results is the primary goal, this significantly weakens the results view.
+
+**Suggestion:** Join on feature definitions at query time (or in the API response) and display the definition name alongside or instead of the raw ID.
+
+---
+
+### 16. Embeddings UI: single `textColumn` vs multi-column API
+
+**Issue:** `FeatureExtractRequest` in `pipeline-api.ts` supports `textColumns` (array), but the UI only ever sends a single `textColumn`. Researchers with multi-column text inputs cannot use the full capability through the UI.
+
+**Suggestion:** Extend the embeddings modal to allow selecting multiple text columns (using the existing column picker infrastructure) and send them as `textColumns`.
+
+---
+
+### 17. No exploratory discovery scan — system is confirmatory only
+
+**Issue:** The current analysis workflow is researcher-directed and confirmatory: the researcher selects two datasets, forms a hypothesis, and the system validates or invalidates it. There is no way to say "here is a pool of datasets and features — find me what is surprising." The intellectual work of identifying candidate confounders, mediators, or unexpected associations remains entirely with the researcher. This limits Tracefield to an instrument for testing hypotheses rather than a tool for generating them.
+
+**Context:** The original AstroReason inspiration was more exploratory — load heterogeneous sources and let the system surface unexpected correlations. The Heat/Crime demo illustrates the gap: the researcher must already know to bring in temperature as a candidate confounder. The system confirms the triangular pattern once the researcher has assembled the three datasets; it would not have surfaced temperature unprompted from a larger pool.
+
+**Suggestion:** Add a **discovery scan** job type:
+- Researcher selects a pool of datasets (≥ 2) and a feature set (or all available scalar features across those datasets).
+- The system runs all pairwise correlation combinations across the pool and ranks results by correlation strength (absolute r or ρ).
+- Results are presented as a ranked table of associations, flagging pairs that exceed a configurable threshold.
+- **Confounder hint**: where a third feature Z correlates with both members of a high-correlation pair (X, Y) at similar strength, surface it as a candidate confounding variable.
+- All scan results carry full provenance identical to a standard analysis job.
+
+**Constraints to consider:**
+- Combinatorial explosion: a pool of N features produces N(N−1)/2 pairwise jobs. Needs a cap or sampling strategy for large feature pools.
+- Multiple-testing correction becomes critical at scale — Benjamini–Hochberg (already supported per-job) should apply across the full scan result set.
+- Discovery scan results should be clearly labelled as exploratory / hypothesis-generating, not confirmatory, in the UI and provenance records.
+- Effect sizes and confidence intervals still required alongside p-values (existing NFR).
+
+---
+
 ## How to use this doc
 
 - Treat items as **backlog**, not blockers for the demo, unless marked critical for your environment.
