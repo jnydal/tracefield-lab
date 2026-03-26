@@ -155,7 +155,7 @@ Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object stor
 
 **Issue:** The current analysis workflow is researcher-directed and confirmatory: the researcher selects two datasets, forms a hypothesis, and the system validates or invalidates it. There is no way to say "here is a pool of datasets and features — find me what is surprising." The intellectual work of identifying candidate confounders, mediators, or unexpected associations remains entirely with the researcher. This limits Tracefield to an instrument for testing hypotheses rather than a tool for generating them.
 
-**Context:** The original AstroReason inspiration was more exploratory — load heterogeneous sources and let the system surface unexpected correlations. The Heat/Crime demo illustrates the gap: the researcher must already know to bring in temperature as a candidate confounder. The system confirms the triangular pattern once the researcher has assembled the three datasets; it would not have surfaced temperature unprompted from a larger pool.
+**Context:** The Heat/Crime demo illustrates the gap: the researcher must already know to bring in temperature as a candidate confounder. The system confirms the triangular pattern once the researcher has assembled the three datasets; it would not have surfaced temperature unprompted from a larger pool.
 
 **Suggestion:** Add a **discovery scan** job type:
 - Researcher selects a pool of datasets (≥ 2) and a feature set (or all available scalar features across those datasets).

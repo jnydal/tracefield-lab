@@ -35,6 +35,43 @@ boundaries.
 
 ---
 
+## Where this is heading
+
+The current system already handles the hard part: fusing heterogeneous datasets via
+embedding-based entity resolution and running reproducible statistical analysis with a
+full provenance chain. What is being built next changes the character of the tool.
+
+**From confirmatory to exploratory.** Today a researcher brings a hypothesis — two
+datasets, a suspected connection — and Tracefield confirms or disconfirms it. The next
+step is a **discovery scan**: select a pool of datasets, and let the system run all
+pairwise correlations across every resolved feature, rank by strength, apply global
+multiple-testing correction, and surface candidate confounders automatically. Instead
+of asking "is X connected to Y?", you ask "what is connected to what — and what is
+driving it?" That is a different kind of research instrument.
+
+**The confounding variable problem, solved systematically.** Finding that ice cream
+sales and crime rates correlate is easy. Understanding that temperature drives both —
+without already knowing to look for it — requires comparing a third dataset against
+both. A discovery scan does that exhaustively across an entire feature pool, flagging
+triangular correlation patterns and computing partial correlations to quantify how much
+each candidate confounder explains. The researcher still interprets; the system finds
+what is worth interpreting.
+
+**A guided pipeline, not a command-line workflow.** Cross-silo research should not
+require reading a 500-line walkthrough document before running a first analysis. An
+upcoming pipeline wizard will make the five-stage sequence — datasets, entity mapping,
+feature extraction, analysis, results — navigable by any researcher without prior
+knowledge of the system internals.
+
+**The long-term ambition** is for Tracefield Lab to become standard infrastructure for
+observational research that crosses dataset boundaries: the tool researchers reach for
+when they have data from different labs, registries, surveys, or archives that were
+never designed to be compared, and need to cross-reference them rigorously and
+reproducibly. Not a replacement for domain expertise or formal causal inference — a
+foundation that makes the cross-silo hypothesis-testing work tractable and auditable.
+
+---
+
 ## Technical Overview
 
 ### Data Flow (Target)
