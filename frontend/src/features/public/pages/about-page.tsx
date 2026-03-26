@@ -51,6 +51,22 @@ export function AboutPage() {
               science: bringing siloed knowledge into one auditable, reproducible system
               so you can find the patterns that live at the boundaries.
             </p>
+            <h2 className="about-content-title">Coming next — Discovery scan</h2>
+            <p className="about-content-copy">
+              Tracefield is currently a <em>confirmatory</em> instrument: you bring a hypothesis,
+              select datasets, and the pipeline validates or invalidates it. The intellectual work
+              of finding candidate confounders and unexpected associations still rests entirely with
+              the researcher.
+            </p>
+            <p className="about-content-copy">
+              The next planned capability is an <strong>exploratory discovery scan</strong>: give the
+              system a pool of datasets and it runs all pairwise correlations across the available
+              features, ranks the results by association strength, and — where a third feature Z
+              correlates with both members of a high-ranking pair — surfaces it as a candidate
+              confounding variable. Think of it as asking "what is surprising here?" rather than
+              "is this hypothesis true?". All scan results will carry full provenance and be clearly
+              labelled as hypothesis-generating, not confirmatory.
+            </p>
             <h2 className="about-content-title">Why this project</h2>
             <p className="about-content-copy">
               Tracefield Lab exists to give researchers a practical way to do cross-dataset
