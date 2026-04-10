@@ -157,7 +157,9 @@ export type AnalysisResult = {
   id: string;
   jobId: string;
   featureXId: string;
+  featureXName?: string;
   featureYId: string;
+  featureYName?: string;
   stats: Record<string, unknown>;
   pValue?: number;
   effectSize?: number;

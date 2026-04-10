@@ -11,6 +11,7 @@ Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object stor
 - **UI**: Column pickers prefer **attached CSV header** (browser) → registered schema → **`latestFileColumns`** → **`POST …/sync-file-metadata`** → preview API. **`POST …/extract-scalar-upload`** sends the CSV with the job so extraction does not depend on MinIO/S3 GET.
 - **Heat/Crime demo: result_summary observability** (`created > 0` warning): Resolution jobs list now highlights `created: N` in amber and shows "⚠ new entities created — check alignment" when any records were created rather than matched, closing the last open item in EMBEDDING_MAPPING_BUG.txt Cause 3.
 - **Feature availability in analysis job form** (§12): `GET /features/summary` LEFT JOINs feature definitions with the features table and returns `computedCount` per definition. The analysis job form uses this instead of the bare definitions list — option labels show computed row counts and a zero-count selection triggers an inline amber warning ("⚠ no computed rows — run scalar extract first").
+- **Analysis results show feature names, not IDs** (§15): `GET /analysis-results` now double-joins `feature_definitions` (Exposed aliases `feat_x` / `feat_y`) and returns `featureXName` / `featureYName` alongside the IDs. The results table displays definition names; falls back to truncated UUID only if the name is absent.
 
 ---
 
@@ -120,14 +121,6 @@ Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object stor
 **Issue:** The manual mapping tab requires raw `dataset_id` and `entity_id` UUIDs, with no name lookup or picker. A UUID typo produces no meaningful error until a downstream job fails. This is more error-prone than even the free-text column name issue.
 
 **Suggestion:** Replace UUID inputs with searchable dataset/entity pickers that resolve to IDs on submit, consistent with the dataset dropdown already used in the automated resolution form.
-
----
-
-### 15. Analysis results show truncated feature IDs, not names
-
-**Issue:** The results table displays truncated internal feature IDs rather than human-readable feature definition names. For a research tool where interpreting results is the primary goal, this significantly weakens the results view.
-
-**Suggestion:** Join on feature definitions at query time (or in the API response) and display the definition name alongside or instead of the raw ID.
 
 ---
 

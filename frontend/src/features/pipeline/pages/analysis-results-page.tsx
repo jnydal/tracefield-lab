@@ -96,11 +96,11 @@ export function AnalysisResultsPage() {
                     <tbody className="bg-white dark:bg-slate-800 [&>tr+tr>td]:border-t [&>tr+tr>td]:border-slate-200 dark:[&>tr+tr>td]:border-slate-600">
                       {results.map((r) => (
                         <tr key={r.id}>
-                          <td className="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">
-                            {r.featureXId.slice(0, 8)}…
+                          <td className="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">
+                            {r.featureXName ?? r.featureXId.slice(0, 8) + '…'}
                           </td>
-                          <td className="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">
-                            {r.featureYId.slice(0, 8)}…
+                          <td className="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">
+                            {r.featureYName ?? r.featureYId.slice(0, 8) + '…'}
                           </td>
                           <td className="px-4 py-2 text-sm text-right tabular-nums text-slate-900 dark:text-slate-100">
                             {formatNum(r.pValue)}

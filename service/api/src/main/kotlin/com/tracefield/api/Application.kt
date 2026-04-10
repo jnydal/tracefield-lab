@@ -1557,16 +1557,25 @@ fun Application.module() {
         get("/analysis-results") {
             val jobId = parseUuid(call.request.queryParameters["jobId"])
             val results = transaction(DatabaseManager.getDatabase()) {
-                val query = when (jobId) {
-                    null -> AnalysisResults.selectAll()
-                    else -> AnalysisResults.select { AnalysisResults.jobId eq jobId }
-                }
+                val FeatX = FeatureDefinitions.alias("feat_x")
+                val FeatY = FeatureDefinitions.alias("feat_y")
+                val query = AnalysisResults
+                    .join(FeatX, JoinType.LEFT, AnalysisResults.featureXId, FeatX[FeatureDefinitions.id])
+                    .join(FeatY, JoinType.LEFT, AnalysisResults.featureYId, FeatY[FeatureDefinitions.id])
+                    .let { q ->
+                        when (jobId) {
+                            null -> q.selectAll()
+                            else -> q.select { AnalysisResults.jobId eq jobId }
+                        }
+                    }
                 query.map { row ->
                     AnalysisResultResponse(
                         id = row[AnalysisResults.id].value.toString(),
                         jobId = row[AnalysisResults.jobId].toString(),
                         featureXId = row[AnalysisResults.featureXId].toString(),
+                        featureXName = row[FeatX[FeatureDefinitions.name]],
                         featureYId = row[AnalysisResults.featureYId].toString(),
+                        featureYName = row[FeatY[FeatureDefinitions.name]],
                         stats = parseJsonElement(row[AnalysisResults.statsJson]) ?: jsonParser.parseToJsonElement("{}"),
                         pValue = row[AnalysisResults.pValue],
                         effectSize = row[AnalysisResults.effectSize],
