@@ -775,7 +775,7 @@ def test_no_duplicate_features_invariant(seeded_heatcrime_conn):
         INSERT INTO features (id, entity_id, feature_definition_id, dataset_id, value_num, provenance_json, created_at)
         VALUES (gen_random_uuid(), %s::uuid, %s::uuid, NULL, %s, %s::jsonb, NOW())
         """,
-        (orig[0], orig[1], orig[2], orig[3]),
+        (orig[0], orig[1], orig[2], json.dumps(orig[3])),
     )
     conn.commit()
 
@@ -824,7 +824,7 @@ def test_analysis_deduplicates_null_dataset_feature_rows(seeded_heatcrime_conn, 
         INSERT INTO features (id, entity_id, feature_definition_id, dataset_id, value_num, provenance_json, created_at)
         VALUES (gen_random_uuid(), %s::uuid, %s::uuid, NULL, %s, %s::jsonb, NOW())
         """,
-        (orig[0], orig[1], orig[2], orig[3]),
+        (orig[0], orig[1], orig[2], json.dumps(orig[3])),
     )
     conn.commit()
 
