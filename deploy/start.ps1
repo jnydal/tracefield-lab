@@ -31,6 +31,7 @@ $env:TRACEFIELD_FRONTEND_IMAGE         = "$registry/frontend:latest"
 $env:TRACEFIELD_WORKER_INGEST_IMAGE    = "$registry/worker-ingest:latest"
 $env:TRACEFIELD_WORKER_EMBEDDINGS_IMAGE = "$registry/worker-embeddings:latest"
 $env:TRACEFIELD_RESOLVER_IMAGE         = "$registry/resolver:latest"
+$env:CERTS_DIR                         = 'C:\ProgramData\tracefield\certs'
 
 # Start compose stack in prod
 Set-Location 'C:\workspace\tracefield-lab'
