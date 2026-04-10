@@ -194,7 +194,8 @@ data class ResolutionJobResponse(
     val startedAt: String? = null,
     val endedAt: String? = null,
     val resultSummary: JsonElement? = null,
-    val excInfo: String? = null
+    val excInfo: String? = null,
+    val warnings: List<String>? = null
 )
 
 @Serializable

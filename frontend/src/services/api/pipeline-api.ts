@@ -134,6 +134,7 @@ export type ResolutionJob = {
   endedAt?: string | null;
   resultSummary?: Record<string, unknown> | null;
   excInfo?: string | null;
+  warnings?: string[] | null;
 };
 
 export type ResolutionJobRequest = {

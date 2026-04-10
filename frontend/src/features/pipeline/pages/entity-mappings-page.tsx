@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useCreateEntityMappingMutation,
   useDeleteEntityMappingMutation,
@@ -68,6 +68,17 @@ export function EntityMappingsPage() {
     { source_record_id: 'rec-1', keys: { id: '1', name: 'Example' } },
   ]);
   const [configError, setConfigError] = useState<string | null>(null);
+  const [joinKeysList, setJoinKeysList] = useState<string[]>([]);
+  const [semanticFieldsList, setSemanticFieldsList] = useState<string[]>([]);
+  const [resolutionWarnings, setResolutionWarnings] = useState<string[] | null>(null);
+
+  const datasetColumns =
+    datasets.find((d) => d.id === resolutionDatasetId)?.latestFileColumns ?? [];
+
+  useEffect(() => {
+    setJoinKeysList([]);
+    setSemanticFieldsList([]);
+  }, [resolutionDatasetId]);
   const [similarModalEntityId, setSimilarModalEntityId] = useState<string | null>(null);
   const [similaritySearch, { data: similarData, isLoading: isSimilarLoading, error: similarError }] =
     useLazySimilaritySearchQuery();
@@ -92,14 +103,12 @@ export function EntityMappingsPage() {
 
   const buildConfig = (): Record<string, unknown> => {
     const base = {
-      joinKeys: joinKeys
-        .split(',')
-        .map((k) => k.trim())
-        .filter(Boolean),
-      semanticFields: semanticFields
-        .split(',')
-        .map((k) => k.trim())
-        .filter(Boolean),
+      joinKeys: datasetColumns.length > 0
+        ? joinKeysList
+        : joinKeys.split(',').map((k) => k.trim()).filter(Boolean),
+      semanticFields: datasetColumns.length > 0
+        ? semanticFieldsList
+        : semanticFields.split(',').map((k) => k.trim()).filter(Boolean),
       threshold: Number(threshold),
       createIfNoMatch,
     };
@@ -122,6 +131,7 @@ export function EntityMappingsPage() {
   const handleCreateResolutionJob = async (event: React.FormEvent) => {
     event.preventDefault();
     setConfigError(null);
+    setResolutionWarnings(null);
     if (!jobName.trim() || !resolutionDatasetId.trim()) return;
     const config = buildConfig();
     const useAllRowsFlag = config.useAllRows === true;
@@ -130,12 +140,15 @@ export function EntityMappingsPage() {
       return;
     }
     try {
-      await createResolutionJob({
+      const result = await createResolutionJob({
         name: jobName,
         datasetId: resolutionDatasetId,
         entityType: entityType || 'person',
         config,
       }).unwrap();
+      if (result.warnings?.length) {
+        setResolutionWarnings(result.warnings);
+      }
       setJobName('');
       setResolutionDatasetId('');
       setEntityType('person');
@@ -143,6 +156,8 @@ export function EntityMappingsPage() {
       setSemanticFields('name');
       setThreshold(0.85);
       setCreateIfNoMatch(false);
+      setJoinKeysList([]);
+      setSemanticFieldsList([]);
       setRecords([{ source_record_id: 'rec-1', keys: { id: '1', name: 'Example' } }]);
     } catch {
       setConfigError('Failed to create resolution job. Try again.');
@@ -328,34 +343,88 @@ export function EntityMappingsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-900 dark:text-slate-200" htmlFor="resolution-join-keys">
+                <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
                   Join keys
                 </label>
-                <p className="text-xs text-slate-500 mb-1 dark:text-slate-400">
-                  Comma-separated for exact matching.
-                </p>
-                <input
-                  id="resolution-join-keys"
-                  className="w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-                  value={joinKeys}
-                  onChange={(event) => setJoinKeys(event.target.value)}
-                  placeholder="id, name"
-                />
+                {datasetColumns.length > 0 ? (
+                  <>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Select columns for exact matching. Leave empty to use semantic matching only.
+                    </p>
+                    <div className="mt-1 max-h-40 overflow-y-auto rounded border border-slate-200 dark:border-slate-600 p-2 space-y-1">
+                      {datasetColumns.map((col) => (
+                        <label key={col} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={joinKeysList.includes(col)}
+                            onChange={(e) =>
+                              setJoinKeysList((prev) =>
+                                e.target.checked ? [...prev, col] : prev.filter((c) => c !== col)
+                              )
+                            }
+                            className="rounded border-slate-300 dark:border-slate-600"
+                          />
+                          <span className="text-sm text-slate-900 dark:text-slate-100">{col}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-500 mb-1 dark:text-slate-400">
+                      Comma-separated for exact matching (e.g. <code>canonical_month</code>). Leave empty to use semantic matching only.
+                    </p>
+                    <input
+                      id="resolution-join-keys"
+                      className="w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                      value={joinKeys}
+                      onChange={(event) => setJoinKeys(event.target.value)}
+                      placeholder="canonical_month, id"
+                    />
+                  </>
+                )}
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-900 dark:text-slate-200" htmlFor="resolution-semantic-fields">
+                <label className="text-sm font-medium text-slate-900 dark:text-slate-200">
                   Semantic fields
                 </label>
-                <p className="text-xs text-slate-500 mb-1 dark:text-slate-400">
-                  Comma-separated for embeddings.
-                </p>
-                <input
-                  id="resolution-semantic-fields"
-                  className="w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-                  value={semanticFields}
-                  onChange={(event) => setSemanticFields(event.target.value)}
-                  placeholder="name"
-                />
+                {datasetColumns.length > 0 ? (
+                  <>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Select columns for embedding-based matching. Leave empty when using join keys for cross-dataset alignment — setting both can cause all months to collapse onto a single entity.
+                    </p>
+                    <div className="mt-1 max-h-40 overflow-y-auto rounded border border-slate-200 dark:border-slate-600 p-2 space-y-1">
+                      {datasetColumns.map((col) => (
+                        <label key={col} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={semanticFieldsList.includes(col)}
+                            onChange={(e) =>
+                              setSemanticFieldsList((prev) =>
+                                e.target.checked ? [...prev, col] : prev.filter((c) => c !== col)
+                              )
+                            }
+                            className="rounded border-slate-300 dark:border-slate-600"
+                          />
+                          <span className="text-sm text-slate-900 dark:text-slate-100">{col}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-500 mb-1 dark:text-slate-400">
+                      Comma-separated for embeddings. Leave empty when using join keys.
+                    </p>
+                    <input
+                      id="resolution-semantic-fields"
+                      className="w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                      value={semanticFields}
+                      onChange={(event) => setSemanticFields(event.target.value)}
+                      placeholder="name"
+                    />
+                  </>
+                )}
               </div>
               <div className="space-y-1 sm:col-span-2 lg:col-span-1">
                 <label className="text-sm font-medium text-slate-900 dark:text-slate-200" htmlFor="resolution-threshold">
@@ -467,6 +536,13 @@ export function EntityMappingsPage() {
             )}
             {configError && (
               <p className="text-sm text-red-600 dark:text-red-400">{configError}</p>
+            )}
+            {resolutionWarnings && resolutionWarnings.length > 0 && (
+              <div className="rounded border border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/30 p-3 text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
+                {resolutionWarnings.map((w, i) => (
+                  <p key={i}>{w}</p>
+                ))}
+              </div>
             )}
             <button
               type="submit"

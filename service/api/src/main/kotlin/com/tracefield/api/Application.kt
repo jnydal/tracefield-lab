@@ -1576,6 +1576,24 @@ fun Application.module() {
                     is kotlinx.serialization.json.JsonPrimitive -> useAllRowsEl.content == "true"
                     else -> false
                 }
+                // Parse joinKeys early so warnings can be collected for both paths.
+                val joinKeysList = when (val jk = configObj["joinKeys"]) {
+                    is kotlinx.serialization.json.JsonArray -> jk.mapNotNull {
+                        it.jsonPrimitive.content.takeIf { s -> s.isNotBlank() }
+                    }
+                    is kotlinx.serialization.json.JsonPrimitive -> {
+                        val s = jk.content.takeIf { it.isNotBlank() }
+                        if (s != null) listOf(s) else emptyList()
+                    }
+                    else -> emptyList()
+                }
+                val warnings = mutableListOf<String>()
+                if (joinKeysList.isEmpty()) {
+                    warnings.add(
+                        "joinKeys is empty — resolution will use semantic matching only. " +
+                        "Cross-dataset entity alignment (e.g. canonical_month) requires explicit joinKeys."
+                    )
+                }
                 val configToStore = if (useAllRows) {
                     val fileRow = transaction(DatabaseManager.getDatabase()) {
                         DatasetFiles.select { DatasetFiles.datasetId eq datasetId }
@@ -1619,15 +1637,17 @@ fun Application.module() {
                         else -> "csv"
                     }
                     val rows = if (format == "json") parseFullJson(content) else parseFullCsv(content)
-                    val joinKeysList = when (val jk = configObj["joinKeys"]) {
-                        is kotlinx.serialization.json.JsonArray -> jk.mapNotNull {
-                            it.jsonPrimitive.content.takeIf { s -> s.isNotBlank() }
+                    // Warn if any joinKey is absent from the file's columns.
+                    if (joinKeysList.isNotEmpty() && rows.isNotEmpty()) {
+                        val fileColumns = rows.first().keys.toSet()
+                        val missing = joinKeysList.filter { it !in fileColumns }
+                        if (missing.isNotEmpty()) {
+                            warnings.add(
+                                "joinKey(s) ${missing.joinToString(", ") { "\"$it\"" }} not found in " +
+                                "dataset columns [${fileColumns.joinToString(", ")}]. " +
+                                "Exact matching will be skipped for these keys."
+                            )
                         }
-                        is kotlinx.serialization.json.JsonPrimitive -> {
-                            val s = jk.content.takeIf { it.isNotBlank() }
-                            if (s != null) listOf(s) else emptyList()
-                        }
-                        else -> emptyList()
                     }
                     val records = rows.map { row ->
                         val firstKey = joinKeysList.firstOrNull()?.takeIf { row.containsKey(it) }
@@ -1671,7 +1691,8 @@ fun Application.module() {
                         datasetId = req.datasetId,
                         entityType = req.entityType,
                         config = configToStore,
-                        createdAt = createdAt.toString()
+                        createdAt = createdAt.toString(),
+                        warnings = warnings.takeIf { it.isNotEmpty() }
                     )
                 )
             }
