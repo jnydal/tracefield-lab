@@ -36,7 +36,12 @@ except ImportError:
     fetch_queued_job = None  # type: ignore
     process_job = None  # type: ignore
 
-from test.invariants.checks import run_all_checks
+from test.invariants.checks import check_no_duplicate_features, run_all_checks
+
+try:
+    from service.resolver.resolution import run_resolution
+except ImportError:
+    run_resolution = None  # type: ignore
 
 
 # UUIDs aligned with infra/sql/099_seed_test_data.sql for consistency
@@ -732,3 +737,154 @@ def test_heatcrime_demo_contract(seeded_heatcrime_conn):
     failed = [r for r in check_results if not r.passed]
     assert not failed, f"Invariant check(s) failed: {[f.name + ': ' + f.message for f in failed]}"
     cur.close()
+
+
+# ---------------------------------------------------------------------------
+# Tests for data-quality guardrails (EMBEDDING_MAPPING_BUG.txt issues 1, 3, 4)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+def test_no_duplicate_features_invariant(seeded_heatcrime_conn):
+    """check_no_duplicate_features passes on clean data and fails after a duplicate is injected.
+
+    Uses dataset_id=NULL to bypass the unique partial index (which only covers non-NULL
+    dataset_id), verifying that the invariant check covers both cases.
+    """
+    conn = seeded_heatcrime_conn
+    cur = conn.cursor()
+
+    # Clean state must pass.
+    result = check_no_duplicate_features(conn)
+    assert result.passed, f"Expected PASS on clean seeded data, got: {result.message}"
+
+    # Inject a duplicate row for one entity with dataset_id=NULL.
+    cur.execute(
+        """
+        SELECT entity_id, feature_definition_id, value_num, provenance_json
+        FROM features
+        WHERE feature_definition_id = %s::uuid
+        LIMIT 1
+        """,
+        (FEAT_DEF_TOTAL_INCIDENTS,),
+    )
+    orig = cur.fetchone()
+    assert orig is not None, "Expected at least one total_incidents feature row"
+    cur.execute(
+        """
+        INSERT INTO features (id, entity_id, feature_definition_id, dataset_id, value_num, provenance_json, created_at)
+        VALUES (gen_random_uuid(), %s::uuid, %s::uuid, NULL, %s, %s::jsonb, NOW())
+        """,
+        (orig[0], orig[1], orig[2], orig[3]),
+    )
+    conn.commit()
+
+    # After injection the invariant must fail.
+    result = check_no_duplicate_features(conn)
+    assert not result.passed, "Expected FAIL after injecting duplicate feature row"
+    assert "duplicate" in result.message.lower()
+
+    # Cleanup injected row (fixture teardown only removes rows by dataset_id).
+    cur.execute(
+        "DELETE FROM features WHERE dataset_id IS NULL AND entity_id = %s::uuid AND feature_definition_id = %s::uuid",
+        (orig[0], orig[1]),
+    )
+    conn.commit()
+    cur.close()
+
+
+@pytest.mark.integration
+def test_analysis_deduplicates_null_dataset_feature_rows(seeded_heatcrime_conn, caplog):
+    """Analysis worker deduplicates duplicate feature rows (dataset_id=NULL) and emits a WARNING.
+
+    Verifies: n=12 in stats_json after dedup, and the dedup warning appears in logs.
+    """
+    if fetch_queued_job is None or process_job is None:
+        pytest.skip("worker_analysis not importable (numpy/scipy required)")
+
+    import logging
+
+    conn = seeded_heatcrime_conn
+    cur = conn.cursor()
+
+    # Inject a duplicate total_incidents row for one entity with dataset_id=NULL.
+    cur.execute(
+        """
+        SELECT entity_id, feature_definition_id, value_num, provenance_json
+        FROM features
+        WHERE feature_definition_id = %s::uuid
+        LIMIT 1
+        """,
+        (FEAT_DEF_TOTAL_INCIDENTS,),
+    )
+    orig = cur.fetchone()
+    assert orig is not None
+    cur.execute(
+        """
+        INSERT INTO features (id, entity_id, feature_definition_id, dataset_id, value_num, provenance_json, created_at)
+        VALUES (gen_random_uuid(), %s::uuid, %s::uuid, NULL, %s, %s::jsonb, NOW())
+        """,
+        (orig[0], orig[1], orig[2], orig[3]),
+    )
+    conn.commit()
+
+    with caplog.at_level(logging.WARNING, logger="worker-analysis"):
+        job = fetch_queued_job(conn)
+        assert job is not None, "Expected a queued analysis job"
+        process_job(conn, dict(job))
+        conn.commit()
+
+    cur.execute(
+        "SELECT status FROM analysis_jobs WHERE id = %s::uuid",
+        (ANALYSIS_JOB_ID_HEATCRIME,),
+    )
+    assert cur.fetchone()[0] == "completed", "Job should complete despite duplicate rows"
+
+    cur.execute(
+        "SELECT stats_json FROM analysis_results WHERE job_id = %s::uuid",
+        (ANALYSIS_JOB_ID_HEATCRIME,),
+    )
+    stats = json.loads(cur.fetchone()[0])
+    assert stats.get("n") == 12, f"Expected n=12 after dedup, got {stats.get('n')}"
+
+    assert any(
+        "deduplicated" in r.message for r in caplog.records
+    ), "Expected dedup warning in worker-analysis logs"
+
+    # Cleanup injected row.
+    cur.execute(
+        "DELETE FROM features WHERE dataset_id IS NULL AND entity_id = %s::uuid AND feature_definition_id = %s::uuid",
+        (orig[0], orig[1]),
+    )
+    conn.commit()
+    cur.close()
+
+
+@pytest.mark.integration
+def test_resolution_warns_on_empty_join_keys(db_conn, caplog):
+    """run_resolution emits a WARNING when joinKeys is empty (signals semantic-only fallback)."""
+    if run_resolution is None:
+        pytest.skip("service.resolver.resolution not importable")
+
+    import logging
+    import uuid
+
+    fake_job = {
+        "id": str(uuid.uuid4()),
+        "dataset_id": str(uuid.uuid4()),
+        "entity_type": "time_period",
+        "config_json": {
+            "records": [{"source_record_id": "r1", "keys": {"canonical_month": "2023-01"}}],
+            "joinKeys": [],
+            "semanticFields": ["canonical_month"],
+            "threshold": 0.85,
+            "createIfNoMatch": False,
+        },
+    }
+
+    with caplog.at_level(logging.WARNING, logger="resolver.resolution"):
+        run_resolution(db_conn, fake_job)
+
+    assert any(
+        "joinKeys is empty" in r.message for r in caplog.records
+    ), "Expected warning about empty joinKeys in resolver.resolution logs"

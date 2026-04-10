@@ -229,6 +229,12 @@ def run_resolution(conn, job: dict) -> dict:
 
     records = config.get("records") or []
     join_keys = config.get("joinKeys") or []
+    if not join_keys:
+        log.warning(
+            "Job %s: joinKeys is empty — resolution will use semantic matching only. "
+            "Cross-dataset entity alignment (e.g. canonical_month) requires explicit joinKeys.",
+            job_id,
+        )
     semantic_fields = config.get("semanticFields") or ["name"]
     threshold = float(config.get("threshold") or 0.85)
     create_if_no_match = bool(config.get("createIfNoMatch") or False)

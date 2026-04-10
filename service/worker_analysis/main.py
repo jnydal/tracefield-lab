@@ -170,7 +170,27 @@ def load_features_for_definitions(
                 (right_id, left_id),
             )
             rows = cur.fetchall()
-    return [dict(r) for r in rows]
+    rows = [dict(r) for r in rows]
+
+    # Deduplicate by entity_id — multiple rows per entity indicate duplicate
+    # feature rows (e.g. concurrent extract runs or cross-dataset contamination).
+    # Keep the first occurrence and warn so operators can investigate.
+    seen: set = set()
+    deduped = []
+    for row in rows:
+        eid = row["entity_id"]
+        if eid not in seen:
+            seen.add(eid)
+            deduped.append(row)
+    if len(deduped) < len(rows):
+        log.warning(
+            "load_features_for_definitions: deduplicated %d -> %d rows "
+            "(duplicate entity_ids detected; check features table for "
+            "duplicate (entity_id, feature_definition_id, dataset_id) rows)",
+            len(rows),
+            len(deduped),
+        )
+    return deduped
 
 
 def run_anova(left_values: list[float], groups: list[str]) -> dict:
@@ -463,6 +483,13 @@ def process_job(conn, job: dict) -> None:
     )
     if not rows:
         raise ValueError("No overlapping entity-feature data for left and right feature sets")
+    if len(rows) < 5:
+        log.warning(
+            "Job %s: only %d entity pairs available for analysis "
+            "(expected ≥ 12 for demo scenario); results may be unreliable",
+            job_id,
+            len(rows),
+        )
 
     stats_dict = run_analysis(config, rows)
     p_value = stats_dict.get("p_value", float("nan"))

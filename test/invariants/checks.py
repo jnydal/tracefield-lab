@@ -216,6 +216,35 @@ def check_scalar_extract_provenance_event(conn) -> CheckResult:
     )
 
 
+def check_no_duplicate_features(conn) -> CheckResult:
+    """No entity should have >1 feature row for the same (feature_definition, dataset) pair.
+    Covers both non-NULL dataset_id (enforced by DB unique index) and NULL dataset_id (no DB constraint)."""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT entity_id, feature_definition_id, dataset_id, COUNT(*) AS n
+            FROM features
+            GROUP BY entity_id, feature_definition_id, dataset_id
+            HAVING COUNT(*) > 1
+            LIMIT 10
+            """
+        )
+        dupes = cur.fetchall()
+    if dupes:
+        first = dict(dupes[0])
+        return CheckResult(
+            name="no_duplicate_features",
+            passed=False,
+            message=f"{len(dupes)} duplicate (entity, feature_def, dataset) group(s) found; first: {first}",
+            details={"duplicate_groups": [dict(d) for d in dupes]},
+        )
+    return CheckResult(
+        name="no_duplicate_features",
+        passed=True,
+        message="No duplicate (entity, feature_definition, dataset) rows in features table",
+    )
+
+
 def run_all_checks(conn) -> list[CheckResult]:
     """Run all invariant checks against the given DB connection. Returns list of CheckResult."""
     checks = [
@@ -225,6 +254,7 @@ def run_all_checks(conn) -> list[CheckResult]:
         check_job_status_terminal_has_ended_at,
         check_analysis_results_required_fields,
         check_scalar_extract_provenance_event,
+        check_no_duplicate_features,
     ]
     results = []
     for check_fn in checks:
