@@ -1450,6 +1450,41 @@ fun Application.module() {
             }
         }
 
+        get("/features/summary") {
+            val items = transaction(DatabaseManager.getDatabase()) {
+                FeatureDefinitions
+                    .join(Features, JoinType.LEFT, FeatureDefinitions.id, Features.featureDefinitionId)
+                    .slice(
+                        FeatureDefinitions.id,
+                        FeatureDefinitions.name,
+                        FeatureDefinitions.description,
+                        FeatureDefinitions.valueType,
+                        FeatureDefinitions.unit,
+                        Features.id.count()
+                    )
+                    .selectAll()
+                    .groupBy(
+                        FeatureDefinitions.id,
+                        FeatureDefinitions.name,
+                        FeatureDefinitions.description,
+                        FeatureDefinitions.valueType,
+                        FeatureDefinitions.unit
+                    )
+                    .orderBy(FeatureDefinitions.name)
+                    .map { row ->
+                        FeatureSummaryResponse(
+                            id = row[FeatureDefinitions.id].value.toString(),
+                            name = row[FeatureDefinitions.name],
+                            description = row[FeatureDefinitions.description],
+                            valueType = row[FeatureDefinitions.valueType],
+                            unit = row[FeatureDefinitions.unit],
+                            computedCount = row[Features.id.count()].toInt()
+                        )
+                    }
+            }
+            call.respond(items)
+        }
+
         route("/analysis-jobs") {
             get {
                 val items = transaction(DatabaseManager.getDatabase()) {

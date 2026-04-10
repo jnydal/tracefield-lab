@@ -89,6 +89,9 @@ curl -X POST http://localhost:8000/features/extract \
 ```
 Check job status: `GET /jobs/{jobId}`
 
+**Feature availability summary** (definitions + computed row counts via LEFT JOIN):
+`GET /features/summary` — returns each feature definition with `computedCount` (0 means extract has not been run). Used by the analysis job form to label dropdowns and surface amber warnings for zero-count features.
+
 **Run Analysis Job** (embedding component vs scalar):
 ```bash
 curl -X POST http://localhost:8000/analysis-jobs \

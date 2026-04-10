@@ -2,10 +2,15 @@ import { useState } from 'react';
 import {
   useListAnalysisJobsQuery,
   useCreateAnalysisJobMutation,
-  useListFeatureDefinitionsQuery,
+  useListFeaturesSummaryQuery,
 } from '../../../services/api/pipeline-api';
+import type { FeatureSummary } from '../../../services/api/pipeline-api';
 
 type TestType = 'anova' | 'spearman' | 'embedding_clustering';
+
+function featureOptionLabel(f: FeatureSummary): string {
+  return f.computedCount > 0 ? `${f.name} (${f.computedCount})` : `${f.name} — no data`;
+}
 
 function isEmbeddingFeature(name: string): boolean {
   return (name || '').startsWith('embeddings.');
@@ -15,7 +20,7 @@ export function AnalysisJobsPage() {
   const { data: jobs = [], isLoading: isLoadingJobs } =
     useListAnalysisJobsQuery();
   const { data: featureDefs = [], isLoading: isLoadingDefs } =
-    useListFeatureDefinitionsQuery();
+    useListFeaturesSummaryQuery();
   const [createJob, { isLoading: isCreating }] = useCreateAnalysisJobMutation();
   const [name, setName] = useState('');
   const [testType, setTestType] = useState<TestType>('spearman');
@@ -226,7 +231,7 @@ export function AnalysisJobsPage() {
                 <option value="">Select…</option>
                 {embeddingFeatures.map((f) => (
                   <option key={f.id} value={f.name}>
-                    {f.name}
+                    {featureOptionLabel(f)}
                   </option>
                 ))}
                 {embeddingFeatures.length === 0 && !isLoadingDefs && (
@@ -269,10 +274,15 @@ export function AnalysisJobsPage() {
                 <option value="">Select…</option>
                 {scalarFeatures.map((f) => (
                   <option key={f.id} value={f.name}>
-                    {f.name}
+                    {featureOptionLabel(f)}
                   </option>
                 ))}
               </select>
+              {outcomeFeature && (featureDefs.find(f => f.name === outcomeFeature)?.computedCount ?? 1) === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠ no computed rows — run scalar extract first
+                </p>
+              )}
             </div>
           </>
         ) : (
@@ -293,10 +303,15 @@ export function AnalysisJobsPage() {
                 <option value="">Select…</option>
                 {featureDefs.map((f) => (
                   <option key={f.id} value={f.name}>
-                    {f.name}
+                    {featureOptionLabel(f)}
                   </option>
                 ))}
               </select>
+              {leftFeature && (featureDefs.find(f => f.name === leftFeature)?.computedCount ?? 1) === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠ no computed rows — run scalar extract first
+                </p>
+              )}
             </div>
             <div className="space-y-1">
               <label
@@ -314,10 +329,15 @@ export function AnalysisJobsPage() {
                 <option value="">Select…</option>
                 {featureDefs.map((f) => (
                   <option key={f.id} value={f.name}>
-                    {f.name}
+                    {featureOptionLabel(f)}
                   </option>
                 ))}
               </select>
+              {rightFeature && (featureDefs.find(f => f.name === rightFeature)?.computedCount ?? 1) === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠ no computed rows — run scalar extract first
+                </p>
+              )}
             </div>
             {isEmbeddingFeature(leftFeature) && (
               <div className="space-y-1">

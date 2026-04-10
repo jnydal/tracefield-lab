@@ -156,6 +156,16 @@ data class FeatureDefinitionResponse(
 )
 
 @Serializable
+data class FeatureSummaryResponse(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val valueType: String,
+    val unit: String? = null,
+    val computedCount: Int
+)
+
+@Serializable
 data class AnalysisJobRequest(
     val name: String,
     val config: JsonElement,

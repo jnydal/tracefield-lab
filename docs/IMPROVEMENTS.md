@@ -10,6 +10,7 @@ Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object stor
 - **Resilience when object-store GET fails**: On ingest, the API stores **`ingest_columns_json`** (header names) and, for uploads **≤ 1 MB**, **`inline_file_b64`** so preview and scalar extract can fall back if MinIO/S3 read fails. See migration `017_dataset_file_ingest_cache.sql` and [ARCHITECTURE.md](../ARCHITECTURE.md) (API ingest / preview).
 - **UI**: Column pickers prefer **attached CSV header** (browser) → registered schema → **`latestFileColumns`** → **`POST …/sync-file-metadata`** → preview API. **`POST …/extract-scalar-upload`** sends the CSV with the job so extraction does not depend on MinIO/S3 GET.
 - **Heat/Crime demo: result_summary observability** (`created > 0` warning): Resolution jobs list now highlights `created: N` in amber and shows "⚠ new entities created — check alignment" when any records were created rather than matched, closing the last open item in EMBEDDING_MAPPING_BUG.txt Cause 3.
+- **Feature availability in analysis job form** (§12): `GET /features/summary` LEFT JOINs feature definitions with the features table and returns `computedCount` per definition. The analysis job form uses this instead of the bare definitions list — option labels show computed row counts and a zero-count selection triggers an inline amber warning ("⚠ no computed rows — run scalar extract first").
 
 ---
 
@@ -100,14 +101,6 @@ Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object stor
 **Issue:** The five pipeline stages (Datasets → Entity Mappings → Features → Analysis Jobs → Results) have no connective tissue. There is no checklist, no prerequisite indicator, and no "you need X before Y" signal. The only guidance is the external demo walkthrough doc. Researchers must already know the correct sequence and configuration semantics; modal warnings exist for some gating but do not form a coherent flow.
 
 **Suggestion:** Add a pipeline stage navigator or progress sidebar that shows completion state per stage and surfaces blockers (e.g. "embeddings required before resolution", "no features computed yet"). Even a lightweight status summary per dataset would significantly reduce cognitive load.
-
----
-
-### 12. Feature definitions decoupled from computed features
-
-**Issue:** Analysis job creation populates feature dropdowns from the **feature definitions registry**, not from features that are actually computed and stored in the database. If definitions are missing, misnamed, or out of sync with what workers actually stored, jobs fail or produce confusing results with no actionable error. There is no "what features exist for this dataset?" discovery view.
-
-**Suggestion:** Add a computed features browser — either inline on the datasets page or as a panel on the analysis job form — that queries the features table directly and shows what is actually available keyed to the selected datasets/entities.
 
 ---
 

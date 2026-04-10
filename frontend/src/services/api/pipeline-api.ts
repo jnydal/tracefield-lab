@@ -96,6 +96,15 @@ export type FeatureDefinition = {
   createdAt: string;
 };
 
+export type FeatureSummary = {
+  id: string;
+  name: string;
+  description?: string;
+  valueType: string;
+  unit?: string;
+  computedCount: number;
+};
+
 export type FeatureDefinitionRequest = {
   name: string;
   description?: string;
@@ -295,6 +304,10 @@ export const pipelineApi = baseApi.injectEndpoints({
       query: () => ({ url: '/features/definitions', method: 'GET' }),
       providesTags: ['FeatureDefinitions'],
     }),
+    listFeaturesSummary: builder.query<FeatureSummary[], void>({
+      query: () => ({ url: '/features/summary', method: 'GET' }),
+      providesTags: ['FeatureDefinitions'],
+    }),
     createFeatureDefinition: builder.mutation<FeatureDefinition, FeatureDefinitionRequest>({
       query: (body) => ({ url: '/features/definitions', method: 'POST', body }),
       invalidatesTags: ['FeatureDefinitions'],
@@ -398,6 +411,7 @@ export const {
   useCreateEntityMappingMutation,
   useDeleteEntityMappingMutation,
   useListFeatureDefinitionsQuery,
+  useListFeaturesSummaryQuery,
   useCreateFeatureDefinitionMutation,
   useDeleteFeatureDefinitionMutation,
   useListAnalysisJobsQuery,

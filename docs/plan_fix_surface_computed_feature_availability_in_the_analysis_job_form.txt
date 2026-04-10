@@ -1,0 +1,138 @@
+Plan: Surface computed feature availability in the analysis job form
+Context
+
+Analysis job creation uses GET /features/definitions (the schema registry) to populate feature dropdowns. No endpoint exists to query what is actually computed in the features table. When a researcher selects total_incidents and units_sold_thousands but scalar extract was never run (or ran for different entities), the job either fails or returns ρ ≈ 0 with no actionable error. This is IMPROVEMENTS.md §12.
+
+The fix has two parts:
+
+A new GET /features/summary API endpoint that LEFT JOINs feature_definitions with features and returns each definition with its computed row count.
+The analysis job form uses the summary instead of the bare definitions list — option labels show the count, and features with zero rows get an inline amber warning when selected.
+Files to change (4)
+File	Change
+service/api/src/main/kotlin/com/tracefield/api/models/Models.kt	Add FeatureSummaryResponse data class
+service/api/src/main/kotlin/com/tracefield/api/Application.kt	Add GET /features/summary endpoint
+frontend/src/services/api/pipeline-api.ts	Add FeatureSummary type + RTK Query hook
+frontend/src/features/pipeline/pages/analysis-jobs-page.tsx	Use summary hook, show counts, warn on zero
+
+
+Step 1 — Models.kt: add FeatureSummaryResponse
+After FeatureDefinitionResponse (line ~156), add:
+
+@Serializable
+data class FeatureSummaryResponse(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val valueType: String,
+    val unit: String? = null,
+    val computedCount: Int
+)
+
+
+Step 2 — Application.kt: add GET /features/summary
+Add after the closing brace of route("/features/definitions") { … } (around line 1451):
+
+get("/features/summary") {
+    val items = transaction(DatabaseManager.getDatabase()) {
+        FeatureDefinitions
+            .join(Features, JoinType.LEFT, FeatureDefinitions.id, Features.featureDefinitionId)
+            .slice(
+                FeatureDefinitions.id,
+                FeatureDefinitions.name,
+                FeatureDefinitions.description,
+                FeatureDefinitions.valueType,
+                FeatureDefinitions.unit,
+                Features.id.count()
+            )
+            .selectAll()
+            .groupBy(
+                FeatureDefinitions.id,
+                FeatureDefinitions.name,
+                FeatureDefinitions.description,
+                FeatureDefinitions.valueType,
+                FeatureDefinitions.unit
+            )
+            .orderBy(FeatureDefinitions.name)
+            .map { row ->
+                FeatureSummaryResponse(
+                    id = row[FeatureDefinitions.id].value.toString(),
+                    name = row[FeatureDefinitions.name],
+                    description = row[FeatureDefinitions.description],
+                    valueType = row[FeatureDefinitions.valueType],
+                    unit = row[FeatureDefinitions.unit],
+                    computedCount = row[Features.id.count()].toInt()
+                )
+            }
+    }
+    call.respond(items)
+}
+Features and JoinType are already available (Exposed + existing imports). No new import needed.
+
+
+Step 3 — pipeline-api.ts: type + hook
+After FeatureDefinition type (line ~97), add:
+
+export type FeatureSummary = {
+  id: string;
+  name: string;
+  description?: string;
+  valueType: string;
+  unit?: string;
+  computedCount: number;
+};
+Add endpoint in pipelineApi.injectEndpoints after listFeatureDefinitions:
+
+listFeaturesSummary: builder.query<FeatureSummary[], void>({
+  query: () => ({ url: '/features/summary', method: 'GET' }),
+  providesTags: ['FeatureDefinitions'],
+}),
+Export the generated hook at the bottom of the exports block:
+
+useListFeaturesSummaryQuery,
+Using providesTags: ['FeatureDefinitions'] means the summary auto-refreshes whenever scalar extract or feature extract completes (those mutations already invalidatesTags: ['FeatureDefinitions']).
+
+
+Step 4 — analysis-jobs-page.tsx: use summary, show counts, warn on zero
+Replace the import and query (lines 5, 17–18):
+
+// remove: useListFeatureDefinitionsQuery
+// add:
+import { useListFeaturesSummaryQuery } from '...';
+
+// replace:
+const { data: featureDefs = [], isLoading: isLoadingDefs } =
+  useListFeaturesSummaryQuery();
+(featureDefs variable name kept to minimise diff — type is now FeatureSummary[], same fields plus computedCount.)
+
+Option label helper (add near top of component):
+
+function featureOptionLabel(f: FeatureSummary): string {
+  return f.computedCount > 0 ? `${f.name} (${f.computedCount})` : `${f.name} — no data`;
+}
+All four dropdowns (left feature, right feature, embedding def, outcome feature) — change each <option>:
+
+// before:
+<option key={f.id} value={f.name}>{f.name}</option>
+// after:
+<option key={f.id} value={f.name}>{featureOptionLabel(f)}</option>
+Zero-count inline warning — add immediately after each </select> for left/right feature and outcome feature (embedding_clustering form uses embedding features so only needs it for the outcome feature). Pattern (repeat for each relevant dropdown):
+
+{leftFeature && (featureDefs.find(f => f.name === leftFeature)?.computedCount ?? 1) === 0 && (
+  <p className="text-xs text-amber-600 dark:text-amber-400">
+    ⚠ no computed rows — run scalar extract first
+  </p>
+)}
+Button disabled state — already disabled={isCreating || isLoadingDefs}, no change needed.
+
+What does NOT change
+No schema migration.
+No changes to the worker or Python services.
+GET /features/definitions is unchanged (it's still used by the feature management UI).
+No new tests required — the query is a read-only JOIN on existing data; the existing invariant suite covers the features table.
+AGENT.md should get a one-line note about the new endpoint (definition of done per CLAUDE.md).
+Verification
+Start the stack; confirm GET /features/summary returns [] when no features are extracted, and returns definitions with computedCount: 0.
+Run scalar extract for a dataset. Confirm the summary now shows computedCount > 0 for extracted features.
+In the analysis job form: verify total_incidents (12) appears in the dropdown, and selecting a feature with 0 rows shows the amber warning inline.
+Selecting features with computedCount > 0 for both left and right: no warning, form submits normally.
+Verify dark mode amber renders correctly.

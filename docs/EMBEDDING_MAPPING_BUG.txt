@@ -117,6 +117,11 @@ researchers see the signal immediately without querying entity_map directly.
 
 Verify entity alignment (if you still see ρ ≈ 0 after applying fixes)
 
+0. Check computedCount in the analysis job form.
+   The feature dropdowns now show "(N)" next to each feature name.
+   If total_incidents or units_sold_thousands shows "— no data" (computedCount = 0),
+   scalar extract has not been run for that feature — run it before submitting the job.
+
 1. Check n in stats_json for the analysis job.
    If n < 12: entity alignment is partial — some months have no shared entity.
 
