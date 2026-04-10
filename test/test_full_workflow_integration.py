@@ -770,13 +770,13 @@ def test_no_duplicate_features_invariant(seeded_heatcrime_conn):
     )
     orig = cur.fetchone()
     assert orig is not None, "Expected at least one total_incidents feature row"
-    cur.execute(
-        """
+    insert_sql = """
         INSERT INTO features (id, entity_id, feature_definition_id, dataset_id, value_num, provenance_json, created_at)
         VALUES (gen_random_uuid(), %s::uuid, %s::uuid, NULL, %s, %s::jsonb, NOW())
-        """,
-        (orig[0], orig[1], orig[2], json.dumps(orig[3])),
-    )
+        """
+    params = (orig[0], orig[1], orig[2], json.dumps(orig[3]))
+    cur.execute(insert_sql, params)
+    cur.execute(insert_sql, params)
     conn.commit()
 
     # After injection the invariant must fail.
@@ -844,7 +844,7 @@ def test_analysis_deduplicates_null_dataset_feature_rows(seeded_heatcrime_conn, 
         "SELECT stats_json FROM analysis_results WHERE job_id = %s::uuid",
         (ANALYSIS_JOB_ID_HEATCRIME,),
     )
-    stats = json.loads(cur.fetchone()[0])
+    stats = cur.fetchone()[0]
     assert stats.get("n") == 12, f"Expected n=12 after dedup, got {stats.get('n')}"
 
     assert any(
