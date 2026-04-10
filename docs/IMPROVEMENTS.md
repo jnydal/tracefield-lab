@@ -9,6 +9,7 @@ Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object stor
 - **Scalar features from uploaded CSVs**: GUI **Extract scalar features** writes numeric/text columns into the feature store keyed by resolved entities (`POST /datasets/{id}/extract-scalar`). Analysis jobs can use those values without SQL seeds.
 - **Resilience when object-store GET fails**: On ingest, the API stores **`ingest_columns_json`** (header names) and, for uploads **≤ 1 MB**, **`inline_file_b64`** so preview and scalar extract can fall back if MinIO/S3 read fails. See migration `017_dataset_file_ingest_cache.sql` and [ARCHITECTURE.md](../ARCHITECTURE.md) (API ingest / preview).
 - **UI**: Column pickers prefer **attached CSV header** (browser) → registered schema → **`latestFileColumns`** → **`POST …/sync-file-metadata`** → preview API. **`POST …/extract-scalar-upload`** sends the CSV with the job so extraction does not depend on MinIO/S3 GET.
+- **Heat/Crime demo: result_summary observability** (`created > 0` warning): Resolution jobs list now highlights `created: N` in amber and shows "⚠ new entities created — check alignment" when any records were created rather than matched, closing the last open item in EMBEDDING_MAPPING_BUG.txt Cause 3.
 
 ---
 
@@ -89,12 +90,6 @@ Tracked gaps and follow-ups from pipeline/UI work (datasets, ingest, object stor
 **Issue:** `worker-embeddings` reads `object_uri` from DB; it does not use `inline_file_b64`. If S3 is broken, embeddings extract can still fail while scalar extract succeeds for small files.
 
 **Suggestion:** Align worker with same fallback chain or document the limitation.
-
-### 10. Heat/Crime demo: aligning entities across silos
-
-**Symptom:** Phase 1 analysis completed but Spearman ρ ≈ 0 and non-significant *p*, or failed with no overlapping features — crime scalars and ice-cream scalars were on **different** `entity_id`s when resolution created **duplicate** time_periods per dataset (embedding-only path can miss or mis-order months).
-
-**Fix in repo:** Demo CSVs include a shared **`canonical_month`** column (`2023-01` … `2023-12`). Resolution **join keys** are `native_id, canonical_month` so `entity_map.source_record_id` stays the native row id (scalar extract works) and exact match on `canonical_month` reuses the same entity for ice cream and temperature. See [DEMO_WALKTHROUGH_HEATCRIME.md](DEMO_WALKTHROUGH_HEATCRIME.md) Steps 3 and 7.
 
 ---
 

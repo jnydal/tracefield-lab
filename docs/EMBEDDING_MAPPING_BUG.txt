@@ -31,8 +31,7 @@ STATUS OF FIXES (as of 2026-04-10)
 
 Cause 1 — Crime and ice cream on different entities (partial overlap)        FIXED
 Cause 2 — Duplicate feature rows (Cartesian join)                            FIXED
-Cause 3 — Semantic threshold creates new entities (no signal)            PARTIALLY FIXED
-  └─ Observability gap: result_summary counts not shown in UI              OPEN
+Cause 3 — Semantic threshold creates new entities (no signal)                FIXED
 
 See detail below.
 
@@ -91,7 +90,7 @@ Fixes applied:
 
 
 Cause 3 — Semantic threshold creates new entities / result_summary not visible
-STATUS: PARTIALLY FIXED — observability gap remains
+STATUS: FIXED
 
 Root cause: When semantic similarity falls below the threshold (default 0.85) and
 createIfNoMatch=True, the resolver creates a new entity for that ice-cream month
@@ -110,12 +109,9 @@ What is fixed:
   the demo scenario. This eliminates the threshold failure mode for normal use.
 - Resolver logs a WARNING when joinKeys is empty (semantic-only path active).
 
-What remains open:
-- result_summary counts are stored on resolution jobs in the DB but are not
-  displayed in the UI. A researcher cannot see "8 of 12 months were CREATED
-  rather than matched" without querying entity_map directly.
-- Surfacing result_summary (especially created > 0 as a warning) in the
-  resolution jobs list would close this gap. Tracked in IMPROVEMENTS.md.
+Observability gap closed: the resolution jobs list now highlights created > 0
+in amber with a "⚠ new entities created — check alignment" warning so
+researchers see the signal immediately without querying entity_map directly.
 
 --------------------------------------------------------------------------------
 

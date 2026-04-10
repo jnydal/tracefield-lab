@@ -616,9 +616,30 @@ export function EntityMappingsPage() {
                             </span>
                           </td>
                           <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">
-                            {summary
-                              ? `exact: ${String(summary.exact ?? 0)} · semantic: ${String(summary.semantic ?? 0)} · created: ${String(summary.created ?? 0)} · unmatched: ${String(summary.unmatched ?? 0)}`
-                              : '—'}
+                            {summary ? (
+                              <div className="space-y-0.5">
+                                <div>
+                                  <span>exact: {String(summary.exact ?? 0)}</span>
+                                  {' · '}
+                                  <span>semantic: {String(summary.semantic ?? 0)}</span>
+                                  {' · '}
+                                  <span className={
+                                    (summary.created as number ?? 0) > 0
+                                      ? 'font-medium text-amber-600 dark:text-amber-400'
+                                      : ''
+                                  }>
+                                    created: {String(summary.created ?? 0)}
+                                  </span>
+                                  {' · '}
+                                  <span>unmatched: {String(summary.unmatched ?? 0)}</span>
+                                </div>
+                                {(summary.created as number ?? 0) > 0 && (
+                                  <p className="text-amber-600 dark:text-amber-400">
+                                    ⚠ new entities created — check alignment
+                                  </p>
+                                )}
+                              </div>
+                            ) : '—'}
                           </td>
                         </tr>
                       );
